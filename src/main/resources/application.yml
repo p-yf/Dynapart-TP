@@ -1,0 +1,15 @@
+fy:
+  thread-pool:
+    enabled: true
+    coreNums: 5
+    maxNums: 10
+    poolName: yf-thread-pool
+    threadName: yf-thread
+    isDaemon: true
+    coreDestroy: false
+    aliveTime: 5
+    queueName: myq
+    queueCapacity: 1000
+    rejectStrategy: mys
+    monitor:
+      enabled: true

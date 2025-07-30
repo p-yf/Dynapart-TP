@@ -1,0 +1,3 @@
+com.yf.pool.springboot_integration.AutoConfiguration.ThreadPoolConfiguration
+com.yf.monitor.springboot_integration.WebAutoConfiguration
+com.yf.monitor.springboot_integration.WsAutoConfiguration

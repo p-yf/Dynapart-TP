@@ -1,0 +1,22 @@
+package com.yf.test.q;
+
+import com.yf.pool.springboot_integration.annotation.TaskQueueBean;
+import com.yf.pool.taskqueue.TaskQueue;
+
+@TaskQueueBean("myq")
+public class myq extends TaskQueue {
+    @Override
+    public Boolean addTask(Runnable task) {
+        return null;
+    }
+
+    @Override
+    public Runnable poll(Integer aliveTime) throws InterruptedException {
+        return null;
+    }
+
+    @Override
+    public Boolean removeTask() {
+        return null;
+    }
+}

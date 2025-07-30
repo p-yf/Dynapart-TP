@@ -1,0 +1,46 @@
+package com.yf.pool.threadfactory;
+
+import com.yf.pool.threadpool.ThreadPool;
+import com.yf.pool.worker.Worker;
+import lombok.Data;
+
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Data
+public class ThreadFactory {
+    private ThreadPool threadPool;
+    private String threadName = "default";// 线程名称
+    private Boolean isDaemon = false;//是否守护线程
+    private Boolean coreDestroy = false;//是否销毁核心线程
+    private Integer aliveTime = null;//空闲存活时间 :null代表不销毁
+    private AtomicInteger threadNum = new AtomicInteger(1);// 线程编号
+
+
+    public ThreadFactory(String threadName,Boolean isDaemon,Boolean coreDestroy,Integer aliveTime){
+        this.threadName = threadName;
+        this.isDaemon = isDaemon;
+        this.coreDestroy = coreDestroy;
+        this.aliveTime = aliveTime;
+    }
+
+    public Worker createWorker(Boolean isCore, Runnable task){
+        Worker worker = new Worker(threadPool,isCore,threadName+threadNum.getAndIncrement(),isDaemon,coreDestroy,aliveTime,task);
+        if(isCore) {
+            threadPool.getCoreList().add(worker);
+        }else{
+            threadPool.getExtraList().add(worker);
+        }
+        return worker;
+    }
+
+    public Worker createWorker(Boolean isCore, FutureTask task){
+        Worker worker = new Worker(threadPool,isCore,threadName+threadNum.getAndIncrement(),isDaemon,coreDestroy,aliveTime,task);
+        if(isCore) {
+            threadPool.getCoreList().add(worker);
+        }else{
+            threadPool.getExtraList().add(worker);
+        }
+        return worker;
+    }
+}
