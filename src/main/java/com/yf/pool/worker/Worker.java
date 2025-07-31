@@ -9,19 +9,20 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Setter
 public class Worker extends Thread {
+    volatile private Boolean flag = true;
     private Boolean isCore;
     private ThreadPool threadPool;
     private Boolean coreDestroy;//如果非核心线程就设置为null
-    private Integer aliveTime;//等于null的话则不进行销毁操作
+    private Integer aliveTime;//核心线程如果允许销毁则为这个数的两倍
     private Runnable onTimeTask;//是指直接提交运行的任务
     private Runnable loopTask = ()->//这里是循环从队列拿到任务
     {
-        while (true) {
+        while (flag) {
             try {
                 Runnable runnable;
                 if(isCore) {
                     if(coreDestroy) {//核心线程并且允许销毁
-                        runnable = threadPool.getTaskQueue().poll(aliveTime);
+                        runnable = threadPool.getTaskQueue().poll(aliveTime*2);
                         if(runnable == null){
                             threadPool.getCoreList().remove(this);
                             log.info("核心线程"+getName()+"销毁");

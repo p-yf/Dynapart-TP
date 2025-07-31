@@ -92,4 +92,9 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
         }
         return true;
     }
+
+    @Override
+    public int getSize() {
+        return queue.size();
+    }
 }

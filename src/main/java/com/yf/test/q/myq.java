@@ -19,4 +19,9 @@ public class myq extends TaskQueue {
     public Boolean removeTask() {
         return null;
     }
+
+    @Override
+    public int getSize() {
+        return 0;
+    }
 }

@@ -4,12 +4,9 @@ import com.yf.pool.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
-
+/**
+ * 实现类需要保证线程安全
+ */
 @Getter
 @Setter
 public abstract class TaskQueue {
@@ -34,4 +31,9 @@ public abstract class TaskQueue {
      * 移除任务
      */
     public abstract Boolean removeTask();
+
+    /**
+     * 获取长度
+     */
+    public abstract int getSize();
 }
