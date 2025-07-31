@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "fy.thread-pool.monitor", name = "enabled", havingValue = "true")
 public class WebAutoConfiguration {
     @Bean
-    public MonitorController monitorController(ThreadPool threadPool, ThreadPoolProperties threadPoolProperties){
-        return new MonitorController(threadPool,threadPoolProperties);
+    public MonitorController monitorController(ThreadPool threadPool){
+        return new MonitorController(threadPool);
     }
 }

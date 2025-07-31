@@ -1,6 +1,6 @@
 package com.yf.monitor.controller;
 
-import com.yf.pool.springboot_integration.AutoConfiguration.ThreadPoolProperties;
+import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.threadpool.ThreadPool;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,7 +15,6 @@ import java.util.Map;
 public class MonitorController {
 
     private ThreadPool threadPool;
-    private ThreadPoolProperties threadPoolProperties;
     /**
      * 获取线程的信息
      */
@@ -28,8 +27,8 @@ public class MonitorController {
      * 获取线程池的信息
      */
     @GetMapping("/pool")
-    public ThreadPoolProperties getThreadPoolInfo() {
-        return threadPoolProperties;
+    public PoolInfo getThreadPoolInfo() {
+        return threadPool.getThreadPoolInfo();
     }
 
     /**

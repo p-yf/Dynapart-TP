@@ -16,5 +16,5 @@ public class ThreadPoolProperties {
     private Integer aliveTime;//线程空闲时间
     private String queueName;//队列名称
     private Integer queueCapacity;//队列容量
-    private String rejectStrategy;//拒绝策略名称
+    private String rejectStrategyName;//拒绝策略名称
 }

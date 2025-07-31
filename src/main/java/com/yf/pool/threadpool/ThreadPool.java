@@ -1,9 +1,13 @@
 package com.yf.pool.threadpool;
 
+import com.yf.pool.constant.OfQueue;
+import com.yf.pool.constant.OfRejectStrategy;
 import com.yf.pool.constant.OfWorker;
+import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.pool.taskqueue.TaskQueue;
 import com.yf.pool.threadfactory.ThreadFactory;
+import com.yf.pool.util.GlobalLock;
 import com.yf.pool.worker.Worker;
 import lombok.Getter;
 import lombok.Setter;
@@ -15,17 +19,21 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 @Getter
 @Setter
 public class ThreadPool {
-    private ReentrantLock lock = new ReentrantLock();
+    private Boolean isSpringBootEnvironment;
+    private Lock lock = new ReentrantLock();
     private ThreadFactory threadFactory;
     private TaskQueue taskQueue;
     private RejectStrategy rejectStrategy;
     private Integer coreNums;//核心线程数
     private Integer maxNums;//最大线程数
+    private String queueName = null;//非springboot环境直接用类，反之用名字,拒绝策略同理
+    private String rejectStrategyName = null;
     private Set<Worker> coreList = new HashSet<>();
     private Set<Worker> extraList = new HashSet<>();
 
@@ -45,6 +53,18 @@ public class ThreadPool {
         this.coreNums = coreNums;
         this.maxNums = maxNums;
         this.name = name;
+        //添加队列和策略的名称
+        OfQueue.TASK_QUEUE_MAP.forEach((qName, clazz) -> {
+            if(clazz==taskQueue.getClass()){
+                this.queueName = qName;
+            }
+        });
+        OfRejectStrategy.REJECT_STRATEGY_MAP.forEach((qName, clazz) -> {
+            if(clazz==rejectStrategy.getClass()){
+                this.rejectStrategyName = qName;
+            }
+        });
+
     }
 
     /**
@@ -133,5 +153,29 @@ public class ThreadPool {
         result.put(OfWorker.EXTRA,extraMap);
         return result;
     }
+
+    /**获取线程池信息
+     * @return
+     */
+    public PoolInfo getThreadPoolInfo() {
+        PoolInfo info = new PoolInfo();
+        GlobalLock.READ_LOCK.lock();
+        try {
+            info.setPoolName( name);
+            info.setAliveTime( threadFactory.getAliveTime());
+            info.setThreadName( threadFactory.getThreadName());
+            info.setCoreDestroy( threadFactory.getCoreDestroy());
+            info.setIsDaemon( threadFactory.getIsDaemon());
+            info.setMaxNums( maxNums);
+            info.setCoreNums( coreNums);
+            info.setQueueCapacity( taskQueue.getCapacity());
+            info.setQueueName( queueName);
+            info.setRejectStrategyName( rejectStrategyName);
+        } catch (Exception e) {
+            lock.unlock();
+            e.printStackTrace();
+        }
+        return info;
+     }
 
 }

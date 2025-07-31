@@ -33,7 +33,7 @@ public class ThreadPoolConfiguration {
     @Bean
     public ThreadPool threadPool(ThreadPoolProperties threadPoolProperties) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         String queueName = threadPoolProperties.getQueueName();
-        String rejectStrategyName = threadPoolProperties.getRejectStrategy();
+        String rejectStrategyName = threadPoolProperties.getRejectStrategyName();
         TaskQueue taskQueue; RejectStrategy rejectStrategy;
         try {//尝试从容器中获取，没有的话从作者默认实现中获取
             taskQueue = (TaskQueue) context.getBean(queueName);
@@ -49,14 +49,17 @@ public class ThreadPoolConfiguration {
             Constructor<?> rejectStrategyClassConstructor = rejectStrategyClass.getConstructor();
             rejectStrategy = (RejectStrategy) rejectStrategyClassConstructor.newInstance();
         }
-        return new ThreadPool(threadPoolProperties.getCoreNums(),
+        ThreadPool threadPool = new ThreadPool(threadPoolProperties.getCoreNums(),
                 threadPoolProperties.getMaxNums(),
                 threadPoolProperties.getPoolName(),
                 new ThreadFactory(threadPoolProperties.getThreadName(),
                         threadPoolProperties.getIsDaemon(),
                         threadPoolProperties.getCoreDestroy(),
                         threadPoolProperties.getAliveTime()),
-                taskQueue,rejectStrategy);
+                taskQueue, rejectStrategy);
+        threadPool.setQueueName(queueName);
+        threadPool.setRejectStrategyName(rejectStrategyName);
+        return threadPool;
     }
 
 }

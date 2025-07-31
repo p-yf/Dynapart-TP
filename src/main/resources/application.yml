@@ -8,8 +8,8 @@ fy:
     isDaemon: true
     coreDestroy: false
     aliveTime: 5
-    queueName: myq
+    queueName: linked
     queueCapacity:
-    rejectStrategy: mys
+    rejectStrategyName: mys
     monitor:
       enabled: true

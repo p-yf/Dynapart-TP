@@ -17,7 +17,7 @@ public class RejectStrategyCondition implements Condition {
         String strategyName = (String) attributes.getFirst("value");
 
         // 2. 固定读取配置文件
-        String configValue = context.getEnvironment().getProperty("fy.thread-pool.rejectStrategy");
+        String configValue = context.getEnvironment().getProperty("fy.thread-pool.rejectStrategyName");
 
         // 3. 配置值与注解name匹配则生效
         return strategyName.equals(configValue);
