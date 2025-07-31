@@ -9,7 +9,7 @@ fy:
     coreDestroy: false
     aliveTime: 5
     queueName: myq
-    queueCapacity: 1000
+    queueCapacity:
     rejectStrategy: mys
     monitor:
       enabled: true

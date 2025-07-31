@@ -15,13 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public abstract class TaskQueue {
 
     private Integer capacity;
-    private Integer aliveTime;
-    // 底层用LinkedList存储任务
-    private Queue<Runnable> queue = new LinkedList<>();
-    // 锁：保证线程安全
-    private Lock lock = new ReentrantLock();
-    // 条件变量：用于线程的阻塞和唤醒
-    private Condition notEmpty = lock.newCondition();
+
     private ThreadPool threadPool;
     /**
      * 添加任务

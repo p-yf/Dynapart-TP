@@ -31,12 +31,15 @@ public class ThreadPool {
 
     private String name;//线程池名称
 
-    public ThreadPool(ThreadFactory threadFactory, TaskQueue taskQueue, RejectStrategy rejectStrategy, Integer coreNums, Integer maxNums, String name) {
+    public ThreadPool(
+            Integer coreNums, Integer maxNums, String name,
+            ThreadFactory threadFactory, TaskQueue taskQueue,
+            RejectStrategy rejectStrategy
+    ) {
         this.threadFactory = threadFactory;
         threadFactory.setThreadName(name+":"+threadFactory.getThreadName());
         threadFactory.setThreadPool( this);
         this.taskQueue = taskQueue;
-        taskQueue.setAliveTime(threadFactory.getAliveTime());
         this.rejectStrategy = rejectStrategy;
         rejectStrategy.setThreadPool(this);
         this.coreNums = coreNums;
@@ -48,26 +51,26 @@ public class ThreadPool {
      * 执行任务
      */
     public void execute(Runnable task){
-        try {
+        try{
             lock.lock();
             if (coreList.size() < coreNums) {
                 threadFactory.createWorker(true, task).start();
-            } else {
-                if (coreList.size() + extraList.size() < maxNums) {
-                    threadFactory.createWorker(false, task).start();
-                } else {
-                    if(taskQueue.getCapacity() == null){//说明无界
-                        taskQueue.addTask(task);
-                    }
-                    if (taskQueue.getQueue().size() < taskQueue.getCapacity()) {
-                        taskQueue.addTask(task);
-                    } else {
-                        rejectStrategy.reject(task);
-                    }
-                }
+                return;
+            }
+            else if (coreList.size() + extraList.size() < maxNums) {
+                threadFactory.createWorker(false, task).start();
+                return;
             }
         }finally {
             lock.unlock();
+        }
+        if(taskQueue.getCapacity() == null){//说明无界
+            taskQueue.addTask(task);
+            return;
+        }
+        Boolean success = taskQueue.addTask(task);
+        if(!success) {
+            rejectStrategy.reject(task);
         }
     }
 
@@ -78,28 +81,28 @@ public class ThreadPool {
      */
     public Future submit(Callable<Object> task){
         FutureTask futureTask = new FutureTask(task);
-        try {
+        try{
             lock.lock();
             if (coreList.size() < coreNums) {
                 threadFactory.createWorker(true, futureTask).start();
-            } else {
-                if (coreList.size() + extraList.size() < maxNums) {
-                    threadFactory.createWorker(false, futureTask).start();
-                } else {
-                    if(taskQueue.getCapacity() == null){//说明无界
-                        taskQueue.addTask(futureTask);
-                    }
-                    if (taskQueue.getQueue().size() < taskQueue.getCapacity()) {
-                        taskQueue.addTask(futureTask);
-                    } else {
-                        rejectStrategy.reject(futureTask);
-                    }
-                }
+                return futureTask;
             }
-            return futureTask;
+            else if (coreList.size() + extraList.size() < maxNums) {
+                threadFactory.createWorker(false, futureTask).start();
+                return futureTask;
+            }
         }finally {
             lock.unlock();
         }
+        if(taskQueue.getCapacity() == null){//说明无界
+            taskQueue.addTask(futureTask);
+            return futureTask;
+        }
+        Boolean success = taskQueue.addTask(futureTask);
+        if(success) {
+            return futureTask;
+        }
+         return rejectStrategy.reject(futureTask);
     }
 
     /**

@@ -49,16 +49,14 @@ public class ThreadPoolConfiguration {
             Constructor<?> rejectStrategyClassConstructor = rejectStrategyClass.getConstructor();
             rejectStrategy = (RejectStrategy) rejectStrategyClassConstructor.newInstance();
         }
-        return new ThreadPool(
-                new ThreadFactory(
-                        threadPoolProperties.getThreadName(),
+        return new ThreadPool(threadPoolProperties.getCoreNums(),
+                threadPoolProperties.getMaxNums(),
+                threadPoolProperties.getPoolName(),
+                new ThreadFactory(threadPoolProperties.getThreadName(),
                         threadPoolProperties.getIsDaemon(),
                         threadPoolProperties.getCoreDestroy(),
                         threadPoolProperties.getAliveTime()),
-                taskQueue,
-                rejectStrategy,
-                threadPoolProperties.getCoreNums(),
-                threadPoolProperties.getMaxNums(),
-                threadPoolProperties.getPoolName());
+                taskQueue,rejectStrategy);
     }
+
 }

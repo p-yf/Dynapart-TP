@@ -3,34 +3,38 @@ package com.yf.pool.worker;
 import com.yf.pool.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Getter
 @Setter
 public class Worker extends Thread {
     private Boolean isCore;
     private ThreadPool threadPool;
     private Boolean coreDestroy;//如果非核心线程就设置为null
-    private Integer aliveTime;
-    private Runnable onTimeTask;
-    private Runnable loopTask = ()->
+    private Integer aliveTime;//等于null的话则不进行销毁操作
+    private Runnable onTimeTask;//是指直接提交运行的任务
+    private Runnable loopTask = ()->//这里是循环从队列拿到任务
     {
         while (true) {
             try {
                 Runnable runnable;
                 if(isCore) {
-                    if(coreDestroy) {
+                    if(coreDestroy) {//核心线程并且允许销毁
                         runnable = threadPool.getTaskQueue().poll(aliveTime);
                         if(runnable == null){
                             threadPool.getCoreList().remove(this);
+                            log.info("核心线程"+getName()+"销毁");
                             break;
                         }
-                    }else{
+                    }else{//核心线程并且不允许销毁
                         runnable = threadPool.getTaskQueue().poll(null);
                     }
-                }else{
+                }else{//非核心线程
                     runnable = threadPool.getTaskQueue().poll(aliveTime);
                     if(runnable == null){
                         threadPool.getExtraList().remove(this);
+                        log.info("非核心线程"+getName()+"销毁");
                         break;
                     }
                 }
