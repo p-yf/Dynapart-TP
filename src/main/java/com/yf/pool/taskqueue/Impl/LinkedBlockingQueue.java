@@ -6,9 +6,6 @@ import lombok.Data;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * 链表结构的阻塞队列
@@ -44,19 +41,19 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
 
     /**
      * 获取任务
-     * @param aliveTime，如果为null就代表一直等待，如果不为null就代表等待aliveTime毫秒，如果等待超时则返回null
+     * @param waitTime，如果为null就代表一直等待，如果不为null就代表等待aliveTime毫秒，如果等待超时则返回null
      * @return
      * @throws InterruptedException
      */
     @Override
-    public Runnable poll(Integer aliveTime) throws InterruptedException {
+    public Runnable poll(Integer waitTime) throws InterruptedException {
         getWLock().lock(); // 可中断地获取锁
         try {
             // 循环检查：避免虚假唤醒（spurious wakeup）
             while (queue.isEmpty()) {
                 // 队列空，让当前线程阻塞等待
-                if(aliveTime!=null) {//表示有等待时间
-                    boolean await = getWCondition().await(Long.valueOf(aliveTime), TimeUnit.SECONDS);// 释放锁，进入等待状态
+                if(waitTime !=null) {//表示有等待时间
+                    boolean await = getWCondition().await(Long.valueOf(waitTime), TimeUnit.SECONDS);// 释放锁，进入等待状态
                     if(!await) {//表示超时
                         return null;
                     }

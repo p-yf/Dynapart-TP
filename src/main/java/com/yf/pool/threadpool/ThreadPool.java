@@ -239,7 +239,41 @@ public class ThreadPool {
         return true;
     }
 
+    /**
+     * 改变队列
+     */
+    public Boolean changeQueue(TaskQueue q,String qName){
+        if(q == null|| qName == null){
+            return false;
+        }
+        try {
+            TaskQueue oldQ = taskQueue;
+            oldQ.getWLock();
+            while(oldQ.getTaskNums() > 0){
+                Runnable task = taskQueue.poll(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
+                q.addTask(task);
+            }
+            this.queueName = qName;
+            this.taskQueue = q;
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            taskQueue.getWLock().unlock();
+        }
+        return true;
+    }
 
+    /**
+     * 改变拒绝策略,默认与拒绝策略无共享变量需要争抢，所以线程安全，不需要加锁
+     */
+    public Boolean changeRejectStrategy(RejectStrategy rejectStrategy,String rejectStrategyName){
+        if(rejectStrategy == null|| rejectStrategyName == null){
+            return false;
+        }
+        this.rejectStrategyName = rejectStrategyName;
+        this.rejectStrategy = rejectStrategy;
+        return true;
+    }
 
 
 

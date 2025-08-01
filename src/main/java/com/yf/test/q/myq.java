@@ -11,7 +11,7 @@ public class myq extends TaskQueue {
     }
 
     @Override
-    public Runnable poll(Integer aliveTime) throws InterruptedException {
+    public Runnable poll(Integer waitTime) throws InterruptedException {
         return null;
     }
 

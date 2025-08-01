@@ -34,7 +34,7 @@ public abstract class TaskQueue {
      * 获取任务
       * @return
      */
-    public abstract Runnable poll(Integer aliveTime) throws InterruptedException;
+    public abstract Runnable poll(Integer waitTime) throws InterruptedException;
 
     /**
      * 移除任务
