@@ -21,7 +21,7 @@ public class myq extends TaskQueue {
     }
 
     @Override
-    public int getSize() {
+    public int getTaskNums() {
         return 0;
     }
 }

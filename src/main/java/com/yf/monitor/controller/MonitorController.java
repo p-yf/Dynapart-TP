@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/monitor")
@@ -16,13 +15,6 @@ import java.util.Map;
 public class MonitorController {
 
     private ThreadPool threadPool;
-    /**
-     * 获取线程的信息
-     */
-    @GetMapping("/threads")
-    public Map<String, Map<Thread.State,Integer>> getThreadsInfo() {
-        return threadPool.getThreadsInfo();
-    }
 
     /**
      * 获取线程池的信息

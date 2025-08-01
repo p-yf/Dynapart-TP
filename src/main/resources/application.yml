@@ -13,3 +13,6 @@ fy:
     rejectStrategyName: mys
     monitor:
       enabled: true
+      fixedDelay: 5000
+server:
+  port: 8081

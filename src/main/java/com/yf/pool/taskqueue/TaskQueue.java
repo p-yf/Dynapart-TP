@@ -4,12 +4,21 @@ import com.yf.pool.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
 /**
  * 实现类需要保证线程安全
  */
 @Getter
 @Setter
 public abstract class TaskQueue {
+    private  final ReadWriteLock rwLock = new ReentrantReadWriteLock(true);
+    private  final Lock rLock = rwLock.readLock();
+    private  final Lock wLock = rwLock.writeLock();
+    private final Condition wCondition= getWLock().newCondition();
 
     private Integer capacity;
 
@@ -33,7 +42,7 @@ public abstract class TaskQueue {
     public abstract Boolean removeTask();
 
     /**
-     * 获取长度
+     * 获取任务数量长度
      */
-    public abstract int getSize();
+    public abstract int getTaskNums();
 }
