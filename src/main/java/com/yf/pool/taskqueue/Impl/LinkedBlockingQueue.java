@@ -1,7 +1,8 @@
 package com.yf.pool.taskqueue.Impl;
 
 import com.yf.pool.taskqueue.TaskQueue;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -10,11 +11,13 @@ import java.util.concurrent.TimeUnit;
 /**
  * 链表结构的阻塞队列
  */
-@Data
+@Setter
+@Getter
 public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
-    private Queue<Runnable> queue = new LinkedList<>();
+    private Queue<Runnable> q;
 
     public LinkedBlockingQueue(Integer capacity) {
+        q = new LinkedList<>();
         setCapacity(capacity);
     }
 
@@ -27,12 +30,12 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
         if (task == null) {
             throw new NullPointerException("任务不能为null");
         }
-        if(getCapacity() != null && getCapacity() > queue.size()) {//利用双重检查尽量增加性能
+        if(getCapacity() != null && getCapacity() > q.size()) {//利用双重检查尽量增加性能
             getWLock().lock(); // 获取锁
             try {
                 if(getTaskNums()<getCapacity()) {
                     // 添加任务到队列
-                    boolean added = queue.add(task);
+                    boolean added = q.add(task);
                     // 唤醒等待的线程（可能有线程在poll时阻塞）
                     getWCondition().signal(); // 唤醒一个等待的线程
                     return added;
@@ -55,8 +58,8 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     public Runnable poll(Integer waitTime) throws InterruptedException {
         getWLock().lock(); // 可中断地获取锁
         try {
-            // 循环检查：避免虚假唤醒（spurious wakeup）
-            while (queue.isEmpty()) {
+            // 循环检查：避免虚假唤醒
+            while (q.isEmpty()) {
                 // 队列空，让当前线程阻塞等待
                 if(waitTime !=null) {//表示有等待时间
                     boolean await = getWCondition().await(Long.valueOf(waitTime), TimeUnit.SECONDS);// 释放锁，进入等待状态
@@ -68,7 +71,7 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
                 }
             }
             // 队列有任务，取出并返回
-            return queue.poll();
+            return q.poll();
         } finally {
             getWLock().unlock(); // 确保锁释放
         }
@@ -82,9 +85,9 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     public Boolean removeTask() {
         getWLock().lock();
         try {
-            if (queue.isEmpty()) {
+            if (q.isEmpty()) {
             } else {
-                queue.remove();
+                q.remove();
             }
         }finally {
             getWLock().unlock();
@@ -96,7 +99,7 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     public int getExactTaskNums() {
         getRLock().lock();
         try {
-            return queue.size();
+            return q.size();
         } finally {
             getRLock().unlock();
         }
@@ -104,6 +107,6 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
 
     @Override
     public int getTaskNums() {
-        return queue.size();
+        return q.size();
     }
 }

@@ -5,6 +5,7 @@ import com.yf.pool.constant.OfRejectStrategy;
 import com.yf.pool.constant.OfWorker;
 import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
+import com.yf.pool.task.PriorityTask;
 import com.yf.pool.taskqueue.TaskQueue;
 import com.yf.pool.threadfactory.ThreadFactory;
 import com.yf.pool.worker.Worker;
@@ -92,6 +93,8 @@ public class ThreadPool {
         }
     }
 
+
+
     /**
      * 提交任务，有返回值
      *
@@ -121,6 +124,47 @@ public class ThreadPool {
         }
         return rejectStrategy.reject(futureTask);
     }
+
+    /**
+     * 执行优先级任务
+     * @param task
+     */
+    public void execute(PriorityTask task) {
+        execute( task);
+    }
+
+
+
+    public Future submit(PriorityTask pTask) {
+
+        Callable task = (Callable)((PriorityCallable)pTask);
+        FutureTask futureTask = new FutureTask(task);
+        try {
+            lock.lock();
+            if (coreList.size() < coreNums) {
+                threadFactory.createWorker(true, futureTask).start();
+                return futureTask;
+            } else if (coreList.size() + extraList.size() < maxNums) {
+                threadFactory.createWorker(false, futureTask).start();
+                return futureTask;
+            }
+        } finally {
+            lock.unlock();
+        }
+        if (taskQueue.getCapacity() == null) {//说明无界
+            taskQueue.addTask(futureTask);
+            return futureTask;
+        }
+        Boolean success = taskQueue.addTask(futureTask);
+        if (success) {
+            return futureTask;
+        }
+        return rejectStrategy.reject(futureTask);
+    }
+
+
+
+
 
 //    =======================================================
 //    以下是对于线程池相关参数的读写操作，用来提供监控信息和修改参数，不涉及到线程池运行过程的自动调控，所以读取信息全部无锁
