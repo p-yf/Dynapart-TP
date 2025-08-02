@@ -215,7 +215,7 @@ public class ThreadPool {
     }
 
     //销毁线程
-    public Boolean destroyWorkers(int coreNums, int extraNums) {
+    public void destroyWorkers(int coreNums, int extraNums) {
         if (coreNums > 0) {
             int i = 0;
             for (Worker worker : getCoreList()) {
@@ -236,7 +236,6 @@ public class ThreadPool {
                 }
             }
         }
-        return true;
     }
 
     /**
@@ -246,9 +245,9 @@ public class ThreadPool {
         if(q == null|| qName == null){
             return false;
         }
+        TaskQueue oldQ = taskQueue;
         try {
-            TaskQueue oldQ = taskQueue;
-            oldQ.getWLock();
+            oldQ.getWLock().lock();
             while(oldQ.getTaskNums() > 0){
                 Runnable task = taskQueue.poll(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
                 q.addTask(task);
@@ -258,7 +257,7 @@ public class ThreadPool {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            taskQueue.getWLock().unlock();
+            oldQ.getWLock().unlock();
         }
         return true;
     }

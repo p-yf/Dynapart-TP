@@ -7,15 +7,15 @@ import lombok.Data;
  */
 @Data
 public class PoolInfo {
-    public  Integer coreNums;//核心线程数
-    public  Integer maxNums;//最大线程数
-    public  String poolName;//线程池名称
-    public  String threadName;//线程名称
-    public  Boolean isDaemon;//是否守护线程
-    public  Boolean coreDestroy;//核心线程是否可销毁
-    public  Integer aliveTime;//线程空闲时间
-    public  String queueName;//队列名称
-    public  Integer queueCapacity;//队列容量
-    public  String rejectStrategyName;//拒绝策略名称
+    private  Integer coreNums;//核心线程数
+    private  Integer maxNums;//最大线程数
+    private  String poolName;//线程池名称
+    private  String threadName;//线程名称
+    private  Boolean isDaemon;//是否守护线程
+    private  Boolean coreDestroy;//核心线程是否可销毁
+    private  Integer aliveTime;//线程空闲时间
+    private  String queueName;//队列名称
+    private  Integer queueCapacity;//队列容量
+    private  String rejectStrategyName;//拒绝策略名称
 
 }

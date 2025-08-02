@@ -9,6 +9,11 @@ import org.springframework.util.MultiValueMap;
 public class RejectStrategyCondition implements Condition {
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        //当配置中是可以更换拒绝策略的时候，全部被扫描到的策略都注册成bean
+        String replaceable = context.getEnvironment().getProperty("fy.thread-pool.monitor.rsReplaceable");
+        if(replaceable==null||replaceable.equals("true")){
+            return true;
+        }
         // 1. 获取@注解的属性
         MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(RejectStrategyBean.class.getName());
         if (attributes == null) {

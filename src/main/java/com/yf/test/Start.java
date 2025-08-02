@@ -2,10 +2,14 @@ package com.yf.test;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 @SpringBootApplication
 public class Start {
     public static void main(String[] args) {
-        SpringApplication.run(Start.class, args);
+        ConfigurableApplicationContext run = SpringApplication.run(Start.class, args);
+        for (String beanDefinitionName : run.getBeanDefinitionNames()) {
+            System.out.println(beanDefinitionName);
+        }
     }
 }

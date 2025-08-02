@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 
 @Slf4j
@@ -16,7 +17,7 @@ import org.springframework.context.annotation.Bean;
 @ConditionalOnProperty(prefix = "fy.thread-pool.monitor", name = "enabled", havingValue = "true")
 public class WebAutoConfiguration {
     @Bean
-    public MonitorController monitorController(ThreadPool threadPool){
-        return new MonitorController(threadPool);
+    public MonitorController monitorController(ThreadPool threadPool, ApplicationContext context){
+        return new MonitorController(threadPool,context);
     }
 }

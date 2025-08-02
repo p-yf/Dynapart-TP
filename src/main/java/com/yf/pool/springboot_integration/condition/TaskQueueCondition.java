@@ -9,6 +9,11 @@ import org.springframework.util.MultiValueMap;
 public class TaskQueueCondition implements Condition {
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {
+        //当配置中是可以更换拒绝策略的时候，全部策略都注册成bean
+        String replaceable = context.getEnvironment().getProperty("fy.thread-pool.monitor.qReplaceable");
+        if(replaceable==null||replaceable.equals("true")){
+            return true;
+        }
         // 1. 获取注解的属性
         MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(TaskQueueBean.class.getName());
         if (attributes == null) {

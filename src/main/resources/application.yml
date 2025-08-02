@@ -8,11 +8,13 @@ fy:
     isDaemon: true
     coreDestroy: false
     aliveTime: 5
-    queueName: linked
+    queueName: myq
     queueCapacity:
     rejectStrategyName: mys
     monitor:
       enabled: true
       fixedDelay: 5000
+      qReplaceable: true  #默认是开启的（不写这个key默认开启，写了后只有value为true才是开启，以下同理）
+      rsReplaceable: true
 server:
   port: 8081
