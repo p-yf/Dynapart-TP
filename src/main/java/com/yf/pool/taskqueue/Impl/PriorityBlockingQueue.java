@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * @author yyf
  * @date 2025/8/2 14:09
- * @description
+ * @description:使用优先级队列的时候，提交任务可以直接用普通任务，默认优先级为0最小。也可以用优先级任务，优先级任务需要将普通任务封装进优先级任务，并且指定优先级
  */
 @Setter
 @Getter
