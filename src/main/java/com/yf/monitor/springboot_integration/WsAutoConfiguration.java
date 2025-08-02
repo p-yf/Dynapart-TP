@@ -23,7 +23,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 public class WsAutoConfiguration implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry.addHandler(new ThreadPoolWebSocketHandler(), "/push")
+        registry.addHandler(new ThreadPoolWebSocketHandler(), "/monitor/threads")
                 .setAllowedOrigins("*");
     }
 

@@ -1,10 +1,13 @@
-package com.yf.test.q;
+package com.yf.pool.taskqueue.Impl;
 
-import com.yf.pool.springboot_integration.annotation.TaskQueueBean;
 import com.yf.pool.taskqueue.TaskQueue;
 
-@TaskQueueBean("myqn")
-public class myqn extends TaskQueue {
+/**
+ * @author yyf
+ * @date 2025/8/2 14:09
+ * @description
+ */
+public class PriorityBlockingQueue extends TaskQueue {
     @Override
     public Boolean addTask(Runnable task) {
         return null;

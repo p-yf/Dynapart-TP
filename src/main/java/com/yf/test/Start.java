@@ -8,8 +8,5 @@ import org.springframework.context.ConfigurableApplicationContext;
 public class Start {
     public static void main(String[] args) {
         ConfigurableApplicationContext run = SpringApplication.run(Start.class, args);
-        for (String beanDefinitionName : run.getBeanDefinitionNames()) {
-            System.out.println(beanDefinitionName);
-        }
     }
 }

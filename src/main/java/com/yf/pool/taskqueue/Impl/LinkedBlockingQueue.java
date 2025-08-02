@@ -27,16 +27,22 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
         if (task == null) {
             throw new NullPointerException("任务不能为null");
         }
-        getWLock().lock(); // 获取锁
-        try {
-            // 添加任务到队列
-            boolean added = queue.add(task);
-            // 唤醒等待的线程（可能有线程在poll时阻塞）
-            getWCondition().signal(); // 唤醒一个等待的线程
-            return added;
-        } finally {
-            getWLock().unlock(); // 确保锁释放
+        if(getCapacity() != null && getCapacity() > queue.size()) {//利用双重检查尽量增加性能
+            getWLock().lock(); // 获取锁
+            try {
+                if(getTaskNums()<getCapacity()) {
+                    // 添加任务到队列
+                    boolean added = queue.add(task);
+                    // 唤醒等待的线程（可能有线程在poll时阻塞）
+                    getWCondition().signal(); // 唤醒一个等待的线程
+                    return added;
+                }
+                return false;
+            } finally {
+                getWLock().unlock(); // 确保锁释放
+            }
         }
+        return false;
     }
 
     /**
@@ -87,12 +93,17 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     }
 
     @Override
-    public int getTaskNums() {
+    public int getExactTaskNums() {
         getRLock().lock();
         try {
             return queue.size();
         } finally {
             getRLock().unlock();
         }
+    }
+
+    @Override
+    public int getTaskNums() {
+        return queue.size();
     }
 }

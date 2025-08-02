@@ -10,10 +10,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Data
 public class ThreadFactory {
     private ThreadPool threadPool;
-    private String threadName = "default";// 线程名称
-    private Boolean isDaemon = false;//是否守护线程
-    private Boolean coreDestroy = false;//是否销毁核心线程
-    private Integer aliveTime = null;//空闲存活时间 :null代表不销毁
+    private String threadName;// 线程名称
+    private Boolean isDaemon;//是否守护线程
+    private Boolean coreDestroy;//是否销毁核心线程
+    private Integer aliveTime;//空闲存活时间 :null代表不销毁
     private AtomicInteger threadNum = new AtomicInteger(1);// 线程编号
 
 
@@ -34,13 +34,4 @@ public class ThreadFactory {
         return worker;
     }
 
-    public Worker createWorker(Boolean isCore, FutureTask task){
-        Worker worker = new Worker(threadPool,isCore,threadName+threadNum.getAndIncrement(),isDaemon,coreDestroy,aliveTime,task);
-        if(isCore) {
-            threadPool.getCoreList().add(worker);
-        }else{
-            threadPool.getExtraList().add(worker);
-        }
-        return worker;
-    }
 }

@@ -42,7 +42,12 @@ public abstract class TaskQueue {
     public abstract Boolean removeTask();
 
     /**
-     * 获取任务数量长度
+     * 获取任务数量
      */
-    public abstract int getTaskNums();
+    public abstract int getExactTaskNums();//精准获取任务数量，有读锁
+
+    /**
+     * 获取任务数量
+     */
+    public abstract int getTaskNums();//获取任务数量，无锁
 }

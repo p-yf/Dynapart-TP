@@ -9,13 +9,9 @@ import com.yf.pool.threadpool.ThreadPool;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
 
 
 @RestController
@@ -51,7 +47,11 @@ public class MonitorController {
       * return true/false 表示成功与否
      */
     @PutMapping("/worker")
-    public Boolean changeWorkerParams(Integer coreNums, Integer maxNums, Boolean coreDestroy, Integer aliveTime,Boolean isDaemon) {
+    public Boolean changeWorkerParams(Integer coreNums,
+                                      Integer maxNums,
+                                      Boolean coreDestroy,
+                                      Integer aliveTime,
+                                      Boolean isDaemon) {
         return threadPool.changeWorkerParams(coreNums, maxNums, coreDestroy, aliveTime,isDaemon);
     }
 

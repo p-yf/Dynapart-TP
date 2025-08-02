@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>线程池监控中心 - 监控页</title>
+    <!-- 引入外部资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+
+    <!-- 配置Tailwind自定义主题 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        success: '#52C41A',
+                        warning: '#FAAD14',
+                        danger: '#FF4D4F',
+                        info: '#1890FF',
+                        purple: '#722ED1',
+                        dark: '#1F2937',
+                        light: '#F9FAFB'
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .stat-card {
+                @apply bg-white rounded-lg p-4 shadow-sm transition-all duration-300 hover:shadow-md;
+            }
+            .info-card {
+                @apply bg-white rounded-lg p-5 shadow-sm border border-gray-100;
+            }
+            .nav-active {
+                @apply text-primary border-primary font-medium;
+            }
+            .badge {
+                @apply text-xs px-2 py-1 rounded-full font-medium;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-inter text-dark min-h-screen">
+<!-- 顶部导航栏 -->
+<header class="bg-white sticky top-0 z-50 shadow-sm">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center py-4">
+            <div class="flex items-center space-x-2">
+                <i class="fa fa-tasks text-primary text-2xl"></i>
+                <h1 class="text-xl font-bold text-gray-800">线程池监控中心</h1>
+            </div>
+
+            <!-- 页面导航 -->
+            <nav class="hidden md:flex items-center space-x-8">
+                <a href="index.html" class="nav-active border-b-2 px-1 py-5 transition-colors">
+                    <i class="fa fa-dashboard mr-1"></i> 监控页
+                </a>
+                <a href="configuration.html" class="text-gray-600 border-b-2 border-transparent hover:text-primary px-1 py-5 transition-colors">
+                    <i class="fa fa-cog mr-1"></i> 配置页
+                </a>
+            </nav>
+
+            <!-- 移动端菜单按钮 -->
+            <button class="md:hidden text-gray-600 hover:text-primary" id="mobile-menu-button">
+                <i class="fa fa-bars text-xl"></i>
+            </button>
+
+            <!-- 刷新控制 -->
+            <div class="hidden md:flex items-center space-x-4">
+                <div class="flex items-center text-sm text-gray-500">
+                    <i class="fa fa-refresh mr-2" id="refresh-icon"></i>
+                    <span id="last-updated">最后更新: 从未更新</span>
+                </div>
+                <button id="refresh-btn" class="bg-primary hover:bg-primary/90 text-white px-3 py-1.5 rounded-md text-sm flex items-center transition-colors">
+                    <i class="fa fa-refresh mr-1"></i> 刷新
+                </button>
+            </div>
+        </div>
+
+        <!-- 移动端菜单 -->
+        <div class="md:hidden hidden" id="mobile-menu">
+            <div class="flex flex-col space-y-3 pb-4">
+                <a href="index.html" class="nav-active px-2 py-2 rounded-md">
+                    <i class="fa fa-dashboard mr-1"></i> 监控页
+                </a>
+                <a href="configuration.html" class="text-gray-600 hover:text-primary px-2 py-2 rounded-md">
+                    <i class="fa fa-cog mr-1"></i> 配置页
+                </a>
+                <div class="flex items-center justify-between pt-2 border-t border-gray-100">
+                    <span id="mobile-last-updated" class="text-sm text-gray-500">最后更新: 从未更新</span>
+                    <button id="mobile-refresh-btn" class="bg-primary hover:bg-primary/90 text-white px-3 py-1 rounded-md text-sm">
+                        <i class="fa fa-refresh mr-1"></i> 刷新
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- 主内容区 -->
+<main class="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- 线程池名称和基本状态 -->
+    <div class="info-card mb-6">
+        <div class="flex flex-col md:flex-row md:items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold text-gray-800 mb-1" id="pool-name">-</h2>
+                <p class="text-gray-500 text-sm">线程命名: <span id="thread-name" class="font-medium">-</span></p>
+            </div>
+            <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                <span class="badge bg-blue-100 text-blue-800" id="queue-name">-</span>
+                <span class="badge bg-purple-100 text-purple-800" id="reject-strategy">-</span>
+                <span id="daemon-badge" class="badge bg-gray-100 text-gray-800">-</span>
+                <span id="core-destroy-badge" class="badge bg-gray-100 text-gray-800">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要指标区域 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- 核心线程数 -->
+        <div class="stat-card border-l-4 border-primary">
+            <div class="text-sm text-gray-500">核心线程数</div>
+            <div class="text-2xl font-bold mt-1" id="core-nums">-</div>
+            <div class="mt-2 text-xs text-gray-400">配置的核心线程数量</div>
+        </div>
+
+        <!-- 最大线程数 -->
+        <div class="stat-card border-l-4 border-info">
+            <div class="text-sm text-gray-500">最大线程数</div>
+            <div class="text-2xl font-bold mt-1" id="max-nums">-</div>
+            <div class="mt-2 text-xs text-gray-400">允许的最大线程数量</div>
+        </div>
+
+        <!-- 队列任务数 -->
+        <div class="stat-card border-l-4 border-warning">
+            <div class="text-sm text-gray-500">队列任务数</div>
+            <div class="text-2xl font-bold mt-1" id="queue-size">-</div>
+            <div class="mt-2 text-xs text-gray-400">
+                队列容量: <span id="queue-capacity" class="font-medium">-</span>
+                <span class="ml-1" id="queue-usage">(-%)</span>
+            </div>
+        </div>
+
+        <!-- 线程空闲时间 -->
+        <div class="stat-card border-l-4 border-secondary">
+            <div class="text-sm text-gray-500">线程空闲时间</div>
+            <div class="text-2xl font-bold mt-1" id="alive-time">-</div>
+            <div class="mt-2 text-xs text-gray-400">超过此时长将被回收</div>
+        </div>
+    </div>
+
+    <!-- 线程状态趋势图（新增） -->
+    <div class="info-card mb-6">
+        <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <i class="fa fa-line-chart text-primary mr-2"></i> 线程状态变化趋势
+        </h3>
+        <div class="h-80">
+            <canvas id="thread-trend-chart"></canvas>
+        </div>
+        <div class="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-success inline-block mr-1"></span> 运行中 (RUNNABLE)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-warning inline-block mr-1"></span> 阻塞中 (BLOCKED)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-info inline-block mr-1"></span> 等待中 (WAITING)</div>
+            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-purple inline-block mr-1"></span> 限时等待 (TIMED_WAITING)</div>
+        </div>
+    </div>
+
+    <!-- 线程状态分布 -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+        <!-- 核心线程状态图表 -->
+        <div class="info-card">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fa fa-th-large text-primary mr-2"></i> 核心线程状态分布
+            </h3>
+            <div class="h-64">
+                <canvas id="core-threads-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- 额外线程状态图表 -->
+        <div class="info-card">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fa fa-th-large text-info mr-2"></i> 额外线程状态分布
+            </h3>
+            <div class="h-64">
+                <canvas id="extra-threads-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- 线程状态详情 -->
+    <div class="info-card mb-6">
+        <h3 class="text-lg font-semibold mb-4 flex items-center">
+            <i class="fa fa-list-alt text-primary mr-2"></i> 线程状态详情
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead>
+                <tr>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">线程类型</th>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">运行中 (RUNNABLE)</th>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">阻塞中 (BLOCKED)</th>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">等待中 (WAITING)</th>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">限时等待 (TIMED_WAITING)</th>
+                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">总数</th>
+                </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                <tr id="core-threads-row">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-primary">核心线程</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-runnable">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-blocked">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-waiting">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-timed-waiting">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 core-total">-</td>
+                </tr>
+                <tr id="extra-threads-row">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-info">额外线程</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-runnable">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-blocked">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-waiting">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-timed-waiting">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 extra-total">-</td>
+                </tr>
+                <tr class="bg-gray-50">
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-700">总计</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-runnable">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-blocked">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-waiting">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-timed-waiting">-</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-700 total-all">-</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<!-- 页脚 -->
+<footer class="bg-white border-t border-gray-200 py-4">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center text-sm text-gray-500">
+            <p>线程池监控系统 &copy; 2023 - 数据来源于实时监控</p>
+        </div>
+    </div>
+</footer>
+
+<script>
+    // 图表实例
+    let coreThreadsChart, extraThreadsChart, threadTrendChart;
+
+    // 存储历史数据用于趋势图 (最多保留30个数据点)
+    const trendData = {
+        timestamps: [],
+        runnable: [],
+        blocked: [],
+        waiting: [],
+        timedWaiting: []
+    };
+    const MAX_DATA_POINTS = 30;
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', function() {
+        // 初始化图表
+        initCharts();
+
+        // 绑定事件
+        bindEvents();
+
+        // 加载初始数据
+        loadThreadPoolInfo();
+        loadQueueSize();
+
+        // 连接WebSocket
+        connectWebSocket();
+    });
+
+    // 初始化图表
+    function initCharts() {
+        // 核心线程图表
+        const coreCtx = document.getElementById('core-threads-chart').getContext('2d');
+        coreThreadsChart = new Chart(coreCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['运行中', '阻塞中', '等待中', '限时等待'],
+                datasets: [{
+                    data: [0, 0, 0, 0],
+                    backgroundColor: [
+                        '#52C41A', // 成功-绿色
+                        '#FAAD14', // 警告-黄色
+                        '#1890FF', // 信息-蓝色
+                        '#722ED1'  // 紫色
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+
+        // 额外线程图表
+        const extraCtx = document.getElementById('extra-threads-chart').getContext('2d');
+        extraThreadsChart = new Chart(extraCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['运行中', '阻塞中', '等待中', '限时等待'],
+                datasets: [{
+                    data: [0, 0, 0, 0],
+                    backgroundColor: [
+                        '#52C41A', // 成功-绿色
+                        '#FAAD14', // 警告-黄色
+                        '#1890FF', // 信息-蓝色
+                        '#722ED1'  // 紫色
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    }
+                }
+            }
+        });
+
+        // 线程状态趋势图 (新增)
+        const trendCtx = document.getElementById('thread-trend-chart').getContext('2d');
+        threadTrendChart = new Chart(trendCtx, {
+            type: 'line',
+            data: {
+                labels: trendData.timestamps,
+                datasets: [
+                    {
+                        label: '运行中 (RUNNABLE)',
+                        data: trendData.runnable,
+                        borderColor: '#52C41A',
+                        backgroundColor: 'rgba(82, 196, 26, 0.1)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: '阻塞中 (BLOCKED)',
+                        data: trendData.blocked,
+                        borderColor: '#FAAD14',
+                        backgroundColor: 'rgba(250, 173, 20, 0.1)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: '等待中 (WAITING)',
+                        data: trendData.waiting,
+                        borderColor: '#1890FF',
+                        backgroundColor: 'rgba(24, 144, 255, 0.1)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    },
+                    {
+                        label: '限时等待 (TIMED_WAITING)',
+                        data: trendData.timedWaiting,
+                        borderColor: '#722ED1',
+                        backgroundColor: 'rgba(114, 46, 209, 0.1)',
+                        tension: 0.3,
+                        fill: false,
+                        pointRadius: 2,
+                        pointHoverRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: '时间'
+                        },
+                        ticks: {
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: '线程数量'
+                        },
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false // 图例在图表下方单独展示
+                    },
+                    tooltip: {
+                        callbacks: {
+                            title: function(tooltipItems) {
+                                return `时间: ${tooltipItems[0].label}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // 绑定事件
+    function bindEvents() {
+        // 移动端菜单切换
+        document.getElementById('mobile-menu-button').addEventListener('click', function() {
+            const mobileMenu = document.getElementById('mobile-menu');
+            mobileMenu.classList.toggle('hidden');
+        });
+
+        // 刷新按钮
+        document.getElementById('refresh-btn').addEventListener('click', refreshData);
+        document.getElementById('mobile-refresh-btn').addEventListener('click', refreshData);
+    }
+
+    // 刷新数据
+    function refreshData() {
+        // 显示加载状态
+        const refreshIcon = document.getElementById('refresh-icon');
+        refreshIcon.classList.add('fa-spin');
+
+        // 加载数据
+        Promise.all([
+            loadThreadPoolInfo(),
+            loadQueueSize()
+        ]).then(() => {
+            // 更新时间
+            updateLastUpdatedTime();
+
+            // 停止加载动画
+            refreshIcon.classList.remove('fa-spin');
+        }).catch(error => {
+            console.error('刷新数据失败:', error);
+            refreshIcon.classList.remove('fa-spin');
+        });
+    }
+
+    // 加载线程池信息
+    function loadThreadPoolInfo() {
+        return fetch('http://localhost:8080/monitor/pool')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('获取线程池信息失败');
+                }
+                return response.json();
+            })
+            .then(data => {
+                // 更新页面数据
+                document.getElementById('pool-name').textContent = data.poolName || '未知';
+                document.getElementById('thread-name').textContent = data.threadName || '未知';
+                document.getElementById('core-nums').textContent = data.coreNums || 0;
+                document.getElementById('max-nums').textContent = data.maxNums || 0;
+                document.getElementById('queue-name').textContent = data.queueName || '未知队列';
+                document.getElementById('queue-capacity').textContent = data.queueCapacity || 0;
+                document.getElementById('reject-strategy').textContent = data.rejectStrategyName || '未知策略';
+                document.getElementById('alive-time').textContent = (data.aliveTime || 0) + ' s';
+
+                // 更新徽章状态
+                document.getElementById('daemon-badge').textContent =
+                    data.isDaemon ? '守护线程' : '非守护线程';
+                document.getElementById('daemon-badge').className =
+                    data.isDaemon ? 'badge bg-blue-100 text-blue-800' : 'badge bg-gray-100 text-gray-800';
+
+                document.getElementById('core-destroy-badge').textContent =
+                    data.coreDestroy ? '核心线程可销毁' : '核心线程不可销毁';
+                document.getElementById('core-destroy-badge').className =
+                    data.coreDestroy ? 'badge bg-green-100 text-green-800' : 'badge bg-orange-100 text-orange-800';
+            })
+            .catch(error => {
+                console.error('加载线程池信息失败:', error);
+                throw error;
+            });
+    }
+
+    // 加载队列大小
+    function loadQueueSize() {
+        return fetch('http://localhost:8080/monitor/tasks')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('获取队列大小失败');
+                }
+                return response.text().then(text => parseInt(text));
+            })
+            .then(size => {
+                const queueSizeEl = document.getElementById('queue-size');
+                const queueCapacityEl = document.getElementById('queue-capacity');
+                const queueUsageEl = document.getElementById('queue-usage');
+
+                queueSizeEl.textContent = size;
+
+                // 计算队列使用率
+                const capacity = parseInt(queueCapacityEl.textContent) || 0;
+                if (capacity > 0) {
+                    const usage = Math.round((size / capacity) * 100);
+                    queueUsageEl.textContent = `(${usage}%)`;
+
+                    // 根据使用率设置颜色
+                    if (usage > 80) {
+                        queueSizeEl.className = 'text-2xl font-bold mt-1 text-danger';
+                        queueUsageEl.className = 'ml-1 text-danger';
+                    } else if (usage > 50) {
+                        queueSizeEl.className = 'text-2xl font-bold mt-1 text-warning';
+                        queueUsageEl.className = 'ml-1 text-warning';
+                    } else {
+                        queueSizeEl.className = 'text-2xl font-bold mt-1';
+                        queueUsageEl.className = 'ml-1';
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('加载队列大小失败:', error);
+                throw error;
+            });
+    }
+
+    // 连接WebSocket
+    function connectWebSocket() {
+        // 确定WebSocket协议（http对应ws，https对应wss）
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUri = `${protocol}//localhost:8080/monitor/threads`;
+
+        const websocket = new WebSocket(wsUri);
+
+        websocket.onopen = function(evt) {
+            console.log('WebSocket连接已打开');
+        };
+
+        websocket.onclose = function(evt) {
+            console.log('WebSocket连接已关闭，将在5秒后尝试重连');
+            // 5秒后重连
+            setTimeout(connectWebSocket, 5000);
+        };
+
+        websocket.onmessage = function(evt) {
+            try {
+                const data = JSON.parse(evt.data);
+                updateThreadsInfo(data);
+                updateLastUpdatedTime();
+            } catch (e) {
+                console.error('解析WebSocket数据失败:', e);
+            }
+        };
+
+        websocket.onerror = function(evt) {
+            console.error('WebSocket错误:', evt);
+        };
+    }
+
+    // 更新线程信息
+    function updateThreadsInfo(data) {
+        // 处理核心线程数据
+        const coreThreads = data.core || {};
+        updateThreadStats('core', coreThreads);
+        updateChart(coreThreadsChart, coreThreads);
+
+        // 处理额外线程数据
+        const extraThreads = data.extra || {};
+        updateThreadStats('extra', extraThreads);
+        updateChart(extraThreadsChart, extraThreads);
+
+        // 计算总计
+        const totals = calculateTotalStats();
+
+        // 更新趋势图数据
+        updateTrendData(totals);
+    }
+
+    // 更新线程状态统计
+    function updateThreadStats(prefix, threads) {
+        const runnable = threads.RUNNABLE || 0;
+        const blocked = threads.BLOCKED || 0;
+        const waiting = threads.WAITING || 0;
+        const timedWaiting = threads.TIMED_WAITING || 0;
+        const total = runnable + blocked + waiting + timedWaiting;
+
+        document.querySelector(`.${prefix}-runnable`).textContent = runnable;
+        document.querySelector(`.${prefix}-blocked`).textContent = blocked;
+        document.querySelector(`.${prefix}-waiting`).textContent = waiting;
+        document.querySelector(`.${prefix}-timed-waiting`).textContent = timedWaiting;
+        document.querySelector(`.${prefix}-total`).textContent = total;
+    }
+
+    // 计算总统计
+    function calculateTotalStats() {
+        const coreRunnable = parseInt(document.querySelector('.core-runnable').textContent) || 0;
+        const coreBlocked = parseInt(document.querySelector('.core-blocked').textContent) || 0;
+        const coreWaiting = parseInt(document.querySelector('.core-waiting').textContent) || 0;
+        const coreTimedWaiting = parseInt(document.querySelector('.core-timed-waiting').textContent) || 0;
+
+        const extraRunnable = parseInt(document.querySelector('.extra-runnable').textContent) || 0;
+        const extraBlocked = parseInt(document.querySelector('.extra-blocked').textContent) || 0;
+        const extraWaiting = parseInt(document.querySelector('.extra-waiting').textContent) || 0;
+        const extraTimedWaiting = parseInt(document.querySelector('.extra-timed-waiting').textContent) || 0;
+
+        const totalRunnable = coreRunnable + extraRunnable;
+        const totalBlocked = coreBlocked + extraBlocked;
+        const totalWaiting = coreWaiting + extraWaiting;
+        const totalTimedWaiting = coreTimedWaiting + extraTimedWaiting;
+        const totalAll = totalRunnable + totalBlocked + totalWaiting + totalTimedWaiting;
+
+        document.querySelector('.total-runnable').textContent = totalRunnable;
+        document.querySelector('.total-blocked').textContent = totalBlocked;
+        document.querySelector('.total-waiting').textContent = totalWaiting;
+        document.querySelector('.total-timed-waiting').textContent = totalTimedWaiting;
+        document.querySelector('.total-all').textContent = totalAll;
+
+        // 返回总计数据用于趋势图
+        return {
+            runnable: totalRunnable,
+            blocked: totalBlocked,
+            waiting: totalWaiting,
+            timedWaiting: totalTimedWaiting
+        };
+    }
+
+    // 更新趋势图数据
+    function updateTrendData(totals) {
+        const now = new Date();
+        // 格式化时间为 HH:MM:SS
+        const timeStr = now.toTimeString().slice(0, 8);
+
+        // 添加新数据点
+        trendData.timestamps.push(timeStr);
+        trendData.runnable.push(totals.runnable);
+        trendData.blocked.push(totals.blocked);
+        trendData.waiting.push(totals.waiting);
+        trendData.timedWaiting.push(totals.timedWaiting);
+
+        // 如果数据点超过最大值，移除最旧的数据
+        if (trendData.timestamps.length > MAX_DATA_POINTS) {
+            trendData.timestamps.shift();
+            trendData.runnable.shift();
+            trendData.blocked.shift();
+            trendData.waiting.shift();
+            trendData.timedWaiting.shift();
+        }
+
+        // 更新图表
+        threadTrendChart.data.labels = trendData.timestamps;
+        threadTrendChart.data.datasets[0].data = trendData.runnable;
+        threadTrendChart.data.datasets[1].data = trendData.blocked;
+        threadTrendChart.data.datasets[2].data = trendData.waiting;
+        threadTrendChart.data.datasets[3].data = trendData.timedWaiting;
+        threadTrendChart.update();
+    }
+
+    // 更新图表数据
+    function updateChart(chart, threads) {
+        chart.data.datasets[0].data = [
+            threads.RUNNABLE || 0,
+            threads.BLOCKED || 0,
+            threads.WAITING || 0,
+            threads.TIMED_WAITING || 0
+        ];
+        chart.update();
+    }
+
+    // 更新最后更新时间
+    function updateLastUpdatedTime() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        const dateStr = now.toLocaleDateString();
+        const formattedTime = `${dateStr} ${timeStr}`;
+
+        document.getElementById('last-updated').textContent = `最后更新: ${formattedTime}`;
+        document.getElementById('mobile-last-updated').textContent = `最后更新: ${formattedTime}`;
+    }
+</script>
+</body>
+</html>

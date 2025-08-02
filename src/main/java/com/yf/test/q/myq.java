@@ -21,6 +21,11 @@ public class myq extends TaskQueue {
     }
 
     @Override
+    public int getExactTaskNums() {
+        return 0;
+    }
+
+    @Override
     public int getTaskNums() {
         return 0;
     }
