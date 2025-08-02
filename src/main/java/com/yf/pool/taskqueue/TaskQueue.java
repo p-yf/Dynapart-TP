@@ -9,6 +9,11 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 /**
  * 实现类需要保证线程安全
  */

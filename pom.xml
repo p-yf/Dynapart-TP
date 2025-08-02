@@ -28,13 +28,11 @@
             <optional>true</optional>
         </dependency>
 
-        <!--用于集成springboot的自动配置-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
-        <!--        只引入注解-->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>

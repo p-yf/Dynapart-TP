@@ -16,6 +16,11 @@ import org.springframework.context.annotation.Bean;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 @AutoConfiguration
 @EnableConfigurationProperties(ThreadPoolProperties.class)
 @ConditionalOnProperty(prefix = "fy.thread-pool", name = "enabled", havingValue = "true")

@@ -11,6 +11,11 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 @Getter
 @Setter
 public abstract class  RejectStrategy {
@@ -21,6 +26,5 @@ public abstract class  RejectStrategy {
 
     private ThreadPool threadPool;
     public abstract void reject (Runnable task);//处理普通任务的
-    public abstract  Future reject (FutureTask task);//处理futureTask的，有返回值是为了判断任务是否被丢弃,更高的灵活性
 
 }

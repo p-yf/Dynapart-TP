@@ -3,6 +3,11 @@ package com.yf.pool.springboot_integration.AutoConfiguration;
 import lombok.Data;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+
+/**
+ * @author yyf
+ * @description
+ */
 @Data
 @ConditionalOnProperty(prefix = "fy.thread-pool",name = "enabled",havingValue = "true")
 @ConfigurationProperties(prefix = "fy.thread-pool")

@@ -7,6 +7,11 @@ import lombok.Data;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 @Data
 public class ThreadFactory {
     private ThreadPool threadPool;

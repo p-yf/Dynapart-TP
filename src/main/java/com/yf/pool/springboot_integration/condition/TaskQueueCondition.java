@@ -6,6 +6,11 @@ import org.springframework.context.annotation.ConditionContext;
 import org.springframework.core.type.AnnotatedTypeMetadata;
 import org.springframework.util.MultiValueMap;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 public class TaskQueueCondition implements Condition {
     @Override
     public boolean matches(ConditionContext context, AnnotatedTypeMetadata metadata) {

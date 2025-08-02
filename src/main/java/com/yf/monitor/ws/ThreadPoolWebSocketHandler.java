@@ -11,6 +11,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
+/**
+ * @author yyf
+ * @description
+ */
 public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
 
     // 存储所有活跃的WebSocket会话

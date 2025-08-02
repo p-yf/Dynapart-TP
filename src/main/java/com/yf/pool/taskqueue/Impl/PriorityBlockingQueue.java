@@ -98,12 +98,22 @@ public class PriorityBlockingQueue extends TaskQueue {
         try {
             if (q.isEmpty()) {
             } else {
-                q.remove();
+                q.remove(findLowestPriorityTask());
             }
         }finally {
             getWLock().unlock();
         }
         return true;
+    }
+
+    private PriorityTask findLowestPriorityTask() {
+        PriorityTask lowestPriorityTask = q.peek();
+        for (PriorityTask task : q) {
+            if (task.getPriority() < lowestPriorityTask.getPriority()) {
+                lowestPriorityTask = task;
+            }
+        }
+        return lowestPriorityTask;
     }
 
     @Override

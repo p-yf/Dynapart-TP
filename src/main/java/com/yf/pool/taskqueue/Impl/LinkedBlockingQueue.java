@@ -8,6 +8,11 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 /**
  * 链表结构的阻塞队列
  */

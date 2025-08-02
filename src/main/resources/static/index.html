@@ -8,7 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-
+    <link rel="icon" type="image/png" href="logo/logo.png">
     <!-- 配置Tailwind自定义主题 -->
     <script>
         tailwind.config = {
@@ -254,7 +254,7 @@
 <footer class="bg-white border-t border-gray-200 py-4">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center text-sm text-gray-500">
-            <p>线程池监控系统 &copy; 2023 - 数据来源于实时监控</p>
+            <p>线程池监控系统 &copy;</p>
         </div>
     </div>
 </footer>
@@ -477,9 +477,16 @@
         });
     }
 
+    // 获取基础URL（自动适应端口）
+    function getBaseUrl() {
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+        return `${protocol}//${host}`;
+    }
+
     // 加载线程池信息
     function loadThreadPoolInfo() {
-        return fetch('http://localhost:8080/monitor/pool')
+        return fetch(`${getBaseUrl()}/monitor/pool`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('获取线程池信息失败');
@@ -516,7 +523,7 @@
 
     // 加载队列大小
     function loadQueueSize() {
-        return fetch('http://localhost:8080/monitor/tasks')
+        return fetch(`${getBaseUrl()}/monitor/tasks`)
             .then(response => {
                 if (!response.ok) {
                     throw new Error('获取队列大小失败');
@@ -559,7 +566,8 @@
     function connectWebSocket() {
         // 确定WebSocket协议（http对应ws，https对应wss）
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUri = `${protocol}//localhost:8080/monitor/threads`;
+        const host = window.location.host;
+        const wsUri = `${protocol}//${host}/monitor/threads`;
 
         const websocket = new WebSocket(wsUri);
 

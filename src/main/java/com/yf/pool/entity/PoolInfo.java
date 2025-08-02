@@ -2,6 +2,11 @@ package com.yf.pool.entity;
 
 import lombok.Data;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 /**
  * 格式与ThreadProperties一致，另外创建这个的原因是为了与springboot相关的解耦，插拔式选择是否需要springboot集成
  */

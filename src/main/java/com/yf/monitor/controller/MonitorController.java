@@ -13,7 +13,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.lang.reflect.InvocationTargetException;
 
-
+/**
+ * @author yyf
+ * @description
+ */
 @RestController
 @RequestMapping("/monitor")
 @AllArgsConstructor
@@ -61,6 +64,9 @@ public class MonitorController {
      */
     @PutMapping("/queue")
     public Boolean changeQ(String qName,Integer qCapacity) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        if(qName==null|| qName.isEmpty()){
+            return false;
+        }
         TaskQueue q;
         try {
             q = (TaskQueue) context.getBean(qName);
@@ -80,6 +86,9 @@ public class MonitorController {
      */
     @PutMapping("/rejectStrategy")
     public Boolean changeRS(String rsName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        if(rsName == null|| rsName.isEmpty()){
+            return false;
+        }
         RejectStrategy rs;
         try {
             rs = (RejectStrategy) context.getBean(rsName);

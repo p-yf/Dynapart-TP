@@ -1,20 +1,20 @@
 fy:
   thread-pool:
-    enabled: true
-    coreNums: 5
-    maxNums: 10
-    poolName: yf-thread-pool
-    threadName: yf-thread
-    isDaemon: true
-    coreDestroy: false
-    aliveTime: 5
-    queueName: linked
-    queueCapacity:
-    rejectStrategyName: callerRuns
+    enabled: true  #是否开启线程池自动装配
+    coreNums: 5    #线程池核心线程数
+    maxNums: 10    #线程池最大线程数
+    poolName: yf-thread-pool   #线程池名称
+    threadName: yf-thread      #线程名称
+    isDaemon: true      #是否是守护线程
+    coreDestroy: false  #线程池是否销毁
+    aliveTime: 5        #线程存活时间（单位：s）
+    queueName: linked   #队列名称
+    queueCapacity:      #队列容量（不写代表null，为无界）
+    rejectStrategyName: callerRuns   #拒绝策略名称
     monitor:
-      enabled: true
-      fixedDelay: 1000
-      qReplaceable: true  #默认是开启的（不写这个key默认开启，写了后只有value为true才是开启，以下同理）
-      rsReplaceable: true
+      enabled: true       #是否开启监控
+      fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
+      qReplaceable: true  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
+      rsReplaceable: true #是否可更换拒绝策略
 server:
   port: 8080

@@ -5,7 +5,6 @@ import com.yf.pool.constant.OfRejectStrategy;
 import com.yf.pool.constant.OfWorker;
 import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
-import com.yf.pool.task.PriorityTask;
 import com.yf.pool.taskqueue.TaskQueue;
 import com.yf.pool.threadfactory.ThreadFactory;
 import com.yf.pool.worker.Worker;
@@ -22,6 +21,11 @@ import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+
+/**
+ * @author yyf
+ * @description
+ */
 @Getter
 @Setter
 public class ThreadPool {
@@ -122,47 +126,9 @@ public class ThreadPool {
         if (success) {
             return futureTask;
         }
-        return rejectStrategy.reject(futureTask);
+        rejectStrategy.reject(futureTask);
+        return futureTask;
     }
-
-    /**
-     * 执行优先级任务
-     * @param task
-     */
-    public void execute(PriorityTask task) {
-        execute( task);
-    }
-
-
-
-    public Future submit(PriorityTask pTask) {
-
-        Callable task = (Callable)((PriorityCallable)pTask);
-        FutureTask futureTask = new FutureTask(task);
-        try {
-            lock.lock();
-            if (coreList.size() < coreNums) {
-                threadFactory.createWorker(true, futureTask).start();
-                return futureTask;
-            } else if (coreList.size() + extraList.size() < maxNums) {
-                threadFactory.createWorker(false, futureTask).start();
-                return futureTask;
-            }
-        } finally {
-            lock.unlock();
-        }
-        if (taskQueue.getCapacity() == null) {//说明无界
-            taskQueue.addTask(futureTask);
-            return futureTask;
-        }
-        Boolean success = taskQueue.addTask(futureTask);
-        if (success) {
-            return futureTask;
-        }
-        return rejectStrategy.reject(futureTask);
-    }
-
-
 
 
 

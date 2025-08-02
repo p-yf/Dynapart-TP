@@ -7,7 +7,7 @@
     <!-- 引入外部资源 -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-
+    <link rel="icon" type="image/png" href="logo/logo.png">
     <!-- 配置Tailwind自定义主题 -->
     <script>
         tailwind.config = {
@@ -262,12 +262,19 @@
 <footer class="bg-white border-t border-gray-200 py-4">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center text-sm text-gray-500">
-            <p>线程池监控系统 &copy; 2023 - 配置修改将实时生效</p>
+            <p>线程池监控系统 &copy;</p>
         </div>
     </div>
 </footer>
 
 <script>
+    // 获取基础URL（自动适应端口）
+    function getBaseUrl() {
+        const protocol = window.location.protocol;
+        const host = window.location.host;
+        return `${protocol}//${host}`;
+    }
+
     // 存储原始配置数据，用于重置功能
     let originalConfig = {
         worker: {},
@@ -420,7 +427,7 @@
         });
 
         // 发送请求保存配置（参数在URL中）
-        fetch(`http://localhost:8080/monitor/worker?${params}`, {
+        fetch(`${getBaseUrl()}/monitor/worker?${params}`, {
             method: 'PUT'
         })
             .then(response => response.json())
@@ -458,12 +465,14 @@
         // 将参数转换为查询字符串
         const params = new URLSearchParams();
         Object.entries(formData).forEach(([key, value]) => {
-            // 对于null值，我们传递字符串"null"，后端需要正确解析
-            params.append(key, value === null ? 'null' : value);
+            // 对于null值，不传递该参数
+            if (value !== null) {
+                params.append(key, value);
+            }
         });
 
         // 发送请求保存配置（参数在URL中）
-        fetch(`http://localhost:8080/monitor/queue?${params}`, {
+        fetch(`${getBaseUrl()}/monitor/queue?${params}`, {
             method: 'PUT'
         })
             .then(response => response.json())
@@ -501,7 +510,7 @@
         });
 
         // 发送请求保存配置（参数在URL中）
-        fetch(`http://localhost:8080/monitor/rejectStrategy?${params}`, {
+        fetch(`${getBaseUrl()}/monitor/rejectStrategy?${params}`, {
             method: 'PUT'
         })
             .then(response => response.json())

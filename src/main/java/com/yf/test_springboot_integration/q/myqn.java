@@ -1,8 +1,12 @@
-package com.yf.test.q;
+package com.yf.test_springboot_integration.q;
 
 import com.yf.pool.springboot_integration.annotation.TaskQueueBean;
 import com.yf.pool.taskqueue.TaskQueue;
 
+/**
+ * @author yyf
+ * @description
+ */
 @TaskQueueBean("myqn")
 public class myqn extends TaskQueue {
     @Override
