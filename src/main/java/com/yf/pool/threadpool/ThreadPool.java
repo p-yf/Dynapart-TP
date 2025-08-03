@@ -259,7 +259,7 @@ public class ThreadPool {
         try {
             oldQ.getWLock().lock();
             while(oldQ.getTaskNums() > 0){
-                Runnable task = taskQueue.poll(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
+                Runnable task = oldQ.poll(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
                 q.addTask(task);
             }
             this.queueName = qName;

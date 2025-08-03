@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * @author yyf
- * @description
+ * @description   //接下来要做的就是实现自动将map自动装满，也就是扫描类路径下所有的策略类并且有策略注解的策略类，这样就能解决在非 springboot环境下无法自动发现扩展的策略的问题
  */
 public class OfRejectStrategy {
     public final static String CALLER_RUNS = "callerRuns";//调用当前线程运行
