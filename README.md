@@ -98,18 +98,7 @@ Future<?> future = threadPool.submit(() -> {
 #### WebSocket实时监控
 连接`/monitor/threads`端点，实时接收线程池状态更新。
 
-### 端口号处理
-为了确保请求能够正确连接到后端服务，建议从配置文件中读取服务器端口号：
 
-```java
-// 从配置文件中读取端口号
-@Value("${server.port:8080}")
-private int serverPort;
-
-// 构建请求URL
-String baseUrl = "http://localhost:" + serverPort;
-String apiUrl = baseUrl + "/monitor/pool";
-```
 
 这种方式会优先使用配置文件中定义的`server.port`，如果没有定义则默认使用8080端口。
 
