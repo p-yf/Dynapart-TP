@@ -28,6 +28,7 @@ public abstract class TaskQueue {
     private Integer capacity;
 
     private ThreadPool threadPool;
+
     /**
      * 添加任务
      * @param task

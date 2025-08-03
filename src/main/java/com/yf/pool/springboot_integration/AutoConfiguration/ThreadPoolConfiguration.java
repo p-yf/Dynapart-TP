@@ -42,6 +42,7 @@ public class ThreadPoolConfiguration {
         TaskQueue taskQueue; RejectStrategy rejectStrategy;
         try {//尝试从容器中获取，没有的话从作者默认实现中获取
             taskQueue = (TaskQueue) context.getBean(queueName);
+            taskQueue.setCapacity(threadPoolProperties.getQueueCapacity());
         }catch (NoSuchBeanDefinitionException e){
             Class<?> taskQueueClass = OfQueue.TASK_QUEUE_MAP.get(queueName);
             Constructor<?> queueClassConstructor = taskQueueClass.getConstructor(Integer.class);

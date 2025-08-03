@@ -31,7 +31,7 @@ DynaGuardAutoPool 是一个高性能、可动态调整的轻量级线程池框�
 
 ## 📚 使用方法
 
-### 1. Spring Boot环境集成
+### 1. Spring Boot环境集成(test_springboot_integration包就是用来测试springboot集成的)
 
 #### 配置文件
 在`application.properties`或`application.yml`中添加以下配置：
@@ -145,3 +145,129 @@ threadPool.submit(() -> {
 - 确保在生产环境中合理配置线程池参数，避免资源耗尽
 - 动态调整参数时，注意核心线程数不能超过最大线程数
 - 自定义队列时，需确保线程安全
+
+## 🔧 开发者扩展说明
+
+### 自定义任务队列
+要实现自定义任务队列，只需继承`TaskQueue`抽象类并实现其抽象方法：
+
+```java
+// @TaskQueueBean("custom")//springboot环境加上，yml文件配置好队列名称，可实现自动装配
+public class CustomQueue extends TaskQueue {//需要保证线程安全，读写锁以及条件变量抽象父类已经提供
+    private Queue<Runnable> q;
+
+    public CustomQueue(Integer capacity) {
+    //如果是springboot环境就不要加上这个构造方法，因为容器中没有capacity的bean
+        setCapacity(capacity);
+    }   
+
+    @Override
+    public Boolean addTask(Runnable task) {
+        //添加任务逻辑
+    }
+
+    @Override
+    public Runnable poll(Integer waitTime) throws InterruptedException {
+        // 获取任务逻辑
+    }
+
+    @Override
+    public Boolean removeTask() {
+        // 移除任务逻辑
+    }
+
+    @Override
+    public int getExactTaskNums() {
+        // 获取此时精确任务数量逻辑（需要锁来保证）
+    }
+
+    @Override
+    public int getTaskNums() {
+        // 获取此时任务数量逻辑（不需要锁来保证）
+    }
+}
+```
+
+然后，在`OfQueue`常量类中注册你的自定义队列（如果是本项目使用者则无需关注，如果是本项目开发者则需要）：
+
+```java
+public class OfQueue {
+    public final static String CUSTOM = "custom";
+    // 其他队列类型...
+    
+    static {
+        TASK_QUEUE_MAP.put(LINKED, LinkedBlockingQueue.class);
+        TASK_QUEUE_MAP.put(PRIORITY, PriorityBlockingQueue.class);
+        TASK_QUEUE_MAP.put(CUSTOM, CustomQueue.class);  // 注册自定义队列
+    }
+}
+```
+
+### 自定义拒绝策略
+要实现自定义拒绝策略，只需实现`RejectStrategy`接口：
+
+```java
+//使用与队列同理
+public class CustomRejectStrategy implements RejectStrategy {
+    private ThreadPool threadPool;
+
+    @Override
+    public void setThreadPool(ThreadPool threadPool) {
+        this.threadPool = threadPool;
+    }
+
+    @Override
+    public void reject(Runnable task) {
+        // 自定义拒绝逻辑
+        System.err.println("Custom rejection strategy: Task rejected - " + task);
+        // 例如，可以记录日志、尝试重新提交或执行其他操作
+    }
+}
+```
+
+然后，在`OfRejectStrategy`常量类中注册你的自定义拒绝策略：
+
+```java
+public class OfRejectStrategy {
+    public final static String CUSTOM = "custom";
+    // 其他拒绝策略...
+    
+    static {
+        REJECT_STRATEGY_MAP.put(CALLER_RUNS, CallerRunsStrategy.class);
+        REJECT_STRATEGY_MAP.put(DISCARD_OLDEST, DiscardOldestStrategy.class);
+        REJECT_STRATEGY_MAP.put(DISCARD, DiscardStrategy.class);
+        REJECT_STRATEGY_MAP.put(CUSTOM, CustomRejectStrategy.class);  // 注册自定义拒绝策略
+    }
+}
+```
+
+## 📚 技术文档
+
+### 核心技术实现
+
+#### 1. 线程池核心实现
+- **动态参数调整**：通过`ThreadPool`类中的方法实现核心线程数、最大线程数等参数的动态调整
+- **线程生命周期管理**：通过`Worker`类中的循环任务和超时机制实现线程的创建和自动回收
+- **任务调度**：使用`TaskQueue`接口定义的队列实现任务的存储和调度
+
+#### 2. 并发控制机制
+- 使用`ReentrantLock`和`ReadWriteLock`保证线程安全
+- 使用`Condition`实现线程间的通信和等待唤醒机制
+- 采用精细的锁粒度，避免全局锁带来的性能瓶颈
+
+#### 3. 组件设计模式
+- **策略模式**：用于实现不同的拒绝策略和任务队列
+- **工厂模式**：通过`ThreadFactory`创建线程
+- **观察者模式**：通过WebSocket实现线程池状态的实时推送
+
+#### 4. Spring Boot集成
+- 使用`@ConfigurationProperties`和`@AutoConfiguration`实现自动配置
+- 通过`@ConditionalOnProperty`和`@Conditional`实现条件装配
+- 提供`ThreadPoolProperties`类让用户可以通过配置文件自定义线程池参数
+
+#### 5. 监控系统
+- **REST API**：提供HTTP接口用于查询和调整线程池参数
+- **WebSocket**：通过`ThreadPoolWebSocketHandler`实现线程池状态的实时推送
+- **前端监控界面**：使用HTML、Tailwind CSS和JavaScript实现可视化监控界面（豆包生成的哦）
+
+#### 6.未来集成命令行......
