@@ -72,7 +72,7 @@ threadPool.execute(() -> {
 //如果是使用优先级队列，那么应传入PriorityTask对象能手动指定优先级（数字越大优先级越高），示例：
 //Runnable r = () -> {};        //任务，返回值 ，优先级
 //PriorityTask pt = new PriorityTask(r, null,10);
-//threadPool.execute(pt);
+//threadPool.executeThreadFirst(pt);
 
 
 // 提交有返回值的任务
@@ -83,7 +83,7 @@ Future<?> future = threadPool.submit(() -> {
 //如果是使用优先级队列，那么应传入PriorityTask对象能手动指定优先级（数字越大优先级越高），示例：
 //Callable c = () -> {};        //任务，返回值 ，优先级
 //PriorityTask pt = new PriorityTask(c,10);
-//threadPool.execute(pt);
+//threadPool.executeThreadFirst(pt);
 ```
 
 ### 2. 监控线程池
@@ -177,7 +177,7 @@ public class CustomQueue extends TaskQueue {//需要保证线程安全，读写�
 }
 ```
 
-然后，在`OfQueue`常量类中注册你的自定义队列（如果是本项目使用者则无需关注，如果是本项目开发者则需要）：
+然后，在`OfQueue`常量类中注册你的自定义队列（如果是本项目的springboot环境下的使用者则无需关注。如果不用springboot环境，那么需要在初始化线程池之前添加你扩展的队列的名称和类到map中。如果是本项目开发者则需要添加好名称后再在静态代码块中添加上队列名称与类）：
 
 ```java
 public class OfQueue {

@@ -47,7 +47,11 @@ public class Worker extends Thread {
                 if (runnable != null) {
                     runnable.run();
                 }
-            } catch (Exception e) {
+            }
+            catch (InterruptedException e) {
+                break;
+            }
+            catch (Exception e) {
                 e.printStackTrace();
             }
         }

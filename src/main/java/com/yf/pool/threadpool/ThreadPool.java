@@ -71,10 +71,62 @@ public class ThreadPool {
 
     }
 
+    public void execute(Runnable task) {//与juc的线程池判断逻辑一致，适合cpu密集型
+        try {
+            lock.lock();
+            if (coreList.size() < coreNums) {
+                threadFactory.createWorker(true, task).start();
+                return;
+            }
+            if (taskQueue.getCapacity() == null) {//说明无界
+                taskQueue.addTask(task);
+                return;
+            }
+            Boolean success = taskQueue.addTask(task);
+            if(success){
+                return;
+            }
+            if (coreList.size() + extraList.size() < maxNums) {
+                threadFactory.createWorker(false, task).start();
+                return;
+            }
+        } finally {
+            lock.unlock();
+        }
+        rejectStrategy.reject(task);
+    }
+
+    public Future submit(Callable<Object> task) {
+        FutureTask futureTask = new FutureTask(task);
+        try {
+            lock.lock();
+            if (coreList.size() < coreNums) {
+                threadFactory.createWorker(true, futureTask).start();
+                return futureTask;
+            }
+            if (taskQueue.getCapacity() == null) {//说明无界
+                taskQueue.addTask(futureTask);
+                return futureTask;
+            }
+            Boolean success = taskQueue.addTask(futureTask);
+            if(success){
+                return futureTask;
+            }
+            if (coreList.size() + extraList.size() < maxNums) {
+                threadFactory.createWorker(false, futureTask).start();
+                return futureTask;
+            }
+        } finally {
+            lock.unlock();
+        }
+        rejectStrategy.reject(futureTask);
+        return futureTask;
+    }
+
     /**
      * 执行任务
      */
-    public void execute(Runnable task) {
+    public void executeThreadFirst(Runnable task) {//线程优先，先考虑非核心线程再考虑队列，适合io密集型
         try {
             lock.lock();
             if (coreList.size() < coreNums) {
@@ -104,7 +156,7 @@ public class ThreadPool {
      *
      * @return future容器
      */
-    public Future submit(Callable<Object> task) {
+    public Future submitThreadFirst(Callable<Object> task) {
         FutureTask futureTask = new FutureTask(task);
         try {
             lock.lock();
@@ -230,6 +282,7 @@ public class ThreadPool {
             int i = 0;
             for (Worker worker : getCoreList()) {
                 worker.setFlag(false);
+                worker.interrupt();
                 i++;
                 if (i == coreNums) {
                     break;
@@ -240,6 +293,7 @@ public class ThreadPool {
             int j = 0;
             for (Worker worker : getExtraList()) {
                 worker.setFlag(false);
+                worker.interrupt();
                 j++;
                 if (j == extraNums) {
                     break;
