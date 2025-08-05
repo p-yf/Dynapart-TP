@@ -28,17 +28,5 @@ public class SchedulePushInfoService {
     public void pushInfo() {
         ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(threadPool.getThreadsInfo());
         ThreadPoolWebSocketHandler.broadcastTaskNums(threadPool.getTaskNums());
-        System.out.println(threadPool.getTaskNums());
-        threadPool.executeThreadFirst(() -> {
-            for(int i = 0;i<10;i++){
-                threadPool.execute(() -> {
-                        if(System.currentTimeMillis()%2==0) {
-                            while (true) {
-
-                            }
-                        }
-                });
-            }
-        });
     }
 }
