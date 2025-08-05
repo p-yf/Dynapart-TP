@@ -55,4 +55,24 @@ public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
             System.err.println("推送线程池信息失败: " + e.getMessage());
         }
     }
+
+    public static void broadcastTaskNums(int nums) {
+        if (sessions.isEmpty()) {
+            return;
+        }
+        try {
+            // 将线程池信息转换为JSON字符串
+            String jsonMessage = objectMapper.writeValueAsString(nums);
+            TextMessage message = new TextMessage(jsonMessage);
+
+            // 向每个会话发送消息
+            for (WebSocketSession session : sessions) {
+                if (session.isOpen()) {
+                    session.sendMessage(message);
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("推送任务数量失败: " + e.getMessage());
+        }
+    }
 }

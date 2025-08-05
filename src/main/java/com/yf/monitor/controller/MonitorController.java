@@ -41,7 +41,7 @@ public class MonitorController {
      */
     @GetMapping("/tasks")
     public int getQueueSize() {
-        return threadPool.getQueueSize();
+        return threadPool.getTaskNums();
     }
 
 

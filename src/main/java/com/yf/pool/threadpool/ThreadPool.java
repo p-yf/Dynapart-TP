@@ -241,7 +241,7 @@ public class ThreadPool {
      * 获取队列中任务数量
      * @return
      */
-    public int getQueueSize() {
+    public int getTaskNums() {
         return taskQueue.getTaskNums();
     }
 

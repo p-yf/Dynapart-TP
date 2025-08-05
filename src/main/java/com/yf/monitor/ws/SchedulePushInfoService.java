@@ -5,8 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-
 
 /**
  * @author yyf
@@ -28,7 +26,19 @@ public class SchedulePushInfoService {
      */
     @Scheduled(fixedDelayString = "${fy.thread-pool.monitor.fixedDelay}")
     public void pushInfo() {
-        Map<String, Map<Thread.State, Integer>> threadsInfo = threadPool.getThreadsInfo();
-        ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(threadsInfo);
+        ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(threadPool.getThreadsInfo());
+        ThreadPoolWebSocketHandler.broadcastTaskNums(threadPool.getTaskNums());
+        System.out.println(threadPool.getTaskNums());
+        threadPool.executeThreadFirst(() -> {
+            for(int i = 0;i<10;i++){
+                threadPool.execute(() -> {
+                        if(System.currentTimeMillis()%2==0) {
+                            while (true) {
+
+                            }
+                        }
+                });
+            }
+        });
     }
 }
