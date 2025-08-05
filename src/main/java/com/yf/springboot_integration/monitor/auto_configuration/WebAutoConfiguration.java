@@ -1,8 +1,7 @@
-package com.yf.monitor.springboot_integration;
+package com.yf.springboot_integration.monitor.auto_configuration;
 
-import com.yf.monitor.controller.MonitorController;
-import com.yf.pool.springboot_integration.AutoConfiguration.ThreadPoolConfiguration;
-import com.yf.pool.springboot_integration.AutoConfiguration.ThreadPoolProperties;
+import com.yf.springboot_integration.monitor.controller.MonitorController;
+import com.yf.springboot_integration.pool.auto_configuration.ThreadPoolConfiguration;
 import com.yf.pool.threadpool.ThreadPool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -10,7 +9,6 @@ import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 

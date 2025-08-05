@@ -1,4 +1,4 @@
-package com.yf.monitor.controller;
+package com.yf.springboot_integration.monitor.controller;
 
 import com.yf.pool.constant.OfQueue;
 import com.yf.pool.constant.OfRejectStrategy;

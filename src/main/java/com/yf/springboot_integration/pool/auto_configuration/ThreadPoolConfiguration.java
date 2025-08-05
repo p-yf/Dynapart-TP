@@ -1,4 +1,4 @@
-package com.yf.pool.springboot_integration.AutoConfiguration;
+package com.yf.springboot_integration.pool.auto_configuration;
 
 import com.yf.pool.constant.OfQueue;
 import com.yf.pool.constant.OfRejectStrategy;

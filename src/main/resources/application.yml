@@ -9,11 +9,11 @@ fy:
     coreDestroy: false  #线程池是否销毁
     aliveTime: 5        #线程存活时间（单位：s）
     queueName: linked   #队列名称
-    queueCapacity:      #队列容量（不写代表null，为无界）
+    queueCapacity: 100      #队列容量（不写代表null，为无界）
     rejectStrategyName: callerRuns   #拒绝策略名称
     monitor:
       enabled: true       #是否开启监控
-      fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
+      fixedDelay: 5000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
       qReplaceable: true  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
       rsReplaceable: true #是否可更换拒绝策略
 server:

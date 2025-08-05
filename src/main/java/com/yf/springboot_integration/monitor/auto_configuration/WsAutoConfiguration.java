@@ -1,8 +1,8 @@
-package com.yf.monitor.springboot_integration;
+package com.yf.springboot_integration.monitor.auto_configuration;
 
-import com.yf.monitor.ws.SchedulePushInfoService;
-import com.yf.monitor.ws.ThreadPoolWebSocketHandler;
-import com.yf.pool.springboot_integration.AutoConfiguration.ThreadPoolConfiguration;
+import com.yf.springboot_integration.monitor.ws.SchedulePushInfoService;
+import com.yf.springboot_integration.monitor.ws.ThreadPoolWebSocketHandler;
+import com.yf.springboot_integration.pool.auto_configuration.ThreadPoolConfiguration;
 import com.yf.pool.threadpool.ThreadPool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;

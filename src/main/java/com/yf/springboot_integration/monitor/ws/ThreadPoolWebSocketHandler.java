@@ -1,4 +1,4 @@
-package com.yf.monitor.ws;
+package com.yf.springboot_integration.monitor.ws;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.socket.CloseStatus;

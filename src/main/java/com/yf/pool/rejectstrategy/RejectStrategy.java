@@ -4,8 +4,6 @@ import com.yf.pool.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;

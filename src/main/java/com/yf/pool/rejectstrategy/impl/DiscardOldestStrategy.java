@@ -2,9 +2,6 @@ package com.yf.pool.rejectstrategy.impl;
 
 import com.yf.pool.rejectstrategy.RejectStrategy;
 
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-
 /**
  * @author yyf
  * @date 2025/8/2 23:13

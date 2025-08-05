@@ -1,6 +1,6 @@
-package com.yf.pool.springboot_integration.annotation;
+package com.yf.springboot_integration.pool.annotation;
 
-import com.yf.pool.springboot_integration.condition.TaskQueueCondition;
+import com.yf.springboot_integration.pool.condition.TaskQueueCondition;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.stereotype.Component;
 

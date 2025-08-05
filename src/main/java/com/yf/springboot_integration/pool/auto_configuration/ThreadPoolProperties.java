@@ -1,4 +1,4 @@
-package com.yf.pool.springboot_integration.AutoConfiguration;
+package com.yf.springboot_integration.pool.auto_configuration;
 
 import lombok.Data;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;

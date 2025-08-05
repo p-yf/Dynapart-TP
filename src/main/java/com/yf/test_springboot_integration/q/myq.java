@@ -1,6 +1,6 @@
 package com.yf.test_springboot_integration.q;
 
-import com.yf.pool.springboot_integration.annotation.TaskQueueBean;
+import com.yf.springboot_integration.pool.annotation.TaskQueueBean;
 import com.yf.pool.taskqueue.TaskQueue;
 
 /**

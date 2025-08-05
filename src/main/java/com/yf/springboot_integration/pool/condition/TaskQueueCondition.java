@@ -1,6 +1,6 @@
-package com.yf.pool.springboot_integration.condition;
+package com.yf.springboot_integration.pool.condition;
 
-import com.yf.pool.springboot_integration.annotation.TaskQueueBean;
+import com.yf.springboot_integration.pool.annotation.TaskQueueBean;
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
 import org.springframework.core.type.AnnotatedTypeMetadata;

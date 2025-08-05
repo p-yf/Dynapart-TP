@@ -4,7 +4,6 @@ import com.yf.pool.threadpool.ThreadPool;
 import com.yf.pool.worker.Worker;
 import lombok.Data;
 
-import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
 
 

@@ -1,4 +1,4 @@
-package com.yf.monitor.ws;
+package com.yf.springboot_integration.monitor.ws;
 
 import com.yf.pool.threadpool.ThreadPool;
 import lombok.extern.slf4j.Slf4j;
