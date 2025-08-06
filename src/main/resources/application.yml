@@ -1,4 +1,4 @@
-fy:
+yf:
   thread-pool:
     enabled: true  #是否开启线程池自动装配
     coreNums: 5    #线程池核心线程数

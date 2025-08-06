@@ -20,7 +20,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Slf4j
 @AutoConfiguration
 @AutoConfigureAfter(ThreadPoolConfiguration.class)
-@ConditionalOnProperty(prefix = "fy.thread-pool.monitor", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "yf.thread-pool.monitor", name = "enabled", havingValue = "true")
 public class WebAutoConfiguration implements WebMvcConfigurer{
     @Bean
     public MonitorController monitorController(ThreadPool threadPool, ApplicationContext context){

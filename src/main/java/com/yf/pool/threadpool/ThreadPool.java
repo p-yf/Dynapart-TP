@@ -250,14 +250,39 @@ public class ThreadPool {
      * 改变worker相关参数，直接赋值就好，会动态平衡的
      */
     public Boolean changeWorkerParams(Integer coreNums, Integer maxNums, Boolean coreDestroy, Integer aliveTime, Boolean isDaemon) {
-        if (maxNums < coreNums) {
+        if (maxNums!=null&&coreNums!=null&&maxNums < coreNums) {
             return false;
         }
         int oldCoreNums = this.coreNums;
         int oldMaxNums = this.maxNums;
-        this.maxNums = maxNums;//无论如何非核心线程都能直接改变
-        this.coreNums = coreNums;
-        destroyWorkers(oldCoreNums - coreNums, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
+        if(coreNums!=null){
+            if(maxNums==null){
+                if(coreNums > oldMaxNums){
+                    return false;
+                }
+            }
+        }else{
+            if(maxNums!=null&&maxNums < oldCoreNums){
+                return false;
+            }
+        }
+        if(maxNums!=null) {
+            this.maxNums = maxNums;//无论如何非核心线程都能直接改变
+        }
+        if(coreNums!=null) {
+            this.coreNums = coreNums;
+        }
+        if(coreNums==null){
+            if(maxNums!=null) {
+                destroyWorkers(0, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
+            }
+        }else{
+            if(maxNums==null) {
+                destroyWorkers(oldCoreNums - coreNums, 0);
+            }else{
+                destroyWorkers(oldCoreNums - coreNums, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
+            }
+        }
         if (aliveTime != null) {
             this.threadFactory.setAliveTime(aliveTime);
         }
@@ -277,7 +302,7 @@ public class ThreadPool {
     }
 
     //销毁线程
-    public void destroyWorkers(int coreNums, int extraNums) {
+    public void destroyWorkers(int coreNums, int extraNums) {//销毁的数量
         if (coreNums > 0) {
             int i = 0;
             for (Worker worker : getCoreList()) {

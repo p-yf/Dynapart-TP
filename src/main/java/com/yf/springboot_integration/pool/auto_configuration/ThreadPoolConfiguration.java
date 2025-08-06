@@ -23,7 +23,7 @@ import java.lang.reflect.InvocationTargetException;
  */
 @AutoConfiguration
 @EnableConfigurationProperties(ThreadPoolProperties.class)
-@ConditionalOnProperty(prefix = "fy.thread-pool", name = "enabled", havingValue = "true")
+@ConditionalOnProperty(prefix = "yf.thread-pool", name = "enabled", havingValue = "true")
 public class ThreadPoolConfiguration {
 
     private final ApplicationContext context;
