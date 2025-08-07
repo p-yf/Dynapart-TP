@@ -27,17 +27,17 @@ public class Worker extends Thread {
                 Runnable runnable;
                 if(isCore) {
                     if(coreDestroy) {//核心线程并且允许销毁
-                        runnable = threadPool.getTaskQueue().poll(aliveTime*2);
+                        runnable = threadPool.getTaskQueue().getTask(aliveTime*2);
                         if(runnable == null){
                             threadPool.getCoreList().remove(this);
                             log.info("核心线程"+getName()+"销毁");
                             break;
                         }
                     }else{//核心线程并且不允许销毁
-                        runnable = threadPool.getTaskQueue().poll(null);
+                        runnable = threadPool.getTaskQueue().getTask(null);
                     }
                 }else{//非核心线程
-                    runnable = threadPool.getTaskQueue().poll(aliveTime);
+                    runnable = threadPool.getTaskQueue().getTask(aliveTime);
                     if(runnable == null){
                         threadPool.getExtraList().remove(this);
                         log.info("非核心线程"+getName()+"销毁");

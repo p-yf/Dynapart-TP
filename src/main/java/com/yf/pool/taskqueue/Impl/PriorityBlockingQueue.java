@@ -24,34 +24,47 @@ public class PriorityBlockingQueue extends TaskQueue {
     }
 
     /**
-     * 添加任务
+     * 添加任务,用普通任务封装进优先级任务，其实核心是用下面那个offer
      * @param task
      * @return
      */
-    public Boolean addTask(Runnable task) {
+    public Boolean offer(Runnable task) {
         if(task instanceof PriorityTask) {
             PriorityTask priorityTask = (PriorityTask) task;
-            return addTask(priorityTask);
+            return offer(priorityTask);
         }else{
             PriorityTask priorityTask = new PriorityTask(task, null,0);
-            return addTask(priorityTask);
+            return offer(priorityTask);
         }
     }
-    private Boolean addTask(PriorityTask task) {
+    private Boolean offer(PriorityTask task) {
         if (task == null) {
             throw new NullPointerException("任务不能为null");
         }
-        if (getCapacity() != null && getCapacity() > q.size()) {//利用双重检查尽量增加性能
+        if (getCapacity() != null) {//利用双重检查尽量增加性能
+            if(getCapacity()>getTaskNums()) {
+                getWLock().lock(); // 获取锁
+                try {
+                    if (getTaskNums() < getCapacity()) {
+                        // 添加任务到队列
+                        boolean added = q.add(task);
+                        // 唤醒等待的线程（可能有线程在poll时阻塞）
+                        getWCondition().signal(); // 唤醒一个等待的线程
+                        return added;
+                    }
+                    return false;
+                } finally {
+                    getWLock().unlock(); // 确保锁释放
+                }
+            }
+        }else{
             getWLock().lock(); // 获取锁
             try {
-                if (getTaskNums() < getCapacity()) {
-                    // 添加任务到队列
-                    boolean added = q.add(task);
-                    // 唤醒等待的线程（可能有线程在poll时阻塞）
-                    getWCondition().signal(); // 唤醒一个等待的线程
-                    return added;
-                }
-                return false;
+                // 添加任务到队列
+                boolean added = q.add(task);
+                // 唤醒等待的线程（可能有线程在poll时阻塞）
+                getWCondition().signal(); // 唤醒一个等待的线程
+                return added;
             } finally {
                 getWLock().unlock(); // 确保锁释放
             }
@@ -66,7 +79,7 @@ public class PriorityBlockingQueue extends TaskQueue {
      * @throws InterruptedException
      */
     @Override
-    public Runnable poll(Integer waitTime) throws InterruptedException {
+    public Runnable getTask(Integer waitTime) throws InterruptedException {
         getWLock().lock(); // 可中断地获取锁
         try {
             // 循环检查：避免虚假唤醒

@@ -26,26 +26,29 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
         setCapacity(capacity);
     }
 
+
+    public void warning() {
+        if(getTaskNums()>10){
+            System.out.println("任务数量已经超过10个!!!");
+        }
+    }
     /**
      * 添加任务
      * @param task
      * @return
      */
-    public Boolean addTask(Runnable task) {
+    public Boolean offer(Runnable task) {
         if (task == null) {
             throw new NullPointerException("任务不能为null");
         }
         if(getCapacity()==null){//无界
             getWLock().lock(); // 获取锁
             try {
-                if(getTaskNums()<getCapacity()) {
-                    // 添加任务到队列
-                    boolean added = q.add(task);
-                    // 唤醒等待的线程（可能有线程在poll时阻塞）
-                    getWCondition().signal(); // 唤醒一个等待的线程
-                    return added;
-                }
-                return false;
+                // 添加任务到队列
+                boolean added = q.add(task);
+                // 唤醒等待的线程（可能有线程在poll时阻塞）
+                getWCondition().signal(); // 唤醒一个等待的线程
+                return added;
             } finally {
                 getWLock().unlock(); // 确保锁释放
             }
@@ -76,7 +79,7 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
      * @throws InterruptedException
      */
     @Override
-    public Runnable poll(Integer waitTime) throws InterruptedException {
+    public Runnable getTask(Integer waitTime) throws InterruptedException {
         getWLock().lock(); // 可中断地获取锁
         try {
             // 循环检查：避免虚假唤醒

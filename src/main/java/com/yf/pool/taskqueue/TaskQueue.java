@@ -34,16 +34,30 @@ public abstract class TaskQueue {
      * @param task
      * @return
      */
-    public abstract Boolean addTask(Runnable task);
+    public Boolean addTask(Runnable task){
+        warning();
+        return offer(task);
+    };
+
+    /**
+     * 添加任务的方法
+     * @return
+     */
+    public abstract Boolean offer(Runnable task);
+
+    /**
+     * 警告
+     */
+    public void warning(){};
 
     /**
      * 获取任务
       * @return
      */
-    public abstract Runnable poll(Integer waitTime) throws InterruptedException;
+    public abstract Runnable getTask(Integer waitTime) throws InterruptedException;
 
     /**
-     * 移除任务
+     * 移除任务(用于丢弃策略)
      */
     public abstract Boolean removeTask();
 

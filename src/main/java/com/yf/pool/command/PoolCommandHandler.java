@@ -30,7 +30,7 @@ public class PoolCommandHandler {
     private Thread commandThread;
     private final BlockingQueue<String> commandHistory = new LinkedBlockingDeque<>(100);
     private int historyIndex = -1;
-    private static final String PROMPT = "thread-pool> ";
+    private static final String PROMPT = "yf:DGA-pool> ";
     private static final String HELP_HEADER = "\n======= 线程池命令行工具 v1.0 =======";
     private static final String HELP_FOOTER = "=======================================\n";
 

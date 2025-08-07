@@ -10,12 +10,12 @@ import com.yf.pool.taskqueue.TaskQueue;
 @TaskQueueBean("myq")
 public class myq extends TaskQueue {
     @Override
-    public Boolean addTask(Runnable task) {
+    public Boolean offer(Runnable task) {
         return null;
     }
 
     @Override
-    public Runnable poll(Integer waitTime) throws InterruptedException {
+    public Runnable getTask(Integer waitTime) throws InterruptedException {
         return null;
     }
 
