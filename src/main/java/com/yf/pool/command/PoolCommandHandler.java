@@ -49,7 +49,7 @@ public class PoolCommandHandler {
         }
 
         isRunning = true;
-        commandThread = new Thread(this::commandLoop, "ThreadPool-Command-Thread");
+        commandThread = new Thread(this::commandLoop, "DGAPool-Command-Thread");
         commandThread.setDaemon(true);
         commandThread.start();
         printWelcomeMessage();
