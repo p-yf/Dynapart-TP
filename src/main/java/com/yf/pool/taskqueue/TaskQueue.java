@@ -35,8 +35,9 @@ public abstract class TaskQueue {
      * @return
      */
     public Boolean addTask(Runnable task){
+        Boolean offer = offer(task);
         warning();
-        return offer(task);
+        return offer;
     };
 
     /**

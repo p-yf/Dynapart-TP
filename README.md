@@ -156,10 +156,17 @@ public class CustomQueue extends TaskQueue {//需要保证线程安全，读写�
         setCapacity(capacity);
     }   
 
+    
     @Override
-    public Boolean addTask(Runnable task) {
+    public Boolean offer(Runnable task) {
         //添加任务逻辑
     }
+
+    //也可以自行选择是否实现warning方法，用来完成添加任务后的报警功能。这是一种模板方法来实现的，父类会有个addTask方法，在添加任务后调用报警方法
+    //public void warning() {
+        // 警告逻辑
+    //}
+
 
     @Override
     public Runnable poll(Integer waitTime) throws InterruptedException {
@@ -253,6 +260,7 @@ public class OfRejectStrategy {
 #### 3. 组件设计模式
 - **策略模式**：用于实现不同的拒绝策略和任务队列
 - **工厂模式**：通过`ThreadFactory`创建线程
+- **模板方法**：在TaskQueue中定义添加任务后报警的模板方法，具体的逻辑子类实现
 - **观察者模式**：通过WebSocket实现线程池状态的实时推送
 
 #### 4. Spring Boot集成
