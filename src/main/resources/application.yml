@@ -6,10 +6,10 @@ yf:
     poolName: yf-thread-pool   #线程池名称
     threadName: yf-thread      #线程名称
     isDaemon: true      #是否是守护线程
-    coreDestroy: false  #线程池是否销毁
+    coreDestroy: false  #核心线程是否销毁
     aliveTime: 5        #线程存活时间（单位：s）
     queueName: linked   #队列名称
-    queueCapacity: 100      #队列容量（不写代表null，为无界）
+    queueCapacity:      #队列容量（不写代表null，为无界）
     rejectStrategyName: callerRuns   #拒绝策略名称
     monitor:
       enabled: true       #是否开启监控

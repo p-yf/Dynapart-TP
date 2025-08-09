@@ -7,6 +7,10 @@ import lombok.Setter;
 import java.util.LinkedList;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 
 /**
@@ -19,6 +23,11 @@ import java.util.concurrent.TimeUnit;
 @Setter
 @Getter
 public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
+    private  final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
+    private  final Lock rLock = rwLock.readLock();
+    private  final Lock wLock = rwLock.writeLock();
+    private final Condition wCondition= getWLock().newCondition();
+
     private Queue<Runnable> q;
 
     public LinkedBlockingQueue(Integer capacity) {
@@ -86,7 +95,7 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
             while (q.isEmpty()) {
                 // 队列空，让当前线程阻塞等待
                 if(waitTime !=null) {//表示有等待时间
-                    boolean await = getWCondition().await(Long.valueOf(waitTime), TimeUnit.SECONDS);// 释放锁，进入等待状态
+                    boolean await = getWCondition().await(Long.valueOf(waitTime), TimeUnit.MILLISECONDS);// 释放锁，进入等待状态
                     if(!await) {//表示超时
                         return null;
                     }
@@ -107,13 +116,16 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
      */
     @Override
     public Boolean removeTask() {
+        if (q.isEmpty()) {
+            return false;
+        }
         getWLock().lock();
         try {
-            if (q.isEmpty()) {
-                return false;
-            } else {
+            if(!q.isEmpty()) {
                 q.remove();
                 return true;
+            }else{
+                return false;
             }
         }finally {
             getWLock().unlock();
@@ -134,4 +146,11 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     public int getTaskNums() {
         return q.size();
     }
+
+    @Override
+    public Lock getGlobalLock() {
+        return getWLock();
+    }
+
+
 }

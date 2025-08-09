@@ -3,6 +3,8 @@ package com.yf.test_springboot_integration.q;
 import com.yf.springboot_integration.pool.annotation.TaskQueueBean;
 import com.yf.pool.taskqueue.TaskQueue;
 
+import java.util.concurrent.locks.Lock;
+
 /**
  * @author yyf
  * @description
@@ -32,5 +34,10 @@ public class myq extends TaskQueue {
     @Override
     public int getTaskNums() {
         return 0;
+    }
+
+    @Override
+    public Lock getGlobalLock() {
+        return null;
     }
 }

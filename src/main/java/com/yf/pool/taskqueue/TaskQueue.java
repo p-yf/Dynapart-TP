@@ -20,10 +20,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Getter
 @Setter
 public abstract class TaskQueue {
-    private  final ReadWriteLock rwLock = new ReentrantReadWriteLock(true);
-    private  final Lock rLock = rwLock.readLock();
-    private  final Lock wLock = rwLock.writeLock();
-    private final Condition wCondition= getWLock().newCondition();
+
 
     private Integer capacity;
 
@@ -71,4 +68,10 @@ public abstract class TaskQueue {
      * 获取任务数量
      */
     public abstract int getTaskNums();//获取任务数量，无锁
+
+    /**
+     * 获取全局锁
+     * @return
+     */
+    public abstract Lock getGlobalLock();
 }

@@ -7,6 +7,10 @@ import lombok.Setter;
 
 import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author yyf
@@ -16,6 +20,10 @@ import java.util.concurrent.TimeUnit;
 @Setter
 @Getter
 public class PriorityBlockingQueue extends TaskQueue {
+    private  final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
+    private  final Lock rLock = rwLock.readLock();
+    private  final Lock wLock = rwLock.writeLock();
+    private final Condition wCondition= getWLock().newCondition();
 
     private PriorityQueue<PriorityTask> q;
     public PriorityBlockingQueue(Integer capacity) {
@@ -86,7 +94,7 @@ public class PriorityBlockingQueue extends TaskQueue {
             while (q.isEmpty()) {
                 // 队列空，让当前线程阻塞等待
                 if(waitTime !=null) {//表示有等待时间
-                    boolean await = getWCondition().await(Long.valueOf(waitTime), TimeUnit.SECONDS);// 释放锁，进入等待状态
+                    boolean await = getWCondition().await(Long.valueOf(waitTime), TimeUnit.MILLISECONDS);// 释放锁，进入等待状态
                     if(!await) {//表示超时
                         return null;
                     }
@@ -142,5 +150,10 @@ public class PriorityBlockingQueue extends TaskQueue {
     @Override
     public int getTaskNums() {
         return q.size();
+    }
+
+    @Override
+    public Lock getGlobalLock() {
+        return wLock;
     }
 }
