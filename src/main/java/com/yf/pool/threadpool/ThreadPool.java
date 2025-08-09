@@ -16,6 +16,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.locks.Lock;
@@ -38,8 +39,8 @@ public class ThreadPool {
     private Integer maxNums;//最大线程数
     private String queueName = null;//非springboot环境直接用类，反之用名字,拒绝策略同理
     private String rejectStrategyName = null;
-    private Set<Worker> coreList = new HashSet<>();
-    private Set<Worker> extraList = new HashSet<>();
+    private volatile Set<Worker> coreList = new CopyOnWriteArraySet<>();
+    private volatile Set<Worker> extraList = new CopyOnWriteArraySet<>();
 
     private String name;//线程池名称
 
@@ -336,7 +337,7 @@ public class ThreadPool {
         }
         TaskQueue oldQ = taskQueue;
         try {
-            oldQ.getGlobalLock().lock();
+            oldQ.globalLock();
             while(oldQ.getTaskNums() > 0){
                 Runnable task = oldQ.getTask(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
                 q.addTask(task);
@@ -346,7 +347,7 @@ public class ThreadPool {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            oldQ.getGlobalLock().unlock();
+            oldQ.globalUnlock();
         }
         return true;
     }

@@ -153,7 +153,13 @@ public class PriorityBlockingQueue extends TaskQueue {
     }
 
     @Override
-    public Lock getGlobalLock() {
-        return wLock;
+    public void globalLock() {
+        wLock.lock();
     }
+
+    @Override
+    public void globalUnlock() {
+        wLock.unlock();
+    }
+
 }

@@ -73,5 +73,7 @@ public abstract class TaskQueue {
      * 获取全局锁
      * @return
      */
-    public abstract Lock getGlobalLock();
+    public abstract void globalLock();
+
+    public abstract void globalUnlock();
 }

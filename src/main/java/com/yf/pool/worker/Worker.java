@@ -75,6 +75,7 @@ public class Worker extends Thread {
     public void run() {
         if(onTimeTask !=null){
             onTimeTask.run();
+            log.info("执行ontimeTask");
             onTimeTask = null;
         }
         loopTask.run();

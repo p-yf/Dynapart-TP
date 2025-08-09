@@ -148,8 +148,13 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     }
 
     @Override
-    public Lock getGlobalLock() {
-        return getWLock();
+    public void globalLock() {
+        getWLock().lock();
+    }
+
+    @Override
+    public void globalUnlock() {
+        getWLock().unlock();
     }
 
 
