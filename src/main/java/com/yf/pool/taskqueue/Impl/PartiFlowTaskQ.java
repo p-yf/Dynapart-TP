@@ -8,8 +8,6 @@ import com.yf.pool.taskqueue.TaskQueue;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.concurrent.locks.Lock;
-
 /**
  * @author yyf
  * @date 2025/8/9 10:49
@@ -58,7 +56,24 @@ public class PartiFlowTaskQ extends TaskQueue {
     }
 
     @Override
-    public Lock getGlobalLock() {
-        return partiFlow.getGlobalLock();
+    public void lockGlobally() {
+        partiFlow.lockGlobally();
     }
+
+    @Override
+    public void unlockGlobally() {
+        partiFlow.unlockGlobally();
+    }
+
+    @Override
+    public Integer getCapacity() {
+        return partiFlow.getCapacity();
+    }
+
+    @Override
+    public void setCapacity(Integer capacity) {
+        partiFlow.setCapacity(capacity);
+    }
+
+
 }

@@ -336,7 +336,7 @@ public class ThreadPool {
         }
         TaskQueue oldQ = taskQueue;
         try {
-            oldQ.getGlobalLock().lock();
+            oldQ.lockGlobally();
             while(oldQ.getTaskNums() > 0){
                 Runnable task = oldQ.getTask(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
                 q.addTask(task);
@@ -346,7 +346,7 @@ public class ThreadPool {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            oldQ.getGlobalLock().unlock();
+            oldQ.unlockGlobally();
         }
         return true;
     }

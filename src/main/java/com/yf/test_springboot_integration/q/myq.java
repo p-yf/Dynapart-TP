@@ -37,7 +37,23 @@ public class myq extends TaskQueue {
     }
 
     @Override
-    public Lock getGlobalLock() {
-        return null;
+    public void lockGlobally() {
+
     }
+
+    @Override
+    public void unlockGlobally() {
+
+    }
+
+    @Override
+    public Integer getCapacity() {
+        return 0;
+    }
+
+    @Override
+    public void setCapacity(Integer capacity) {
+
+    }
+
 }

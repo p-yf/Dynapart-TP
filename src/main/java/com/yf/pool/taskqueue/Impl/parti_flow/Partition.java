@@ -3,6 +3,7 @@ package com.yf.pool.taskqueue.Impl.parti_flow;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -20,7 +21,7 @@ public class Partition<T>  {
     private final Lock headLock = new ReentrantLock( false);
     private final Lock tailLock = new ReentrantLock( false);
     private final Condition headCondition = headLock.newCondition();
-    private final Node<T> head = new Node<>();
+    private Node<T> head = new Node<>();
     private Node<T> tail = head;
     private AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
@@ -33,7 +34,6 @@ public class Partition<T>  {
             throw new NullPointerException("元素不能为null");
         }
         Node<T> newNode = new Node<>(element);
-
         if(capacity==null) {
             tailLock.lock();
             try {
@@ -74,13 +74,14 @@ public class Partition<T>  {
                     headCondition.await();
                 }
             }
-            Node<T> first = head.getNext();
-            head.setNext(first.getNext());
-            if (head.getNext() == null) {
-                tail = head;
-            }
+            Node<T> h = head;
+            Node<T> first = h.getNext();
+            h.setNext(h); // 帮助垃圾回收
+            head = first;
+            T element = first.getValue();
+            first.setValue(null);
             size.getAndDecrement();
-            return first.getValue();
+            return element;
         } finally {
             headLock.unlock();
         }
@@ -94,6 +95,9 @@ public class Partition<T>  {
         try{
             if(head.getNext() != null){
                 head.setNext(head.getNext().getNext());
+                if (head.getNext() == null) {
+                    tail = head;
+                }
                 size.getAndDecrement();
                 return true;
             }else{
@@ -114,7 +118,7 @@ public class Partition<T>  {
     private void signalWaitForElement() {
         headLock.lock();
         try {
-            headCondition.signalAll();
+            headCondition.signal();
         } finally {
             headLock.unlock();
         }
