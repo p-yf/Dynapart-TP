@@ -4,11 +4,6 @@ import com.yf.pool.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 
 /**
  * @author yyf
@@ -20,9 +15,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 @Getter
 @Setter
 public abstract class TaskQueue {
-
-
-    private Integer capacity;
 
     private ThreadPool threadPool;
 
@@ -73,7 +65,11 @@ public abstract class TaskQueue {
      * 获取全局锁
      * @return
      */
-    public abstract void globalLock();
+    public abstract void lockGlobally();
 
-    public abstract void globalUnlock();
+    public abstract void unlockGlobally();
+
+    public abstract Integer getCapacity();
+
+    public abstract void setCapacity(Integer capacity);
 }

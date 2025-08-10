@@ -24,7 +24,7 @@ public class PriorityBlockingQueue extends TaskQueue {
     private  final Lock rLock = rwLock.readLock();
     private  final Lock wLock = rwLock.writeLock();
     private final Condition wCondition= getWLock().newCondition();
-
+    private volatile Integer capacity;
     private PriorityQueue<PriorityTask> q;
     public PriorityBlockingQueue(Integer capacity) {
         q = new PriorityQueue<>();
@@ -153,13 +153,23 @@ public class PriorityBlockingQueue extends TaskQueue {
     }
 
     @Override
-    public void globalLock() {
+    public void lockGlobally() {
         wLock.lock();
     }
 
     @Override
-    public void globalUnlock() {
+    public void unlockGlobally() {
         wLock.unlock();
+    }
+
+    @Override
+    public Integer getCapacity() {
+        return capacity;
+    }
+
+    @Override
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
     }
 
 }

@@ -29,10 +29,10 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     private final Condition wCondition= getWLock().newCondition();
 
     private Queue<Runnable> q;
-
+    private volatile Integer capacity;
     public LinkedBlockingQueue(Integer capacity) {
         q = new LinkedList<>();
-        setCapacity(capacity);
+        this.capacity = capacity;
     }
 
 
@@ -148,14 +148,25 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
     }
 
     @Override
-    public void globalLock() {
-        getWLock().lock();
+    public void lockGlobally() {
+        wLock.lock();
     }
 
     @Override
-    public void globalUnlock() {
-        getWLock().unlock();
+    public void unlockGlobally() {
+        wLock.unlock();
     }
+
+    @Override
+    public Integer getCapacity() {
+        return capacity;
+    }
+
+    @Override
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
+    }
+
 
 
 }

@@ -15,10 +15,10 @@ import lombok.extern.slf4j.Slf4j;
 @Setter
 public class Worker extends Thread {
     volatile private Boolean flag = true;
-    private Boolean isCore;
+    volatile private Boolean isCore;
     private ThreadPool threadPool;
-    private Boolean coreDestroy;//如果非核心线程就设置为null
-    private Integer aliveTime;//核心线程如果允许销毁则为这个数的两倍
+    volatile private Boolean coreDestroy;//如果非核心线程就设置为null
+    volatile private Integer aliveTime;//核心线程如果允许销毁则为这个数的两倍
     private Runnable onTimeTask;//是指直接提交运行的任务
     private Runnable loopTask = ()->//这里是循环从队列拿到任务
     {
@@ -74,8 +74,11 @@ public class Worker extends Thread {
     @Override
     public void run() {
         if(onTimeTask !=null){
-            onTimeTask.run();
-            log.info("执行ontimeTask");
+            try {
+                onTimeTask.run();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             onTimeTask = null;
         }
         loopTask.run();
