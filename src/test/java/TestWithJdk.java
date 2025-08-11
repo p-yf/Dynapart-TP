@@ -28,12 +28,12 @@ public class TestWithJdk {
                 20,
                 "",
                 new ThreadFactory("MineThreadPool", false, false, 5000),
-                new PartiFlowTaskQ(10,1000, OfferStrategy.HASH, PollStrategy.ROUND_ROBIN, RemoveStrategy.ROUND_ROBIN),
+                new PartiFlowTaskQ(5,1000, OfferStrategy.HASH, PollStrategy.ROUND_ROBIN, RemoveStrategy.ROUND_ROBIN),
                 new CallerRunsStrategy()
         );
         long timeMillis = System.currentTimeMillis();
         threadPool.execute(()->{
-            for(int i = 0; i < 20000000; i++) {
+            for(int i = 0; i < 10000000; i++) {
                 threadPool.execute(() -> {
                     System.out.println(System.currentTimeMillis() - timeMillis);
                     System.err.println(count.incrementAndGet());

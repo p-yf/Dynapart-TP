@@ -67,8 +67,13 @@ public class PartiFlow<T> {
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
-        //性能优先，允许即使队列没有全满，也可以任务放不进去，所以无需遍历所有分区
-            return partitions[offerStrategy.selectPartition(partitions, element)].offer(element);
+        int index = offerStrategy.selectPartition(partitions, element);
+        Boolean suc = false;
+        for(int i = 0;i<partitions.length&&!suc;i++) {
+            suc = partitions[index].offer(element);
+            index = (index+1)%partitions.length;
+        }
+            return suc;
     }
 
     public T poll(Integer waitTime) throws InterruptedException {
