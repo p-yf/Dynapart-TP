@@ -1,6 +1,7 @@
 package com.yf.pool.taskqueue.Impl.parti_flow.strategy;
 
 import com.yf.pool.taskqueue.Impl.parti_flow.Partition;
+import com.yf.pool.worker.Worker;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -15,7 +16,7 @@ public enum PollStrategy {
      * 轮询
      */
     ROUND_ROBIN{
-        AtomicInteger round = new AtomicInteger(0);
+        final AtomicInteger round = new AtomicInteger(0);
         @Override
         public int selectPartition(Partition[] partitions) {
             return round.getAndIncrement()%partitions.length;
@@ -45,6 +46,16 @@ public enum PollStrategy {
                 }
             }
             return maxIndex;
+        }
+    },
+
+    /**
+     *线程绑定
+     */
+    THREAD_BINDING{
+        @Override
+        public int selectPartition(Partition[] partitions) {
+            return ((Worker) Thread.currentThread()).getWorkerId()%partitions.length;
         }
     };
 

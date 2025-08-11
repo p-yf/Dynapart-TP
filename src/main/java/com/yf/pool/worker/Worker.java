@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 
 /**
  * @author yyf
@@ -14,6 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 @Getter
 @Setter
 public class Worker extends Thread {
+    volatile private static  AtomicInteger countId = new AtomicInteger(0);
+    volatile private Integer workerId = countId.getAndIncrement();
     volatile private Boolean flag = true;
     volatile private Boolean isCore;
     private ThreadPool threadPool;
@@ -59,9 +63,9 @@ public class Worker extends Thread {
 
     public Worker(ThreadPool threadPool, Boolean isCore, String threadName, Boolean isDaemon, Boolean coreDestroy, Integer aliveTime, Runnable onTimeTask) {
         if(isCore) {
-            this.setName(threadName+":core");
+            this.setName(threadName+workerId+":core");
         }else{
-            this.setName(threadName+":extra");
+            this.setName(threadName+workerId+":extra");
         }
         this.setDaemon(isDaemon);
         this.threadPool = threadPool;

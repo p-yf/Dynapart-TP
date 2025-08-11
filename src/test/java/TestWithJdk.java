@@ -24,34 +24,39 @@ public class TestWithJdk {
 
     private static void testMine() {
         ThreadPool threadPool = new ThreadPool(
+                5,
                 10,
-                20,
-                "",
-                new ThreadFactory("MineThreadPool", false, false, 5000),
-                new PartiFlowTaskQ(5,1000, OfferStrategy.HASH, PollStrategy.ROUND_ROBIN, RemoveStrategy.ROUND_ROBIN),
+                null,
+                new ThreadFactory(null, false, false, 5000),
+                new PartiFlowTaskQ(5,100, OfferStrategy.ROUND_ROBIN, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
                 new CallerRunsStrategy()
         );
         long timeMillis = System.currentTimeMillis();
-        threadPool.execute(()->{
-            for(int i = 0; i < 10000000; i++) {
-                threadPool.execute(() -> {
-                    System.out.println(System.currentTimeMillis() - timeMillis);
-                    System.err.println(count.incrementAndGet());
-                });
+            for(int j = 0;j<32;j++) {
+                for (int i = 0; i < 300; i++) {
+                    threadPool.execute(() -> {
+                        System.out.println(System.currentTimeMillis() - timeMillis);
+                        try {
+                            Thread.sleep(1);
+                        } catch (InterruptedException e) {
+                        }
+                        System.err.println(count.incrementAndGet());
+                    });
+                }
             }
-        });
+
 
 
     }
 
     private static void testJDK() {
-        int corePoolSize = 10;          // 核心线程数
-        int maximumPoolSize = 20;      // 最大线程数
+        int corePoolSize = 5;          // 核心线程数
+        int maximumPoolSize = 10;      // 最大线程数
         long keepAliveTime = 5;        // 空闲线程存活时间
         TimeUnit unit = TimeUnit.SECONDS; // 时间单位
 
         // 使用链表阻塞队列
-        BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>(10000);
+        BlockingQueue<Runnable> workQueue = new LinkedBlockingQueue<>(500);
 
         // 线程工厂 - 用于创建新线程
         java.util.concurrent.ThreadFactory threadFactory = Executors.defaultThreadFactory();
@@ -71,13 +76,17 @@ public class TestWithJdk {
         );
 
         long timeMillis = System.currentTimeMillis();
-        threadPool.execute(()->{
-            for(int i = 0; i < 20000000; i++) {
-                threadPool.execute(() -> {
-                    System.out.println(System.currentTimeMillis() - timeMillis);
-                    System.err.println(count.incrementAndGet());
-                });
+            for(int j = 0;j<32;j++) {
+                for (int i = 0; i < 300; i++) {
+                    threadPool.execute(() -> {
+                        System.out.println(System.currentTimeMillis() - timeMillis);
+                        try {
+                            Thread.sleep(1);
+                        } catch (InterruptedException e) {
+                        }
+                        System.err.println(count.incrementAndGet());
+                    });
+                }
             }
-        });
     }
 }
