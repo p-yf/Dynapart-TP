@@ -53,9 +53,14 @@ public enum PollStrategy {
      *线程绑定
      */
     THREAD_BINDING{
+        final AtomicInteger round = new AtomicInteger(0);
+        final ThreadLocal<Integer> threadLocal = new ThreadLocal<>();
         @Override
         public int selectPartition(Partition[] partitions) {
-            return ((Worker) Thread.currentThread()).getWorkerId()%partitions.length;
+            if(threadLocal.get()==null){
+                threadLocal.set(round.getAndIncrement()%partitions.length);
+            }
+            return threadLocal.get();
         }
     };
 

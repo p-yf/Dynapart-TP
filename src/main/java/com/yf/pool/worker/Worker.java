@@ -17,7 +17,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Setter
 public class Worker extends Thread {
     volatile private static  AtomicInteger countId = new AtomicInteger(0);
-    volatile private Integer workerId = countId.getAndIncrement();
     volatile private Boolean flag = true;
     volatile private Boolean isCore;
     private ThreadPool threadPool;
@@ -63,9 +62,9 @@ public class Worker extends Thread {
 
     public Worker(ThreadPool threadPool, Boolean isCore, String threadName, Boolean isDaemon, Boolean coreDestroy, Integer aliveTime, Runnable onTimeTask) {
         if(isCore) {
-            this.setName(threadName+workerId+":core");
+            this.setName(threadName+countId.getAndIncrement()+":core");
         }else{
-            this.setName(threadName+workerId+":extra");
+            this.setName(threadName+countId.getAndIncrement()+":extra");
         }
         this.setDaemon(isDaemon);
         this.threadPool = threadPool;
