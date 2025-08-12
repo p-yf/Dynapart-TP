@@ -29,6 +29,9 @@ DynaGuardAutoPool 是一个高性能、可动态调整的轻量级线程池框�
 ### 4. 线程生命周期管理
 精细控制线程的创建和销毁，支持核心线程的动态调整和非核心线程的自动回收。
 
+### 5. 自研高性能队列（PartiFlow）
+PartiFlow（分区流）是一款多分区、细粒度、扁平化、多策略、高性能的队列
+
 ## 📚 使用方法
 
 ### 1. Spring Boot环境集成(test_springboot_integration包就是用来测试springboot集成的)
