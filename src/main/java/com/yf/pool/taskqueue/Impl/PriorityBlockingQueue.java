@@ -37,8 +37,7 @@ public class PriorityBlockingQueue extends TaskQueue {
      * @return
      */
     public Boolean offer(Runnable task) {
-        if(task instanceof PriorityTask) {
-            PriorityTask priorityTask = (PriorityTask) task;
+        if(task instanceof PriorityTask priorityTask) {
             return offer(priorityTask);
         }else{
             PriorityTask priorityTask = new PriorityTask(task, null,0);

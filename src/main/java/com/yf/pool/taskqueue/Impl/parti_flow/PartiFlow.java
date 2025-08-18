@@ -17,7 +17,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * 分区流：多队列、细粒度、扁平化、高性能
  * 可选任务入队策略：轮询、随机、hash、填谷
  * 可选任务出队策略：轮询、随机、削峰
- * 移除任务策略：轮询、随机、削峰
+ * 可选移除任务策略：轮询、随机、削峰
  */
 @Setter
 @Getter
@@ -85,9 +85,8 @@ public class PartiFlow<T> {
                     element = partitions[partitionIndex].poll(DEFAULT_WAIT_TIME);
                     if (element == null) {
                         emptyCount++;
-                        //所有分区为空就休眠一会，，并且count清零
+                        //所有分区为空count清零
                         if (emptyCount >= partitions.length) {
-                            Thread.sleep(DEFAULT_WAIT_TIME * 5);
                             emptyCount = 0;
                         }
                     }

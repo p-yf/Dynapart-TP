@@ -28,13 +28,7 @@ public class ThreadFactory {
     }
 
     public Worker createWorker(Boolean isCore, Runnable task){
-        Worker worker = new Worker(threadPool,isCore,threadName,isDaemon,coreDestroy,aliveTime,task);
-        if(isCore) {
-            threadPool.getCoreList().add(worker);
-        }else{
-            threadPool.getExtraList().add(worker);
-        }
-        return worker;
+        return new Worker(threadPool,isCore,threadName,isDaemon,coreDestroy,aliveTime,task);
     }
 
 }

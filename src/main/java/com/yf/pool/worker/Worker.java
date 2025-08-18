@@ -33,6 +33,7 @@ public class Worker extends Thread {
                         runnable = threadPool.getTaskQueue().getTask(aliveTime*2);
                         if(runnable == null){
                             threadPool.getCoreList().remove(this);
+                            threadPool.getCoreWorkerCount().getAndDecrement();
                             log.info("核心线程"+getName()+"销毁");
                             break;
                         }
@@ -43,6 +44,7 @@ public class Worker extends Thread {
                     runnable = threadPool.getTaskQueue().getTask(aliveTime);
                     if(runnable == null){
                         threadPool.getExtraList().remove(this);
+                        threadPool.getExtraWorkerCount().getAndDecrement();
                         log.info("非核心线程"+getName()+"销毁");
                         break;
                     }

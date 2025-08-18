@@ -7,7 +7,7 @@ yf:
     threadName: yf-thread      #线程名称
     isDaemon: true      #是否是守护线程
     coreDestroy: false  #核心线程是否销毁
-    aliveTime: 5        #线程存活时间（单位：s）
+    aliveTime: 5000        #线程存活时间（单位：ms）
     queueName: linked   #队列名称
     queueCapacity:      #队列容量（不写代表null，为无界）
     rejectStrategyName: callerRuns   #拒绝策略名称

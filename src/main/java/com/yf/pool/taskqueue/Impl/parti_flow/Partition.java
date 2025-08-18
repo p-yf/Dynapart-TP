@@ -3,7 +3,6 @@ package com.yf.pool.taskqueue.Impl.parti_flow;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Condition;
@@ -13,99 +12,115 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * @author yyf
  * @date 2025/8/8 23:13
- * @description
+ * @description 优化后的分区队列，性能接近LinkedBlockingQueue
  */
 @Getter
 @Setter
-public class Partition<T>  {
-    private final Lock headLock = new ReentrantLock( false);
-    private final Lock tailLock = new ReentrantLock( false);
-    private final Condition headCondition = headLock.newCondition();
+public class Partition<T> {
+    private final Lock headLock = new ReentrantLock(false);
+    private final Lock tailLock = new ReentrantLock(false);
+    private final Condition notEmpty = headLock.newCondition();
     private Node<T> head = new Node<>();
     private Node<T> tail = head;
-    private AtomicInteger size = new AtomicInteger(0);
+    private final AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
 
     public Partition(Integer capacity) {
         this.capacity = capacity;
     }
+
+    /**
+     * 向队列添加元素，非阻塞版本
+     * 当队列有界且已满时返回false
+     */
     public Boolean offer(T element) {
-        if(element==null){
+        if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
-        Node<T> newNode = new Node<>(element);
-        if(capacity==null) {
-            tailLock.lock();
-            try {
-                tail.setNext(newNode);
-                tail = newNode;
-                signalWaitForElement();
-                size.getAndIncrement();
-            } finally {
-                tailLock.unlock();
-            }
-        }else{
-            tailLock.lock();
-            try {
-                if(size.get()>=capacity){
-                    return false;
-                }
-                tail.setNext(newNode);
-                tail = newNode;
-                signalWaitForElement();
-                size.getAndIncrement();
-            } finally {
-                tailLock.unlock();
-            }
+        // 有界队列且已满时直接返回false
+        if (capacity != null && size.get() == capacity) {
+            return false;
         }
-        return true;
+        int c = -1;
+        Node<T> newNode = new Node<>(element);
+        tailLock.lock();
+        try {
+            // 再次检查容量，防止在获取锁前队列已被填满
+            if (capacity == null || size.get() < capacity) {
+                enqueue(newNode);
+                c = size.getAndIncrement();//先返回当前返回值，再加1
+            }
+        } finally {
+            tailLock.unlock();
+        }
+        // 如果队列之前为空，唤醒等待的消费者
+        if (c == 0) {
+            signalWaitForNotEmpty();
+        }
+        return c != -1;
     }
 
+    /**
+     * 从队列获取元素，支持超时
+     */
     public T poll(Integer waitTime) throws InterruptedException {
+        T x = null;
+        int c = -1;
         headLock.lock();
         try {
-            while (head.getNext() == null) {
-                if (waitTime != null) {
-                    boolean suc = headCondition.await(waitTime, TimeUnit.MILLISECONDS);
-                    if (!suc) {
+            // 队列为空时等待
+            long nanos = 0;
+            while (size.get() == 0) {
+                if (waitTime == null) {
+                    notEmpty.await();
+                } else {
+                    if (nanos == 0) {
+                        nanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
+                        if (nanos <= 0) {
+                            return null;
+                        }
+                    }
+                    nanos = notEmpty.awaitNanos(nanos);
+                    if (nanos <= 0) {
                         return null;
                     }
-                } else {
-                    headCondition.await();
                 }
             }
-            Node<T> h = head;
-            Node<T> first = h.getNext();
-            h.setNext(h); // 帮助垃圾回收
-            head = first;
-            T element = first.getValue();
-            first.setValue(null);
-            size.getAndDecrement();
-            return element;
+            x = dequeue();
+            c = size.getAndDecrement();
+            // 如果还有元素，唤醒其他可能等待的消费者
+            if (c > 1) {
+                notEmpty.signal();
+            }
         } finally {
             headLock.unlock();
         }
+        return x;
     }
 
     public Boolean removeElement() {
-        if(head.getNext() == null){
+        // 无锁快速失败：空队列直接返回
+        if (size.get() == 0) {
             return false;
         }
+
+        int c = -1;
         headLock.lock();
-        try{
-            if(head.getNext() != null){
-                head.setNext(head.getNext().getNext());
-                if (head.getNext() == null) {
-                    tail = head;
+        try {
+            if (size.get() > 0) {
+                dequeue(); // 复用poll中的节点删除逻辑
+                c = size.getAndDecrement();
+                // 队列仍有元素：唤醒下一个消费者
+                if (c > 1) {
+                    notEmpty.signal();
                 }
-                size.getAndDecrement();
-                return true;
-            }else{
+            } else {
                 return false;
             }
-        }finally {
+        } finally {
             headLock.unlock();
         }
+        return true;
     }
 
     public int getElementNums() {
@@ -113,12 +128,33 @@ public class Partition<T>  {
     }
 
     /**
-     * 唤醒等待元素的线程
+     * 将节点加入队列尾部
      */
-    private void signalWaitForElement() {
+    private void enqueue(Node<T> node) {
+        tail.setNext(node);
+        tail = node;
+    }
+
+    /**
+     * 从队列头部移除节点
+     */
+    private T dequeue() {
+        Node<T> h = head;
+        Node<T> first = h.getNext();
+        h.setNext(h); // 帮助垃圾回收
+        head = first;
+        T x = first.getValue();
+        first.setValue(null);
+        return x;
+    }
+
+    /**
+     * 唤醒等待非空条件的线程
+     */
+    private void signalWaitForNotEmpty() {
         headLock.lock();
         try {
-            headCondition.signal();
+            notEmpty.signal();
         } finally {
             headLock.unlock();
         }

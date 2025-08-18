@@ -22,7 +22,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 @Setter
 @Getter
-public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
+public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有界
     private  final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
     private  final Lock rLock = rwLock.readLock();
     private  final Lock wLock = rwLock.writeLock();
@@ -30,7 +30,7 @@ public class LinkedBlockingQueue extends TaskQueue {//可以无界可以有界
 
     private Queue<Runnable> q;
     private volatile Integer capacity;
-    public LinkedBlockingQueue(Integer capacity) {
+    public LinkedBlockingQueueMini(Integer capacity) {
         q = new LinkedList<>();
         this.capacity = capacity;
     }

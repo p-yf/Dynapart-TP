@@ -16,8 +16,10 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -38,8 +40,10 @@ public class ThreadPool {
     private Integer maxNums;//最大线程数
     private String queueName = null;//非springboot环境直接用类，反之用名字,拒绝策略同理
     private String rejectStrategyName = null;
-    private Set<Worker> coreList = new HashSet<>();
-    private Set<Worker> extraList = new HashSet<>();
+    private Set<Worker> coreList = ConcurrentHashMap.newKeySet();
+    private Set<Worker> extraList = ConcurrentHashMap.newKeySet();
+    private final AtomicInteger coreWorkerCount = new AtomicInteger(0); // 核心线程存活数
+    private final AtomicInteger extraWorkerCount = new AtomicInteger(0); // 额外线程存活数
 
     private String name;//线程池名称
 
@@ -71,118 +75,92 @@ public class ThreadPool {
 
     }
 
-    public void execute(Runnable task) {//与juc的线程池判断逻辑一致，适合cpu密集型
-        try {
-            lock.lock();
-            if (coreList.size() < coreNums) {
-                threadFactory.createWorker(true, task).start();
+    public void execute(Runnable task) {
+        if (coreList.size() < coreNums) {
+            if (addWorker(task,true)) {
                 return;
             }
-            if (taskQueue.getCapacity() == null) {//说明无界
-                taskQueue.addTask(task);
-                return;
-            }
-            Boolean success = taskQueue.addTask(task);
-            if(success){
-                return;
-            }
-            if (coreList.size() + extraList.size() < maxNums) {
-                threadFactory.createWorker(false, task).start();
-                return;
-            }
-        } finally {
-            lock.unlock();
+        }
+        if (taskQueue.offer(task)) {
+            return;
+        }
+        if (addWorker(task,false)) {
+            return;
         }
         rejectStrategy.reject(task);
     }
 
-    public Future submit(Callable<Object> task) {
-        FutureTask futureTask = new FutureTask(task);
-        try {
-            lock.lock();
-            if (coreList.size() < coreNums) {
-                threadFactory.createWorker(true, futureTask).start();
-                return futureTask;
-            }
-            if (taskQueue.getCapacity() == null) {//说明无界
-                taskQueue.addTask(futureTask);
-                return futureTask;
-            }
-            Boolean success = taskQueue.addTask(futureTask);
-            if(success){
-                return futureTask;
-            }
-            if (coreList.size() + extraList.size() < maxNums) {
-                threadFactory.createWorker(false, futureTask).start();
-                return futureTask;
-            }
-        } finally {
-            lock.unlock();
-        }
-        rejectStrategy.reject(futureTask);
-        return futureTask;
-    }
 
-    /**
-     * 执行任务
-     */
-    public void executeThreadFirst(Runnable task) {//线程优先，先考虑非核心线程再考虑队列，适合io密集型
-        try {
-            lock.lock();
-            if (coreList.size() < coreNums) {
-                threadFactory.createWorker(true, task).start();
-                return;
-            } else if (coreList.size() + extraList.size() < maxNums) {
-                threadFactory.createWorker(false, task).start();
-                return;
+    public Future submit(Callable<Object> callable) {
+        FutureTask task = new FutureTask(callable);
+        if (coreList.size() < coreNums) {
+            if (addWorker(task,true)) {
+                return  task;
             }
-        } finally {
-            lock.unlock();
         }
-        if (taskQueue.getCapacity() == null) {//说明无界
-            taskQueue.addTask(task);
-            return;
+        if (taskQueue.offer(task)) {
+            return  task;
         }
-        Boolean success = taskQueue.addTask(task);
-        if (!success) {
-            rejectStrategy.reject(task);
+        if (addWorker(task,false)) {
+            return  task;
         }
+        rejectStrategy.reject(task);
+        task.cancel(true);
+        return task;
     }
 
 
-
-    /**
-     * 提交任务，有返回值
-     *
-     * @return future容器
-     */
-    public Future submitThreadFirst(Callable<Object> task) {
-        FutureTask futureTask = new FutureTask(task);
-        try {
-            lock.lock();
-            if (coreList.size() < coreNums) {
-                threadFactory.createWorker(true, futureTask).start();
-                return futureTask;
-            } else if (coreList.size() + extraList.size() < maxNums) {
-                threadFactory.createWorker(false, futureTask).start();
-                return futureTask;
+    private boolean addWorker(Runnable task, boolean isCore) {
+        // 循环CAS重试：直到成功或确定无法创建线程
+        while (true) {
+            if (isCore) {
+                int current = coreWorkerCount.get();
+                if (current >= coreNums) {
+                    return false; // 核心线程达到上限，退出
+                }
+                // CAS尝试更新
+                if (coreWorkerCount.compareAndSet(current, current + 1)) {
+                    break; // CAS成功,即将退出循环创建Worker
+                }// CAS失败，继续循环重试
+            } else {
+                // 额外线程逻辑
+                int current = extraWorkerCount.get();
+                int extraMax = maxNums - coreNums;
+                if (current >= extraMax) {
+                    return false; // 额外线程达到上限，退出
+                }
+                if (extraWorkerCount.compareAndSet(current, current + 1)) {
+                    break; // CAS成功，退出循环
+                }// CAS失败，继续循环重试
             }
-        } finally {
-            lock.unlock();
+            Thread.yield();
         }
-        if (taskQueue.getCapacity() == null) {//说明无界
-            taskQueue.addTask(futureTask);
-            return futureTask;
+        Worker worker = null;
+        try {
+            worker = threadFactory.createWorker(isCore, task);
+            if (isCore) {
+                coreList.add(worker);
+            } else {
+                extraList.add(worker);
+            }
+            worker.start();
+            return true;
+        } catch (Throwable e) {//异常回滚
+            if (isCore) {
+                coreWorkerCount.getAndDecrement();
+            } else {
+                extraWorkerCount.getAndDecrement();
+            }
+            if (worker != null) {
+                if (isCore) {
+                    coreList.remove(worker);
+                } else {
+                    extraList.remove(worker);
+                }
+            }
+            return false;
         }
-        Boolean success = taskQueue.addTask(futureTask);
-        if (success) {
-            return futureTask;
-        }
-        rejectStrategy.reject(futureTask);
-        return futureTask;
     }
-
-
 
 //    =======================================================
 //    以下是对于线程池相关参数的读写操作，用来提供监控信息和修改参数，不涉及到线程池运行过程的自动调控，所以读取信息全部无锁
