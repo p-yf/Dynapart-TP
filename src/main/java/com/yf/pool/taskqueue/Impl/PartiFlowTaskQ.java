@@ -26,8 +26,8 @@ public class PartiFlowTaskQ extends TaskQueue {
         partiFlow = new PartiFlow<>(partitionNum,capacity);
     }
 
-    public PartiFlowTaskQ(Integer partitionNum) {
-        partiFlow = new PartiFlow<>(partitionNum);
+    public PartiFlowTaskQ(Integer capacity) {
+        partiFlow = new PartiFlow<>(capacity);
     }
 
     @Override

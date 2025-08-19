@@ -37,9 +37,9 @@ public class TestWithJdk {
                 20,
                 "",
                 new ThreadFactory("", false, false, 2000),
-//                new PartiFlowTaskQ(10,500, OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
+                new PartiFlowTaskQ(10,5001, OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
 //                new LinkedBlockingQueuePlus(5000),
-                new PriorityBlockingQueue(5000),
+//                new PriorityBlockingQueue(5000),
                 new CallerRunsStrategy()
         );
         // 2. 任务完成计数器（确保所有任务执行完再结束计时）

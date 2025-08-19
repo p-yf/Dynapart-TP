@@ -30,7 +30,8 @@ public class PartiFlow<T> {
     private AtomicInteger offerRound = new AtomicInteger(0);
     private AtomicInteger pollRound = new AtomicInteger(0);
     private AtomicInteger removeRound = new AtomicInteger(0);
-    private Integer capacity;
+    private volatile Integer capacity;
+    private Integer DEFAULT_PARTITION_NUM = 5;
     private static final Integer DEFAULT_WAIT_TIME = 100;
 
     public PartiFlow(Integer partitionNum, Integer capacity, OfferStrategy offerStrategy, PollStrategy pollStrategy, RemoveStrategy removeStrategy) {
@@ -38,30 +39,45 @@ public class PartiFlow<T> {
         this.offerStrategy = offerStrategy;
         this.pollStrategy = pollStrategy;
         this.removeStrategy = removeStrategy;
-        if(capacity!=null) {
-            this.capacity = capacity * partitionNum;
-        }
     }
 
     public PartiFlow(Integer partitionNum, Integer capacity) {
         partitions = new Partition[partitionNum];
-        for (int i = 0; i < partitionNum; i++) {
-            partitions[i] = new Partition<T>(capacity);
-        }
-        if(capacity!=null) {
-            this.capacity = capacity * partitionNum;
+        this.capacity = capacity;
+        if (capacity != null) {//不为null，轮询分配
+            final int baseCapacity = capacity / partitionNum;
+            final int remainder = capacity % partitionNum;
+            for (int i = 0; i < partitionNum; i++) {
+                int partitionCapacity = baseCapacity + (i < remainder ? 1 : 0);
+                partitions[i] = new Partition<>(partitionCapacity);
+            }
+        } else {//为null，都为无界队列
+            for (int i = 0; i < partitionNum; i++) {
+                partitions[i] = new Partition<>(null);
+            }
         }
     }
 
-    public PartiFlow(Integer partitionNum) {
-        partitions = new Partition[partitionNum];
-        for (int i = 0; i < partitionNum; i++) {
-            partitions[i] = new Partition<T>(null);
-        }
-        if(capacity!=null) {
-            this.capacity = capacity * partitionNum;
+    /**
+     * 使用默认分区数量初始化，按"基础平均+轮询分配剩余"策略分配容量
+     */
+    public PartiFlow(Integer capacity) {
+        partitions = new Partition[DEFAULT_PARTITION_NUM];
+        this.capacity = capacity;
+        if (capacity != null) {//不为null，轮询分配
+            final int baseCapacity = capacity / DEFAULT_PARTITION_NUM;
+            final int remainder = capacity % DEFAULT_PARTITION_NUM;
+            for (int i = 0; i < DEFAULT_PARTITION_NUM; i++) {
+                int partitionCapacity = baseCapacity + (i < remainder ? 1 : 0);
+                partitions[i] = new Partition<>(partitionCapacity);
+            }
+        } else {//为null，都为无界队列
+            for (int i = 0; i < DEFAULT_PARTITION_NUM; i++) {
+                partitions[i] = new Partition<>(null);
+            }
         }
     }
+
 
     public Boolean offer(T element) {
         if (element == null) {
