@@ -6,6 +6,7 @@ import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.pool.taskqueue.TaskQueue;
 import com.yf.pool.threadpool.ThreadPool;
+import com.yf.springboot_integration.monitor.properties.MonitorProperties;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -24,7 +25,7 @@ public class MonitorController {
 
     private ThreadPool threadPool;
     private ApplicationContext context;
-
+    private MonitorProperties monitorProperties;
 
     /**
      * 获取线程池的信息
@@ -64,6 +65,9 @@ public class MonitorController {
      */
     @PutMapping("/queue")
     public Boolean changeQ(String qName,Integer qCapacity) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        if(!monitorProperties.isQReplaceable()){
+            return false;
+        }
         if(qName==null|| qName.isEmpty()){
             return false;
         }
@@ -86,6 +90,9 @@ public class MonitorController {
      */
     @PutMapping("/rejectStrategy")
     public Boolean changeRS(String rsName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        if(!monitorProperties.isRsReplaceable()){
+            return false;
+        }
         if(rsName == null|| rsName.isEmpty()){
             return false;
         }

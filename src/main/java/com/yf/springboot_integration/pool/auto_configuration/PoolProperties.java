@@ -9,9 +9,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @description
  */
 @Data
-@ConditionalOnProperty(prefix = "yf.thread-pool",name = "enabled",havingValue = "true")
-@ConfigurationProperties(prefix = "yf.thread-pool")
-public class ThreadPoolProperties {
+@ConditionalOnProperty(prefix = "yf.thread-pool.pool",name = "enabled",havingValue = "true")
+@ConfigurationProperties(prefix = "yf.thread-pool.pool")
+public class PoolProperties {
     private Integer coreNums;//核心线程数
     private Integer maxNums;//最大线程数
     private String poolName;//线程池名称

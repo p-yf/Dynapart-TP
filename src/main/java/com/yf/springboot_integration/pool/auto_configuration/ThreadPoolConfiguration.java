@@ -22,8 +22,8 @@ import java.lang.reflect.InvocationTargetException;
  * @description
  */
 @AutoConfiguration
-@EnableConfigurationProperties(ThreadPoolProperties.class)
-@ConditionalOnProperty(prefix = "yf.thread-pool", name = "enabled", havingValue = "true")
+@EnableConfigurationProperties(PoolProperties.class)
+@ConditionalOnProperty(prefix = "yf.thread-pool.pool", name = "enabled", havingValue = "true")
 public class ThreadPoolConfiguration {
 
     private final ApplicationContext context;
@@ -36,7 +36,7 @@ public class ThreadPoolConfiguration {
      * 创建线程池
      */
     @Bean
-    public ThreadPool threadPool(ThreadPoolProperties threadPoolProperties) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+    public ThreadPool threadPool(PoolProperties threadPoolProperties) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         String queueName = threadPoolProperties.getQueueName();
         String rejectStrategyName = threadPoolProperties.getRejectStrategyName();
         TaskQueue taskQueue; RejectStrategy rejectStrategy;

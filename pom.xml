@@ -8,6 +8,7 @@
     <artifactId>TaskFlowCluster-TL</artifactId>
     <version>1.0-SNAPSHOT</version>
 
+<!--    用于springboot环境   其中集群也需要springboot环境-->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -28,20 +29,34 @@
             <optional>true</optional>
         </dependency>
 
+<!--        属于springboot自动装配必要依赖-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-autoconfigure</artifactId>
         </dependency>
 
+<!--        属于可视化监控必要依赖-->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
         </dependency>
 
-
+<!--        属于可视化监控必要依赖-->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-websocket</artifactId>
+        </dependency>
+
+<!--        ==============集群的特殊依赖===============         -->
+        <!-- Redis Starter核心依赖（自动配置RedisTemplate、连接池等） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- 连接池依赖 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
         </dependency>
 
     </dependencies>

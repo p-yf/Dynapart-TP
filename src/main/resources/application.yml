@@ -1,20 +1,55 @@
+server:
+  port: 8080
+
+#线程池配置
 yf:
   thread-pool:
-    enabled: true  #是否开启线程池自动装配
-    coreNums: 5    #线程池核心线程数
-    maxNums: 10    #线程池最大线程数
-    poolName: yf-thread-pool   #线程池名称
-    threadName: yf-thread      #线程名称
-    isDaemon: true      #是否是守护线程
-    coreDestroy: false  #核心线程是否销毁
-    aliveTime: 5000        #线程存活时间（单位：ms）
-    queueName: parti_flow   #队列名称
-    queueCapacity:      #队列容量（不写代表null，为无界）
-    rejectStrategyName: callerRuns   #拒绝策略名称
+    pool:
+      enabled: true
+      coreNums: 5    #线程池核心线程数
+      maxNums: 10    #线程池最大线程数
+      poolName: yf-thread-pool   #线程池名称
+      threadName: yf-thread      #线程名称
+      isDaemon: true      #是否是守护线程
+      coreDestroy: false  #核心线程是否销毁
+      aliveTime: 5000        #线程存活时间（单位：ms）
+      queueName: parti_flow   #队列名称
+      queueCapacity:      #队列容量（不写代表null，为无界）
+      rejectStrategyName: callerRuns   #拒绝策略名称
     monitor:
       enabled: true       #是否开启监控
       fixedDelay: 5000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
-      qReplaceable: true  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
-      rsReplaceable: true #是否可更换拒绝策略
-server:
-  port: 8080
+      qReplaceable: false  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
+      rsReplaceable: false #是否可更换拒绝策略
+
+
+#=============================集群相关========================================
+#redis配置
+spring:
+  data:
+    redis:
+      # Redis服务器地址
+      host: localhost
+      # Redis服务器端口
+      port: 6379
+      # Redis服务器密码（如果没有密码则省略）
+      password:
+      # 数据库索引，默认为0
+      database: 0
+      # 连接超时时间（毫秒）
+      timeout: 10000ms
+      # 连接池配置
+      lettuce:
+        pool:
+          # 最大连接数，默认8
+          max-active: 8
+          # 最大阻塞等待时间，默认-1
+          max-wait: -1ms
+         # 最大空闲连接，默认8
+          max-idle: 8
+          # 最小空闲连接，默认0
+          min-idle: 0
+
+
+
+
