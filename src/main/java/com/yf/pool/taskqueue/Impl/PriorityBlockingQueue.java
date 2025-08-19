@@ -12,137 +12,120 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-/**
- * @author yyf
- * @date 2025/8/2 14:09
- * @description:使用优先级队列的时候，提交任务可以直接用普通任务，默认优先级为0最小。也可以用优先级任务，优先级任务需要将普通任务封装进优先级任务，并且指定优先级
- */
 @Setter
 @Getter
 public class PriorityBlockingQueue extends TaskQueue {
-    private  final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
-    private  final Lock rLock = rwLock.readLock();
-    private  final Lock wLock = rwLock.writeLock();
-    private final Condition wCondition= getWLock().newCondition();
+    private final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
+    private final Lock rLock = rwLock.readLock();
+    private final Lock wLock = rwLock.writeLock();
+    private final Condition notEmpty = wLock.newCondition(); // 仅用于出队等待
     private volatile Integer capacity;
-    private PriorityQueue<PriorityTask> q;
+    private final PriorityQueue<PriorityTask> q;
+
     public PriorityBlockingQueue(Integer capacity) {
-        q = new PriorityQueue<>();
-        setCapacity(capacity);
+        this.q = new PriorityQueue<>();
+        this.capacity = capacity;
     }
 
     /**
-     * 添加任务,用普通任务封装进优先级任务，其实核心是用下面那个offer
-     * @param task
-     * @return
+     * 添加任务，将普通任务封装为优先级任务
      */
     public Boolean offer(Runnable task) {
-        if(task instanceof PriorityTask priorityTask) {
-            return offer(priorityTask);
-        }else{
-            PriorityTask priorityTask = new PriorityTask(task, null,0);
-            return offer(priorityTask);
-        }
-    }
-    private Boolean offer(PriorityTask task) {
         if (task == null) {
             throw new NullPointerException("任务不能为null");
         }
-        if (getCapacity() != null) {//利用双重检查尽量增加性能
-            if(getCapacity()>getTaskNums()) {
-                getWLock().lock(); // 获取锁
-                try {
-                    if (getTaskNums() < getCapacity()) {
-                        // 添加任务到队列
-                        boolean added = q.add(task);
-                        // 唤醒等待的线程（可能有线程在poll时阻塞）
-                        getWCondition().signal(); // 唤醒一个等待的线程
-                        return added;
-                    }
-                    return false;
-                } finally {
-                    getWLock().unlock(); // 确保锁释放
-                }
-            }
-        }else{
-            getWLock().lock(); // 获取锁
-            try {
-                // 添加任务到队列
-                boolean added = q.add(task);
-                // 唤醒等待的线程（可能有线程在poll时阻塞）
-                getWCondition().signal(); // 唤醒一个等待的线程
-                return added;
-            } finally {
-                getWLock().unlock(); // 确保锁释放
-            }
+
+        if (task instanceof PriorityTask) {
+            return offer((PriorityTask) task);
+        } else {
+            PriorityTask priorityTask = new PriorityTask(task, null, 0);
+            return offer(priorityTask);
         }
-        return false;
     }
 
     /**
-     * 获取任务
-     * @param waitTime，如果为null就代表一直等待，如果不为null就代表等待aliveTime毫秒，如果等待超时则返回null
-     * @return
-     * @throws InterruptedException
+     * 添加优先级任务
+     */
+    private boolean offer(PriorityTask task) {
+        if (task == null) {
+            throw new NullPointerException("任务不能为null");
+        }
+        if (capacity != null && getTaskNums() >= capacity) {
+            return false;
+        }
+        wLock.lock();
+        try {
+            if (capacity != null && q.size() >= capacity) {
+                return false;
+            }
+            boolean added = q.add(task);
+            // 唤醒等待出队的线程
+            notEmpty.signal();
+            return added;
+        } finally {
+            wLock.unlock();
+        }
+    }
+
+    /**
+     * 阻塞获取任务（保留出队等待逻辑）
      */
     @Override
     public Runnable getTask(Integer waitTime) throws InterruptedException {
-        getWLock().lock(); // 可中断地获取锁
+        wLock.lock();
         try {
-            // 循环检查：避免虚假唤醒
             while (q.isEmpty()) {
-                // 队列空，让当前线程阻塞等待
-                if(waitTime !=null) {//表示有等待时间
-                    boolean await = getWCondition().await(Long.valueOf(waitTime), TimeUnit.MILLISECONDS);// 释放锁，进入等待状态
-                    if(!await) {//表示超时
+                if (waitTime != null) {
+                    // 限时等待
+                    boolean await = notEmpty.await(waitTime, TimeUnit.MILLISECONDS);
+                    if (!await) { // 超时
                         return null;
                     }
-                }else{
-                    getWCondition().await();// 释放锁，进入等待状态
+                } else {
+                    notEmpty.await();
                 }
             }
-            // 队列有任务，取出并返回
             return q.poll();
         } finally {
-            getWLock().unlock(); // 确保锁释放
+            wLock.unlock();
         }
     }
 
     /**
      * 移除优先级最低的任务
-     * @return
      */
     @Override
     public Boolean removeTask() {
-        getWLock().lock();
+        wLock.lock();
         try {
             if (q.isEmpty()) {
-            } else {
-                q.remove(findLowestPriorityTask());
+                return false;
             }
-        }finally {
-            getWLock().unlock();
-        }
-        return true;
-    }
+            // 找到优先级最低的任务
+            PriorityTask lowest = null;
+            for (PriorityTask task : q) {
+                if (lowest == null || task.getPriority() < lowest.getPriority()) {
+                    lowest = task;
+                }
+            }
 
-    private PriorityTask findLowestPriorityTask() {
-        PriorityTask lowestPriorityTask = q.peek();
-        for (PriorityTask task : q) {
-            if (task.getPriority() < lowestPriorityTask.getPriority()) {
-                lowestPriorityTask = task;
+            if (lowest != null) {
+                q.remove(lowest);
+                return true;
             }
+            return false;
+        } finally {
+            wLock.unlock();
         }
-        return lowestPriorityTask;
     }
 
     @Override
     public int getExactTaskNums() {
-        getRLock().lock();
+        rLock.lock();
         try {
             return q.size();
         } finally {
-            getRLock().unlock();
+            rLock.unlock();
         }
     }
 
@@ -160,15 +143,4 @@ public class PriorityBlockingQueue extends TaskQueue {
     public void unlockGlobally() {
         wLock.unlock();
     }
-
-    @Override
-    public Integer getCapacity() {
-        return capacity;
-    }
-
-    @Override
-    public void setCapacity(Integer capacity) {
-        this.capacity = capacity;
-    }
-
 }

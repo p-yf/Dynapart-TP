@@ -1,6 +1,8 @@
 import com.yf.pool.rejectstrategy.impl.CallerRunsStrategy;
 import com.yf.pool.taskqueue.Impl.LinkedBlockingQueueMini;
+import com.yf.pool.taskqueue.Impl.LinkedBlockingQueuePlus;
 import com.yf.pool.taskqueue.Impl.PartiFlowTaskQ;
+import com.yf.pool.taskqueue.Impl.PriorityBlockingQueue;
 import com.yf.pool.taskqueue.Impl.parti_flow.strategy.OfferStrategy;
 import com.yf.pool.taskqueue.Impl.parti_flow.strategy.PollStrategy;
 import com.yf.pool.taskqueue.Impl.parti_flow.strategy.RemoveStrategy;
@@ -18,25 +20,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestWithJdk {
     // 可调整参数
-    private static final int TOTAL_TASKS = 2_00_000_0; // 总任务数（够多才能体现时间差异）
+    private static final int TOTAL_TASKS = 1_00_000_0; // 总任务数（够多才能体现时间差异）
     private static final int SUBMIT_THREADS = 10000; // 提交任务的线程数（建议=CPU核心数，避免线程过多）
     private static final int THREAD_POOL_SIZE = Runtime.getRuntime().availableProcessors(); // 线程池核心数（贴合CPU能力）
 
     public static void main(String[] args) throws InterruptedException {
-        testMineParti();//io:7248ms   //io+cpu:24380
+        testMineParti();//22748  16676 毫秒  20337  22191  22812 24749 24474
 //        testMyLBQ();
-//        testJDK();//io:9283ms
+//        testJDK();//23550  17337 毫秒  20461  21840 23471 23433 26009
 
     }
 
     private static void testMineParti() throws InterruptedException {
         ThreadPool threadPool = new ThreadPool(
-                10,
-                10,
+                0,
+                20,
                 "",
                 new ThreadFactory("", false, false, 2000),
-                new PartiFlowTaskQ(5,1000, OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
-//                new LBQ(5000),
+//                new PartiFlowTaskQ(10,500, OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
+//                new LinkedBlockingQueuePlus(5000),
+                new PriorityBlockingQueue(5000),
                 new CallerRunsStrategy()
         );
         // 2. 任务完成计数器（确保所有任务执行完再结束计时）
@@ -54,9 +57,17 @@ public class TestWithJdk {
                         // 模拟真实任务：简单计算（避免JIT优化掉空任务）
                         long val = (System.nanoTime() * 3 + 7) % 11;
                         // 任务完成，计数器+1
-                        taskFinishCount.incrementAndGet();
                         System.out.println(val);
                         System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println(val);
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        taskFinishCount.incrementAndGet();
+
                     });
                 }
             });
@@ -80,8 +91,8 @@ public class TestWithJdk {
 
 
     private static void testJDK() throws InterruptedException {
-        int corePoolSize = 10;          // 核心线程数
-        int maximumPoolSize = 10;      // 最大线程数
+        int corePoolSize = 0;          // 核心线程数
+        int maximumPoolSize = 20;      // 最大线程数
         long keepAliveTime = 2;        // 空闲线程存活时间
         TimeUnit unit = TimeUnit.SECONDS; // 时间单位
 
@@ -119,9 +130,17 @@ public class TestWithJdk {
                         // 模拟真实任务：简单计算（避免JIT优化掉空任务）
                         long val = (System.nanoTime() * 3 + 7) % 11;
                         // 任务完成，计数器+1
-                        taskFinishCount.incrementAndGet();
                         System.out.println(val);
                         System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println(val);
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        System.out.println("doit");
+                        taskFinishCount.incrementAndGet();
+
                     });
                 }
             });

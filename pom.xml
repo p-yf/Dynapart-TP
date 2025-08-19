@@ -3,9 +3,9 @@
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-<!--“Dyna” 对应动态（Dynamic），“Guard” 体现监控守护，“Auto” 突出自动装配-->
+<!--    TaskFlowCluster-TP(任务流集群-线程池)-->
     <groupId>com.yf</groupId>
-    <artifactId>DynaGuardAutoPool</artifactId>
+    <artifactId>TaskFlowCluster-TP</artifactId>
     <version>1.0-SNAPSHOT</version>
 
     <parent>
