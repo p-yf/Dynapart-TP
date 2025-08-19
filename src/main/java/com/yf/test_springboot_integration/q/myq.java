@@ -2,6 +2,7 @@ package com.yf.test_springboot_integration.q;
 
 import com.yf.springboot_integration.pool.annotation.TaskQueueBean;
 import com.yf.pool.taskqueue.TaskQueue;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.util.concurrent.locks.Lock;
 
@@ -11,6 +12,7 @@ import java.util.concurrent.locks.Lock;
  */
 @TaskQueueBean("myq")
 public class myq extends TaskQueue {
+
     @Override
     public Boolean offer(Runnable task) {
         return null;

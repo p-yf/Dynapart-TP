@@ -77,6 +77,12 @@ public class PartiFlow<T> {
             }
         }
     }
+    public PartiFlow() {
+        partitions = new Partition[DEFAULT_PARTITION_NUM];
+        for (int i = 0; i < DEFAULT_PARTITION_NUM; i++) {
+            partitions[i] = new Partition<>(null);
+        }
+    }
 
 
     public Boolean offer(T element) {

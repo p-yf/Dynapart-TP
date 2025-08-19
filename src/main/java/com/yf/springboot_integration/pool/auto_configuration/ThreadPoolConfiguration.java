@@ -45,8 +45,9 @@ public class ThreadPoolConfiguration {
             taskQueue.setCapacity(threadPoolProperties.getQueueCapacity());
         }catch (NoSuchBeanDefinitionException e){
             Class<?> taskQueueClass = OfQueue.TASK_QUEUE_MAP.get(queueName);
-            Constructor<?> queueClassConstructor = taskQueueClass.getConstructor(Integer.class);
-            taskQueue = (TaskQueue) queueClassConstructor.newInstance(threadPoolProperties.getQueueCapacity());
+            Constructor<?> queueClassConstructor = taskQueueClass.getConstructor();
+            taskQueue = (TaskQueue) queueClassConstructor.newInstance();
+            taskQueue.setCapacity(threadPoolProperties.getQueueCapacity());
         }
         try {
             rejectStrategy = (RejectStrategy) context.getBean(rejectStrategyName);

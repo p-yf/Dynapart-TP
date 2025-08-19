@@ -30,6 +30,11 @@ public class PartiFlowTaskQ extends TaskQueue {
         partiFlow = new PartiFlow<>(capacity);
     }
 
+    public PartiFlowTaskQ() {
+        partiFlow = new PartiFlow<>();
+    }
+
+
     @Override
     public Boolean offer(Runnable task) {
         return partiFlow.offer( task);

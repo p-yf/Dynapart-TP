@@ -13,6 +13,9 @@ public class LinkedBlockingQueuePlus extends TaskQueue {
     public LinkedBlockingQueuePlus(Integer capacity) {
         q = new Partition<>(capacity);
     }
+    public LinkedBlockingQueuePlus() {
+        q = new Partition<>();
+    }
     @Override
     public Boolean offer(Runnable task) {
         return q.offer( task);

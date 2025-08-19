@@ -34,7 +34,9 @@ public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有�
         q = new LinkedList<>();
         this.capacity = capacity;
     }
-
+    public LinkedBlockingQueueMini() {
+        q = new LinkedList<>();
+    }
 
     public void warning() {
         if(getTaskNums()>10){

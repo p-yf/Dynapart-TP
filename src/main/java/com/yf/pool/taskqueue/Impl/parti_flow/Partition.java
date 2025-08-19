@@ -28,6 +28,8 @@ public class Partition<T> {
     public Partition(Integer capacity) {
         this.capacity = capacity;
     }
+    public Partition() {
+    }
 
     /**
      * 向队列添加元素，非阻塞版本
