@@ -3,6 +3,7 @@ package com.yf.clustering.node.service_registry;
 import com.yf.pool.threadpool.ThreadPool;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -30,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class ServiceRegistryHandler {
 
-    //    每个节点信息包含字段：ip、pid、cpuUsage(cpu使用率)、memoryUsage（内存使用率）、taskNums（任务数量）、queueCapacity(队列大小)
+    //    每个节点信息包含字段：ip、port、cpuUsage(cpu使用率)、memoryUsage（内存使用率）、taskNums（任务数量）、queueCapacity(队列大小)
 //    节点启动时自动向 Redis 注册，设置 35 秒过期时间（比心跳周期多5秒）
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -38,10 +39,12 @@ public class ServiceRegistryHandler {
     private ResourceLoader resourceLoader;
     @Autowired
     private ThreadPool threadPool;
+    @Autowired
+    private ServerProperties serverProperties;
 
-    private final static String IP;
-    private final static String PID;
-    private final static String KEY;
+    private static String IP;
+    private static String PORT;
+    private static String KEY;
     //redis中的key
     private final static String REGISTRY_KEY_PREFIX = "task_flow:registry";//基础信息注册  hash 真正的key是前缀加节点的ip和进程号
     private final static String SORT_BY_CPU = "task_flow:sort:cpuUsage";//节点按cpu使用率排序
@@ -51,7 +54,12 @@ public class ServiceRegistryHandler {
     // Lua脚本
     DefaultRedisScript<Long> redisScript;
 
-    static {
+    private final static  int cpuCores = Runtime.getRuntime().availableProcessors();
+    private final static int HEART_BEAT = 10;
+    private final static int EXPIRE = 12;
+
+    @PostConstruct
+    public void firstRegister(){//启动服务，向redis进行注册
         InetAddress localHost;
         try {
             localHost = Inet4Address.getLocalHost();
@@ -59,17 +67,11 @@ public class ServiceRegistryHandler {
             throw new RuntimeException(e);
         }
         IP = localHost.getHostAddress();
-        PID = String.valueOf(ProcessHandle.current().pid());
-        KEY = REGISTRY_KEY_PREFIX+":"+IP+ ":"+PID;
-    }
-    private final static int HEART_BEAT = 30;
-    private final static int EXPIRE = 35;
-
-    @PostConstruct
-    public void firstRegister(){//启动服务，向redis进行注册
+        PORT = serverProperties.getPort().toString();
+        KEY = REGISTRY_KEY_PREFIX+":"+IP+ ":"+ PORT;
         register();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {//进程退出时，删除redis中hash的key 以及zset的元素
-            stringRedisTemplate.opsForHash().delete(KEY);
+            stringRedisTemplate.opsForHash().delete(KEY,"ip", "port", "cpuUsage", "memoryUsage", "taskNums", "queueCapacity");
             stringRedisTemplate.opsForZSet().remove(SORT_BY_CPU,KEY);
             stringRedisTemplate.opsForZSet().remove(SORT_BY_MEMORY,KEY);
             stringRedisTemplate.opsForZSet().remove(SORT_BY_Queue,KEY);
@@ -92,7 +94,7 @@ public class ServiceRegistryHandler {
         double cpuUsage = getCpuUsage();
         Map<String,String> map = new HashMap<>();
         map.put("ip", IP);
-        map.put("pid", PID);
+        map.put("port", PORT);
         double memoryUsage = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) * 100.0 / Runtime.getRuntime().maxMemory();
         map.put("cpuUsage", String.valueOf(cpuUsage));
         map.put("memoryUsage", String.valueOf(memoryUsage));
@@ -132,6 +134,6 @@ public class ServiceRegistryHandler {
         }
         long endTime = System.currentTimeMillis();
         long cpuEndTime = ProcessHandle.current().info().totalCpuDuration().get().toMillis();
-        return (cpuEndTime - cpuStartTime) * 100.0 / (endTime - startTime);
+        return (cpuEndTime - cpuStartTime) * 100.0 / (endTime - startTime)/cpuCores;
     }
 }
