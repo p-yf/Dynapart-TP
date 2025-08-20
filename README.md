@@ -276,7 +276,5 @@ public class OfRejectStrategy {
 - **WebSocket**：通过`ThreadPoolWebSocketHandler`实现线程池状态的实时推送
 - **前端监控界面**：使用HTML、Tailwind CSS和JavaScript实现可视化监控界面（豆包生成的哦）
 
-#### 6. 集群（敬请期待）
-- **服务注册与发现**：使用redis的hash结构存储线程池的元数据，实现服务的注册与发现，实现负载均衡
-- **服务调用**：使用feign实现服务的调用，实现线程池的远程调用
+
 

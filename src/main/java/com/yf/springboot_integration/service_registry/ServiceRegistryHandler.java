@@ -1,4 +1,4 @@
-package com.yf.clustering.node.service_registry;
+package com.yf.springboot_integration.service_registry;
 
 import com.yf.pool.threadpool.ThreadPool;
 import jakarta.annotation.PostConstruct;
