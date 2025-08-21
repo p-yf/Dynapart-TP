@@ -31,13 +31,11 @@ public class TestWithJdk {
 
     private static void testMineParti() throws InterruptedException {
         ThreadPool threadPool = new ThreadPool(
-                0,
+                10,
                 20,
                 "",
                 new ThreadFactory("", false, false, 2000),
-                new PartiFlow(10,5001, "linked_plus" , OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
-//                new LinkedBlockingQueuePlus(5000),
-//                new PriorityBlockingQueue(5000),
+                new PartiFlow(10,5000, "linked_plus" , OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
                 new CallerRunsStrategy()
         );
         // 2. 任务完成计数器（确保所有任务执行完再结束计时）
@@ -89,7 +87,7 @@ public class TestWithJdk {
 
 
     private static void testJDK() throws InterruptedException {
-        int corePoolSize = 0;          // 核心线程数
+        int corePoolSize = 10;          // 核心线程数
         int maximumPoolSize = 20;      // 最大线程数
         long keepAliveTime = 2;        // 空闲线程存活时间
         TimeUnit unit = TimeUnit.SECONDS; // 时间单位

@@ -49,10 +49,6 @@ public abstract class Partition<T> {
      */
     public abstract Boolean removeEle();
 
-    /**
-     * 获取任务数量
-     */
-    public abstract int getExactEleNums();//精准获取任务数量，有读锁
 
     /**
      * 获取任务数量

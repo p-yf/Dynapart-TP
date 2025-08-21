@@ -132,15 +132,6 @@ public class LinkedBlockingQMini<T> extends Partition<T> {//可以无界可以�
         }
     }
 
-    @Override
-    public int getExactEleNums() {
-        getRLock().lock();
-        try {
-            return q.size();
-        } finally {
-            getRLock().unlock();
-        }
-    }
 
     @Override
     public int getEleNums() {

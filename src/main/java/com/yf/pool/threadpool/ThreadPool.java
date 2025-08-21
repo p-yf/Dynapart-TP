@@ -81,11 +81,9 @@ public class ThreadPool {
             }
         }
         if (partition.offer(task)) {
-            System.out.println("任务添加成功");
             return;
         }
         if (addWorker(task,false)) {
-            System.out.println("非核心创建成功");
             return;
         }
         rejectStrategy.reject(task);

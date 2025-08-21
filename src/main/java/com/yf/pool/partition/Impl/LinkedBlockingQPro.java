@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -13,24 +14,24 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * @author yyf
  * @date 2025/8/8 23:13
- * @description 优化后的分区队列，性能接近LinkedBlockingQueue
+ * @description 优化后的分区队列，出队操作使用CAS实现
  */
 @Getter
 @Setter
-public class LinkedBlockingQPlus<T> extends Partition<T> {
-    private final Lock headLock = new ReentrantLock(false);
+public class LinkedBlockingQPro<T> extends Partition<T> {
     private final Lock tailLock = new ReentrantLock(false);
-    private final Condition notEmpty = headLock.newCondition();
-    private Node<T> head = new Node<>();
-    private Node<T> tail = head;
+    private final Lock conditionLock = new ReentrantLock(false);
+    private final Condition notEmpty = conditionLock.newCondition();
+    private final AtomicReference<Node<T>> head = new AtomicReference<>(new Node<>());
+    private Node<T> tail = head.get();
     private final AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
 
-    public LinkedBlockingQPlus(Integer capacity) {
+    public LinkedBlockingQPro(Integer capacity) {
         this.capacity = capacity;
     }
-    public LinkedBlockingQPlus() {
-    }
+
+    public LinkedBlockingQPro() {}
 
     /**
      * 当队列有界且已满时返回false
@@ -66,13 +67,20 @@ public class LinkedBlockingQPlus<T> extends Partition<T> {
     public T getEle(Integer waitTime) throws InterruptedException {
         T x = null;
         int c = -1;
-        headLock.lock();
-        try {
-            // 队列为空时等待
-            long nanos = 0;
-            while (size.get() == 0) {
+        long nanos = 0;
+        long start = System.nanoTime();
+        // 将等待和CAS操作合并到一个循环中，解决竞态条件
+        while (true) {
+            // 检查队列是否有元素
+            if (size.get() == 0) {
+                // 队列为空时等待
                 if (waitTime == null) {
-                    notEmpty.await();
+                    conditionLock.lock();
+                    try {
+                        notEmpty.await();
+                    } finally {
+                        conditionLock.unlock();
+                    }
                 } else {
                     if (nanos == 0) {
                         nanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
@@ -80,35 +88,61 @@ public class LinkedBlockingQPlus<T> extends Partition<T> {
                             return null;
                         }
                     }
-                    nanos = notEmpty.awaitNanos(nanos);
+                    conditionLock.lock();
+                    try {
+                        nanos = notEmpty.awaitNanos(nanos);
+                        nanos -= System.nanoTime() - start;
+                    } finally {
+                        conditionLock.unlock();
+                    }
                     if (nanos <= 0) {
                         return null;
                     }
                 }
+                // 等待后继续循环检查
+                continue;
             }
-            x = dequeue();
-            c = size.getAndDecrement();
-            // 如果还有元素，唤醒其他可能等待的消费者
-            if (c > 1) {
-                notEmpty.signal();
+
+            // 使用CAS操作出队
+            Node<T> h = head.get();
+            Node<T> first = h.getNext();
+
+            // 双重检查：确保队列确实有元素
+            if (first == null) {
+                continue;
             }
-        } finally {
-            headLock.unlock();
+
+            // 尝试CAS更新头节点
+            if (head.compareAndSet(h, first)) {
+                // CAS成功，完成出队操作
+                x = first.getValue();
+                first.setValue(null); // 帮助GC
+                h.setNext(h); // 原头节点自引用，帮助GC
+
+                c = size.getAndDecrement();
+                // 如果还有元素，唤醒其他可能等待的消费者
+                if (c > 1) {
+                    signalWaitForNotEmpty();
+                }
+                break;
+            }
         }
+
         return x;
     }
+
 
 
     @Override
     public void lockGlobally() {
         tailLock.lock();
-        headLock.lock();
+        conditionLock.lock();
     }
 
     @Override
     public void unlockGlobally() {
+        conditionLock.unlock();
         tailLock.unlock();
-        headLock.unlock();
     }
 
     /**
@@ -123,21 +157,26 @@ public class LinkedBlockingQPlus<T> extends Partition<T> {
         }
 
         int c = -1;
-        headLock.lock();
-        try {
-            if (size.get() > 0) {
-                dequeue(); // 复用poll中的节点删除逻辑
-                c = size.getAndDecrement();
-                // 队列仍有元素：唤醒下一个消费者
-                if (c > 1) {
-                    notEmpty.signal();
-                }
-            } else {
+        // 使用CAS操作出队
+        Node<T> h, first;
+        do {
+            h = head.get();
+            first = h.getNext();
+            // 如果没有元素，返回失败
+            if (first == null) {
                 return false;
             }
-        } finally {
-            headLock.unlock();
+        } while (!head.compareAndSet(h, first));
+
+        first.setValue(null); // 帮助GC
+        h.setNext(h); // 原头节点自引用，帮助GC
+
+        c = size.getAndDecrement();
+        // 队列仍有元素：唤醒下一个消费者
+        if (c > 1) {
+            signalWaitForNotEmpty();
         }
+
         return true;
     }
 
@@ -154,27 +193,14 @@ public class LinkedBlockingQPlus<T> extends Partition<T> {
     }
 
     /**
-     * 从队列头部移除节点
-     */
-    private T dequeue() {
-        Node<T> h = head;
-        Node<T> first = h.getNext();
-        h.setNext(h); // 帮助垃圾回收
-        head = first;
-        T x = first.getValue();
-        first.setValue(null);
-        return x;
-    }
-
-    /**
      * 唤醒等待非空条件的线程
      */
     private void signalWaitForNotEmpty() {
-        headLock.lock();
+        conditionLock.lock();
         try {
             notEmpty.signal();
         } finally {
-            headLock.unlock();
+            conditionLock.unlock();
         }
     }
 }

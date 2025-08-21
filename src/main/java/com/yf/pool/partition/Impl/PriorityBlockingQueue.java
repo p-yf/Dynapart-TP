@@ -129,23 +129,13 @@ public class PriorityBlockingQueue<T> extends Partition<T> {
         }
     }
 
-    /**
-     * 修复：确保size读取线程安全（与getExactEleNums保持一致）
-     */
-    @Override
-    public int getEleNums() {
-        return getExactEleNums();
-    }
 
     @Override
-    public int getExactEleNums() {
-        rLock.lock();
-        try {
-            return q.size();
-        } finally {
-            rLock.unlock();
-        }
+    public int getEleNums() {
+        return q.size();
     }
+
+
 
     @Override
     public void lockGlobally() {

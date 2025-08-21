@@ -25,10 +25,6 @@ public class myq extends Partition {
         return null;
     }
 
-    @Override
-    public int getExactEleNums() {
-        return 0;
-    }
 
     @Override
     public int getEleNums() {

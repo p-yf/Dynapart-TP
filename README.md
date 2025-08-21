@@ -1,10 +1,10 @@
-# TaskFlowCluster-TL(曾命名：DynaGuardAutoPool)
+# DynaPart-TP
 
 <img src="src/main/resources/static/logo/logo.png" alt="Logo" width="200" height="200">  <!-- 项目Logo -->
 
 ## 🚀 项目介绍
 
-DynaGuardAutoPool 是一个高性能、可动态调整的轻量级线程池框架，专为需要精细控制并发任务执行的Java应用程序设计。该框架提供了丰富的线程池管理功能，包括参数动态调整、实时监控和灵活的任务调度策略。
+DynaPart-TP 是一个高性能、可动态调整的轻量级线程池框架，专为需要精细控制并发任务执行的Java应用程序设计。该框架提供了丰富的线程池管理功能，包括参数动态调整、实时监控和灵活的任务调度策略。
 
 ### 核心功能
 - **动态参数调整**：无需重启应用，实时调整核心线程数、最大线程数，甚至是任务队列等参数
@@ -22,42 +22,79 @@ DynaGuardAutoPool 是一个高性能、可动态调整的轻量级线程池框�
 ### 2. 实时监控系统
 通过WebSocket实现了线程池状态的实时推送，客户端可以实时获取线程池的工作状态、任务队列长度等信息。同时提供了REST API用于查询和调整线程池参数。
 
-### 3. 可插拔的组件设计
+### 3. 可视化监控中心
+提供了Web界面的监控中心，可直观查看线程池状态、配置参数，并支持在线修改配置。访问`http://localhost:8080/configuration.html`即可进入监控中心。
+
+### 4. 可插拔的组件设计
 - **任务队列**：支持多种队列实现，可根据业务需求动态切换
 - **拒绝策略**：提供多种拒绝策略（如CallerRuns、DiscardOldest等），并支持自定义策略
 
-### 4. 线程生命周期管理
+### 5. 线程生命周期管理
 精细控制线程的创建和销毁，支持核心线程的动态调整和非核心线程的自动回收。
 
-### 5. 自研高性能队列（PartiFlow）
-PartiFlow（分区流）是一款多分区、细粒度、扁平化、多策略、高性能的队列
+### 6. 分区化队列模型（Partition）
+分区化是框架的核心特性之一，它将队列抽象为一种分区表现形式。任何队列只要实现了`Partition`接口，就可以自由选择成为分区队列或者单个队列。
+
+- **灵活的分区策略**：支持轮询、随机、哈希、填谷等多种任务入队策略
+- **高效的任务出队**：提供轮询、随机、削峰、线程绑定等出队策略
+- **细粒度控制**：可根据业务需求动态调整分区数量和容量
+- **高性能设计**：通过多分区并行处理提高吞吐量，减少锁竞争
+
+### 7. 命令行交互功能
+提供命令行接口，支持在线查询线程池状态、修改配置参数等操作，如`yf info pool`、`yf change worker`等。
+
+### 8. Redis集成支持
+框架支持与Redis集成，可用于分布式环境下的线程池状态共享和任务调度。
+
+## 🚀 性能对比
+
+通过测试对比，DynaPart-TP线程池与JDK线程池相比具有明
+
+### 性能优势
+1. **更高吞吐量**：在相同配置下，DynaPart-TP处理任务的速度比JDK线程池快约5%-10%
+2. **更好的资源利用**：通过分区化设计，减少线程等待时间，提高CPU利用率
+3. **更稳定的性能**：在高并发场景下，DynaPart-TP的性能波动更小
 
 ## 📚 使用方法
 
 ### 1. Spring Boot环境集成(test_springboot_integration包就是用来测试springboot集成的)
 
 #### 1.1配置文件
-在`application.properties`或`application.yml`中添加以下配置：
+在`application.yml`中添加以下配置：
 
-```properties
+```yaml
+server:
+  port: 8080
+
+#线程池配置
 yf:
   thread-pool:
-    enabled: true  #是否开启线程池自动装配
-    coreNums: 5    #线程池核心线程数
-    maxNums: 10    #线程池最大线程数
-    poolName: yf-thread-pool   #线程池名称
-    threadName: yf-thread      #线程名称
-    isDaemon: true      #是否是守护线程
-    coreDestroy: false  #线程池是否销毁
-    aliveTime: 5        #线程存活时间（单位：s）
-    queueName: linked   #队列名称
-    queueCapacity:      #队列容量（不写代表null，为无界）
-    rejectStrategyName: callerRuns   #拒绝策略名称
+    pool:
+      enabled: true
+      coreNums: 5    #线程池核心线程数
+      maxNums: 10    #线程池最大线程数
+      poolName: yf-thread-pool   #线程池名称
+      threadName: yf-thread      #线程名称
+      isDaemon: true      #是否是守护线程
+      coreDestroy: false  #核心线程是否销毁
+      aliveTime: 5000        #线程存活时间（单位：ms）
+      rejectStrategyName: callerRuns   #拒绝策略名称
+    queue:     #(由于queue比较重要，所以与pool和monitor一个层级)
+      partitioning: true  #是否分区化(如果是false，只需要读取capacity和queueName)
+      partitionNum: 10      #分区数量
+      capacity: 500         #队列容量（不写代表null，为无界）
+      queueName: linked_plus     #队列名称
+      offerStrategy:       #入队策略
+      pollStrategy:        #出队策略
+      removeStrategy:      #移除策略
     monitor:
       enabled: true       #是否开启监控
-      fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间（单位：ms）
-      qReplaceable: true  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
-      rsReplaceable: true #是否可更换拒绝策略
+      fixedDelay: 5000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
+      qReplaceable: false  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
+      rsReplaceable: false #是否可更换拒绝策略
+    service-registry:      #是否开启服务注册
+        enabled: true
+
 ```
 
 #### 1.2使用线程池
@@ -109,27 +146,42 @@ Future<?> future = threadPool.submit(() -> {
 
 ```java
 // 创建线程工厂
-ThreadFactory threadFactory = new ThreadFactory("worker", false, false, 6);
-                                            线程名称，是否守护，核心是否摧毁，空闲时间（单位：s）
-// 创建任务队列
-TaskQueue partition = new LinkedBlockingQueue(100);
-                                            队列容量，如果为null，则代表无界
+ThreadFactory threadFactory = new ThreadFactory("worker", false, false, 6000);
+                                            // 线程名称，是否守护线程，核心线程是否销毁，空闲时间（单位：ms）
+
+
+singleQueue.setCapacity(100); // 设置队列容量，如果不设置则为无界队列
+
+// 或创建分区化队列
+PartiFlow<Runnable> partitionedQueue = new PartiFlow<>(
+    10, // 分区数量
+    1000, // 总容量
+    “linked_plus”, // 队列名称
+    OfferStrategy.ROUND_ROBIN, // 入队策略
+    PollStrategy.ROUND_ROBIN, // 出队策略
+    RemoveStrategy.ROUND_ROBIN // 移除策略
+);
+
 // 创建拒绝策略
 RejectStrategy rejectStrategy = new CallerRunsStrategy();
 
-// 创建线程池                           
-ThreadPool threadPool = new ThreadPool(5, 20, //核心数量，最大数量
-                                      "DynaGuardPool",//线程池名称
-                                       threadFactory,//线程工厂
-                                        partition,//任务队列
-                                         rejectStrategy);//拒绝策略
+// 创建线程池                            
+ThreadPool threadPool = new ThreadPool(
+    5, 20, // 核心线程数，最大线程数
+    "DynaPartPool", // 线程池名称
+    threadFactory, // 线程工厂
+    singleQueue, // 任务队列（或使用partitionedQueue）
+    rejectStrategy // 拒绝策略
+);
 
 // 使用线程池
 threadPool.execute(() -> {
     // 任务逻辑
 });
-threadPool.submit(() -> {
+
+Future<?> future = threadPool.submit(() -> {
     // 任务逻辑
+    return "Result";
 });
 ```
 ### 2.1 命令行
@@ -146,54 +198,60 @@ threadPool.submit(() -> {
 ## 🔧 开发者扩展说明
 
 ### 自定义任务队列
-要实现自定义任务队列，只需继承`TaskQueue`抽象类并实现其抽象方法：
+要实现自定义任务队列，只需继承`Partition`抽象类并实现其抽象方法：
 
 ```java
-// @PartitionBean("custom")//springboot环境加上，yml文件配置好队列名称，可实现自动装配
-//如果要正常使用命令行的话还需要手动将名称和类手动注册到map上（并且springboot环境使用命令行的话就无法使用容器中的bean，而是直接new，所以选择哪种需要斟酌）
-public class CustomQueue extends TaskQueue {//需要保证线程安全，读写锁以及条件变量抽象父类已经提供
-    private Queue<Runnable> q;
+// Spring Boot环境下使用该注解并指定队列名称
+@PartitionBean("custom")
+public class CustomQueue<T> extends Partition<T> {
+    // 需要保证线程安全
 
-    public CustomQueue(Integer capacity) {
-    //如果是springboot环境就不要加上这个构造方法，因为容器中没有capacity的bean
-        setCapacity(capacity);
-    }   
-
-    
-    @Override
-    public Boolean offer(Runnable task) {
-        //添加任务逻辑
-    }
-
-    //也可以自行选择是否实现warning方法，用来完成添加任务后的报警功能。这是一种模板方法来实现的，父类会有个addTask方法，在添加任务后调用报警方法
-    //public void warning() {
-        // 警告逻辑
-    //}
-
-
-    @Override
-    public Runnable poll(Integer waitTime) throws InterruptedException {
-        // 获取任务逻辑
+    public CustomQueue() {
     }
 
     @Override
-    public Boolean removeTask() {
-        // 移除任务逻辑
+    public Boolean offer(T task) {
+
+    }
+
+    // 可选：实现warning方法，在添加任务后执行警告逻辑
+    public void warning() {
+
     }
 
     @Override
-    public int getExactTaskNums() {
-        // 获取此时精确任务数量逻辑（需要锁来保证）
+    public T getEle(Integer waitTime) throws InterruptedException {
+
     }
 
     @Override
-    public int getTaskNums() {
-        // 获取此时任务数量逻辑（不需要锁来保证）
+    public Boolean removeEle() {
+
+    }
+
+    @Override
+    public int getEleNums() {
+    }
+
+    @Override
+    public void lockGlobally() {
+    }
+
+    @Override
+    public void unlockGlobally() {
+    }
+
+    @Override
+    public Integer getCapacity() {
+    }
+
+    @Override
+    public void setCapacity(Integer capacity) {
     }
 }
 ```
 
-然后，在`OfQueue`常量类中注册你的自定义队列（如果是本项目的springboot环境下的使用者则无需关注。如果不用springboot环境，那么需要在初始化线程池之前添加你扩展的队列的名称和类到map中。如果是本项目开发者则需要添加好名称后再在静态代码块中添加上队列名称与类）：
+然后，在`OfQueue`常量类中注册你的自定义队列（本项目开发者需要，使用者需要只需要将map.put(:"队列名称",队列类型)就行）：
 
 ```java
 public class OfQueue {
@@ -201,36 +259,32 @@ public class OfQueue {
     // 其他队列类型...
     
     static {
-        TASK_QUEUE_MAP.put(LINKED, LinkedBlockingQueue.class);
+        // 已有的队列注册
+        TASK_QUEUE_MAP.put(LINKED_MINI, LinkedBlockingQMini.class);
+        TASK_QUEUE_MAP.put(LINKED_PLUS, LinkedBlockingQPlus.class);
         TASK_QUEUE_MAP.put(PRIORITY, PriorityBlockingQueue.class);
-        TASK_QUEUE_MAP.put(CUSTOM, CustomQueue.class);  // 注册自定义队列
+        
+        // 注册自定义队列
+        TASK_QUEUE_MAP.put(CUSTOM, CustomQueue.class);
     }
 }
 ```
 
 ### 自定义拒绝策略
-要实现自定义拒绝策略，只需实现`RejectStrategy`接口：
+要实现自定义拒绝策略，只需继承`RejectStrategy`抽象类：
 
 ```java
-//使用与队列同理
-public class CustomRejectStrategy implements RejectStrategy {
-    private ThreadPool threadPool;
-
-    @Override
-    public void setThreadPool(ThreadPool threadPool) {
-        this.threadPool = threadPool;
-    }
-
+// Spring Boot环境下使用该注解并指定策略名称
+@RejectStrategyBean("custom")
+public class CustomRejectStrategy extends RejectStrategy {
     @Override
     public void reject(Runnable task) {
-        // 自定义拒绝逻辑
-        System.err.println("Custom rejection strategy: Task rejected - " + task);
-        // 例如，可以记录日志、尝试重新提交或执行其他操作
+
     }
 }
 ```
 
-然后，在`OfRejectStrategy`常量类中注册你的自定义拒绝策略：
+然后，在`OfRejectStrategy`常量类中注册你的自定义拒绝策略（注册逻辑与上述队列一致）：
 
 ```java
 public class OfRejectStrategy {
@@ -238,10 +292,13 @@ public class OfRejectStrategy {
     // 其他拒绝策略...
     
     static {
+        // 已有的策略注册
         REJECT_STRATEGY_MAP.put(CALLER_RUNS, CallerRunsStrategy.class);
         REJECT_STRATEGY_MAP.put(DISCARD_OLDEST, DiscardOldestStrategy.class);
         REJECT_STRATEGY_MAP.put(DISCARD, DiscardStrategy.class);
-        REJECT_STRATEGY_MAP.put(CUSTOM, CustomRejectStrategy.class);  // 注册自定义拒绝策略
+        
+        // 注册自定义策略
+        REJECT_STRATEGY_MAP.put(CUSTOM, CustomRejectStrategy.class);
     }
 }
 ```
@@ -253,17 +310,17 @@ public class OfRejectStrategy {
 #### 1. 线程池核心实现
 - **动态参数调整**：通过`ThreadPool`类中的方法实现核心线程数、最大线程数等参数的动态调整
 - **线程生命周期管理**：通过`Worker`类中的循环任务和超时机制实现线程的创建和自动回收
-- **任务调度**：使用`TaskQueue`接口定义的队列实现任务的存储和调度
+- **任务调度**：使用`Partition`接口定义的队列实现任务的存储和调度
 
 #### 2. 并发控制机制
 - 使用`ReentrantLock`和`ReadWriteLock`保证线程安全
 - 使用`Condition`实现线程间的通信和等待唤醒机制
-- 采用精细的锁粒度，避免全局锁带来的性能瓶颈
+- 采用精细的锁粒度，避免全局锁带来的性能瓶颈,例如线程池任务提交利用cas以及组件内部锁、队列使用头尾锁以及头锁尾cas等等
 
 #### 3. 组件设计模式
 - **策略模式**：用于实现不同的拒绝策略和任务队列
 - **工厂模式**：通过`ThreadFactory`创建线程
-- **模板方法**：在TaskQueue中定义添加任务后报警的模板方法，具体的逻辑子类实现
+- **模板方法**：在Partition中定义添加任务后报警的模板方法，具体的逻辑子类实现
 - **观察者模式**：通过WebSocket实现线程池状态的实时推送
 
 #### 4. Spring Boot集成
@@ -275,6 +332,11 @@ public class OfRejectStrategy {
 - **REST API**：提供HTTP接口用于查询和调整线程池参数
 - **WebSocket**：通过`ThreadPoolWebSocketHandler`实现线程池状态的实时推送
 - **前端监控界面**：使用HTML、Tailwind CSS和JavaScript实现可视化监控界面（豆包生成的哦）
+
+#### 6. 分区化概念
+- 将队列都抽象为`Partition`，可以轻松将队列分区化，通过`PartiFlow`类实现多队列并行处理
+- 支持多种分区策略：轮询、随机、Hash、填谷等入队策略；轮询、随机、削峰等出队策略
+- 极大降低锁粒度，提升系统并发性能和稳定性
 
 
 

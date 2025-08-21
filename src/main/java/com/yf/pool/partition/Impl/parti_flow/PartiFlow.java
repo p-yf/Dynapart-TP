@@ -138,15 +138,6 @@ public class PartiFlow<T> extends Partition<T>{
         return partitions[removeStrategy.selectPartition(partitions)].removeEle();
     }
 
-    @Override
-    public int getExactEleNums() {
-        lockGlobally();
-        try {
-            return getEleNums();
-        } finally {
-            unlockGlobally();
-        }
-    }
 
     @Override
     public int getEleNums() {
