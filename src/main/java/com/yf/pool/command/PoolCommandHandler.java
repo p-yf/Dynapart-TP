@@ -3,7 +3,7 @@ package com.yf.pool.command;
 import com.yf.pool.constant.OfQueue;
 import com.yf.pool.constant.OfRejectStrategy;
 import com.yf.pool.rejectstrategy.RejectStrategy;
-import com.yf.pool.taskqueue.TaskQueue;
+import com.yf.pool.partition.Partition;
 import com.yf.pool.threadpool.ThreadPool;
 
 import java.io.Console;
@@ -574,7 +574,7 @@ public class PoolCommandHandler {
     }
 
     private void changeQueue(String qName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        TaskQueue newQ = (TaskQueue) OfQueue.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(threadPool.getTaskQueue().getCapacity());
+        Partition newQ = (Partition) OfQueue.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(threadPool.getPartition().getCapacity());
         if(threadPool.changeQueue(newQ, qName)){
             System.out.println("✅ 修改成功");
         }else{

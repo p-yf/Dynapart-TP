@@ -1,6 +1,7 @@
-package com.yf.pool.taskqueue.Impl.parti_flow.strategy;
+package com.yf.pool.partition.Impl.parti_flow.strategy;
 
-import com.yf.pool.taskqueue.Impl.parti_flow.Partition;
+
+import com.yf.pool.partition.Partition;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -52,7 +53,7 @@ public enum OfferStrategy {
         public int selectPartition(Partition[] partitions,Object object) {
             int minIndex = 0;
             for(int i = 0; i < partitions.length; i++){
-                if(partitions[i].getElementNums() < partitions[minIndex].getElementNums()){
+                if(partitions[i].getEleNums() < partitions[minIndex].getEleNums()){
                     minIndex = i;
                 }
             }
@@ -62,4 +63,15 @@ public enum OfferStrategy {
 
     public abstract int selectPartition(Partition[] partitions, Object object);
 
+    public static OfferStrategy fromName(String name) {
+        if (name == null) {
+            return null;
+        }
+        try {
+            // 利用枚举自带的valueOf()方法，名称需完全匹配（大小写敏感）
+            return OfferStrategy.valueOf(name.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return ROUND_ROBIN;
+        }
+    }
 }

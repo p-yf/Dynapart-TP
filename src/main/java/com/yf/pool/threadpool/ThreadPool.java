@@ -5,14 +5,13 @@ import com.yf.pool.constant.OfRejectStrategy;
 import com.yf.pool.constant.OfWorker;
 import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
-import com.yf.pool.taskqueue.TaskQueue;
+import com.yf.pool.partition.Partition;
 import com.yf.pool.threadfactory.ThreadFactory;
 import com.yf.pool.worker.Worker;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -34,7 +33,7 @@ public class ThreadPool {
     private Boolean isSpringBootEnvironment;
     private Lock lock = new ReentrantLock();
     private ThreadFactory threadFactory;
-    private TaskQueue taskQueue;
+    private Partition<Runnable> partition;
     private RejectStrategy rejectStrategy;
     private Integer coreNums;//核心线程数
     private Integer maxNums;//最大线程数
@@ -49,13 +48,13 @@ public class ThreadPool {
 
     public ThreadPool(
             Integer coreNums, Integer maxNums, String name,
-            ThreadFactory threadFactory, TaskQueue taskQueue,
+            ThreadFactory threadFactory, Partition<Runnable> partition,
             RejectStrategy rejectStrategy
     ) {
         this.threadFactory = threadFactory;
         threadFactory.setThreadName(name + ":" + threadFactory.getThreadName());
         threadFactory.setThreadPool(this);
-        this.taskQueue = taskQueue;
+        this.partition = partition;
         this.rejectStrategy = rejectStrategy;
         rejectStrategy.setThreadPool(this);
         this.coreNums = coreNums;
@@ -63,7 +62,7 @@ public class ThreadPool {
         this.name = name;
         //添加队列和策略的名称
         OfQueue.TASK_QUEUE_MAP.forEach((qName, clazz) -> {
-            if (clazz == taskQueue.getClass()) {
+            if (clazz == partition.getClass()) {
                 this.queueName = qName;
             }
         });
@@ -81,10 +80,12 @@ public class ThreadPool {
                 return;
             }
         }
-        if (taskQueue.offer(task)) {
+        if (partition.offer(task)) {
+            System.out.println("任务添加成功");
             return;
         }
         if (addWorker(task,false)) {
+            System.out.println("非核心创建成功");
             return;
         }
         rejectStrategy.reject(task);
@@ -98,7 +99,7 @@ public class ThreadPool {
                 return  task;
             }
         }
-        if (taskQueue.offer(task)) {
+        if (partition.offer(task)) {
             return  task;
         }
         if (addWorker(task,false)) {
@@ -209,7 +210,7 @@ public class ThreadPool {
         info.setIsDaemon(threadFactory.getIsDaemon());
         info.setMaxNums(maxNums);
         info.setCoreNums(coreNums);
-        info.setQueueCapacity(taskQueue.getCapacity());
+        info.setQueueCapacity(partition.getCapacity());
         info.setQueueName(queueName);
         info.setRejectStrategyName(rejectStrategyName);
         return info;
@@ -220,7 +221,7 @@ public class ThreadPool {
      * @return
      */
     public int getTaskNums() {
-        return taskQueue.getTaskNums();
+        return partition.getEleNums();
     }
 
 
@@ -308,19 +309,19 @@ public class ThreadPool {
     /**
      * 改变队列
      */
-    public Boolean changeQueue(TaskQueue q,String qName){
+    public Boolean changeQueue(Partition<Runnable> q, String qName){
         if(q == null|| qName == null){
             return false;
         }
-        TaskQueue oldQ = taskQueue;
+        Partition<Runnable> oldQ = partition;
         try {
             oldQ.lockGlobally();
-            while(oldQ.getTaskNums() > 0){
-                Runnable task = oldQ.getTask(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
-                q.addTask(task);
+            while(oldQ.getEleNums() > 0){
+                Runnable task = oldQ.getEle(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
+                q.addEle(task);
             }
             this.queueName = qName;
-            this.taskQueue = q;
+            this.partition = q;
         } catch (Exception e) {
             e.printStackTrace();
         } finally {

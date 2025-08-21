@@ -1,6 +1,5 @@
-package com.yf.pool.taskqueue;
+package com.yf.pool.partition;
 
-import com.yf.pool.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -14,17 +13,16 @@ import lombok.Setter;
  */
 @Getter
 @Setter
-public abstract class TaskQueue {
+public abstract class Partition<T> {
 
-    private ThreadPool threadPool;
 
     /**
      * 添加任务
-     * @param task
-     * @return
+     *
+     * @param t@return
      */
-    public Boolean addTask(Runnable task){
-        Boolean offer = offer(task);
+    public Boolean addEle(T t){
+        Boolean offer = offer(t);
         warning();
         return offer;
     };
@@ -33,7 +31,7 @@ public abstract class TaskQueue {
      * 添加任务的方法
      * @return
      */
-    public abstract Boolean offer(Runnable task);
+    public abstract Boolean offer(T t);
 
     /**
      * 警告
@@ -44,22 +42,22 @@ public abstract class TaskQueue {
      * 获取任务
       * @return
      */
-    public abstract Runnable getTask(Integer waitTime) throws InterruptedException;
+    public abstract T getEle(Integer waitTime) throws InterruptedException;
 
     /**
      * 移除任务(用于丢弃策略)
      */
-    public abstract Boolean removeTask();
+    public abstract Boolean removeEle();
 
     /**
      * 获取任务数量
      */
-    public abstract int getExactTaskNums();//精准获取任务数量，有读锁
+    public abstract int getExactEleNums();//精准获取任务数量，有读锁
 
     /**
      * 获取任务数量
      */
-    public abstract int getTaskNums();//获取任务数量，无锁
+    public abstract int getEleNums();//获取任务数量，无锁
 
     /**
      * 获取全局锁

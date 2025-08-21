@@ -13,17 +13,24 @@ yf:
       isDaemon: true      #是否是守护线程
       coreDestroy: false  #核心线程是否销毁
       aliveTime: 5000        #线程存活时间（单位：ms）
-      queueName: parti_flow   #队列名称
-      queueCapacity:      #队列容量（不写代表null，为无界）
       rejectStrategyName: callerRuns   #拒绝策略名称
+    queue:     #(由于queue比较重要，所以与pool和monitor一个层级)
+      partitioning: true  #是否分区化(如果是false，只需要读取capacity和queueName)
+      partitionNum: 10      #分区数量
+      capacity: 500         #队列容量（不写代表null，为无界）
+      queueName: linked_plus     #队列名称
+      offerStrategy:       #入队策略
+      pollStrategy:        #出队策略
+      removeStrategy:      #移除策略
     monitor:
       enabled: true       #是否开启监控
       fixedDelay: 5000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
       qReplaceable: false  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
       rsReplaceable: false #是否可更换拒绝策略
+    service-registry:      #是否开启服务注册
+        enabled: true
 
 
-#=============================集群相关========================================
 #redis配置
 spring:
   data:

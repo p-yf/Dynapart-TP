@@ -1,4 +1,4 @@
-package com.yf.pool.taskqueue.Impl.parti_flow;
+package com.yf.pool.partition.Impl;
 
 import lombok.Data;
 

@@ -10,7 +10,7 @@ import com.yf.pool.rejectstrategy.RejectStrategy;
 public class DiscardOldestStrategy extends RejectStrategy {
     @Override
     public void reject(Runnable task) {
-        getThreadPool().getTaskQueue().removeTask();
+        getThreadPool().getPartition().removeEle();
     }
 
 }

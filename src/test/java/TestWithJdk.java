@@ -1,11 +1,9 @@
+import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
+import com.yf.pool.partition.Impl.parti_flow.strategy.OfferStrategy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.PollStrategy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.RemoveStrategy;
 import com.yf.pool.rejectstrategy.impl.CallerRunsStrategy;
-import com.yf.pool.taskqueue.Impl.LinkedBlockingQueueMini;
-import com.yf.pool.taskqueue.Impl.LinkedBlockingQueuePlus;
-import com.yf.pool.taskqueue.Impl.PartiFlowTaskQ;
-import com.yf.pool.taskqueue.Impl.PriorityBlockingQueue;
-import com.yf.pool.taskqueue.Impl.parti_flow.strategy.OfferStrategy;
-import com.yf.pool.taskqueue.Impl.parti_flow.strategy.PollStrategy;
-import com.yf.pool.taskqueue.Impl.parti_flow.strategy.RemoveStrategy;
+import com.yf.pool.partition.Impl.LinkedBlockingQMini;
 import com.yf.pool.threadfactory.ThreadFactory;
 import com.yf.pool.threadpool.ThreadPool;
 
@@ -37,7 +35,7 @@ public class TestWithJdk {
                 20,
                 "",
                 new ThreadFactory("", false, false, 2000),
-                new PartiFlowTaskQ(10,5001, OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
+                new PartiFlow(10,5001, "linked_plus" , OfferStrategy.HASH, PollStrategy.THREAD_BINDING, RemoveStrategy.ROUND_ROBIN),
 //                new LinkedBlockingQueuePlus(5000),
 //                new PriorityBlockingQueue(5000),
                 new CallerRunsStrategy()
@@ -169,7 +167,7 @@ public class TestWithJdk {
                 10,
                 "",
                 new ThreadFactory("", false, false, 2000),
-                new LinkedBlockingQueueMini(5000),
+                new LinkedBlockingQMini(5000),
                 new CallerRunsStrategy()
         );
         // 2. 任务完成计数器（确保所有任务执行完再结束计时）

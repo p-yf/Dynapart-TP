@@ -112,7 +112,7 @@ Future<?> future = threadPool.submit(() -> {
 ThreadFactory threadFactory = new ThreadFactory("worker", false, false, 6);
                                             线程名称，是否守护，核心是否摧毁，空闲时间（单位：s）
 // 创建任务队列
-TaskQueue taskQueue = new LinkedBlockingQueue(100);
+TaskQueue partition = new LinkedBlockingQueue(100);
                                             队列容量，如果为null，则代表无界
 // 创建拒绝策略
 RejectStrategy rejectStrategy = new CallerRunsStrategy();
@@ -121,7 +121,7 @@ RejectStrategy rejectStrategy = new CallerRunsStrategy();
 ThreadPool threadPool = new ThreadPool(5, 20, //核心数量，最大数量
                                       "DynaGuardPool",//线程池名称
                                        threadFactory,//线程工厂
-                                        taskQueue,//任务队列
+                                        partition,//任务队列
                                          rejectStrategy);//拒绝策略
 
 // 使用线程池
@@ -149,7 +149,7 @@ threadPool.submit(() -> {
 要实现自定义任务队列，只需继承`TaskQueue`抽象类并实现其抽象方法：
 
 ```java
-// @TaskQueueBean("custom")//springboot环境加上，yml文件配置好队列名称，可实现自动装配
+// @PartitionBean("custom")//springboot环境加上，yml文件配置好队列名称，可实现自动装配
 //如果要正常使用命令行的话还需要手动将名称和类手动注册到map上（并且springboot环境使用命令行的话就无法使用容器中的bean，而是直接new，所以选择哪种需要斟酌）
 public class CustomQueue extends TaskQueue {//需要保证线程安全，读写锁以及条件变量抽象父类已经提供
     private Queue<Runnable> q;

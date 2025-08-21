@@ -1,6 +1,6 @@
 package com.yf.springboot_integration.pool.condition;
 
-import com.yf.springboot_integration.pool.annotation.TaskQueueBean;
+import com.yf.springboot_integration.pool.annotation.PartitionBean;
 import org.springframework.context.annotation.Condition;
 import org.springframework.context.annotation.ConditionContext;
 import org.springframework.core.type.AnnotatedTypeMetadata;
@@ -20,7 +20,7 @@ public class TaskQueueCondition implements Condition {
             return true;
         }
         // 1. 获取注解的属性
-        MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(TaskQueueBean.class.getName());
+        MultiValueMap<String, Object> attributes = metadata.getAllAnnotationAttributes(PartitionBean.class.getName());
         if (attributes == null) {
             return false;
         }

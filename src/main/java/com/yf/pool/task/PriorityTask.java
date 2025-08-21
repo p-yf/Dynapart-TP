@@ -6,32 +6,27 @@ import lombok.Setter;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 
-/**
- * @author yyf
- * @date 2025/8/2 19:31
- * @description 带有优先级的任务类
- */
 @Setter
 @Getter
-public class PriorityTask extends FutureTask implements Comparable<PriorityTask> {
+public class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>> {
     private int priority = 0;
 
-    public PriorityTask(Callable<?> callable, int priority) {
+    public PriorityTask(Callable<V> callable, int priority) {
         super(callable);
         this.priority = priority;
     }
 
-    public PriorityTask(Runnable runnable, Object result, int priority) {
-        super(runnable, result);
+    public PriorityTask(Runnable runnable, int priority) {
+        // 无返回值时，result 传 null，且泛型固定为 Void
+        super(runnable, null);
         this.priority = priority;
     }
 
-    /**
-     * 实现Comparable接口，使任务可以比较优先级
-     * 优先级高的任务排在前面（数字越大优先级越高）
-     */
     @Override
-    public int compareTo(PriorityTask other) {
-        return Integer.compare(other.priority, this.priority);
+    public int compareTo(PriorityTask<V> other) {
+        if (other == null) {
+            return -1;
+        }
+        return Integer.compare(other.getPriority(), this.getPriority());
     }
 }

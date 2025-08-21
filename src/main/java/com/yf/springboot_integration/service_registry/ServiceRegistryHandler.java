@@ -3,6 +3,7 @@ package com.yf.springboot_integration.service_registry;
 import com.yf.pool.threadpool.ThreadPool;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
@@ -29,6 +30,7 @@ import java.util.concurrent.TimeUnit;
  * @description
  */
 @Component
+@ConditionalOnProperty(prefix = "yf.service-registry",name = "enabled",havingValue = "true")
 public class ServiceRegistryHandler {
 
     //    每个节点信息包含字段：ip、port、cpuUsage(cpu使用率)、memoryUsage（内存使用率）、taskNums（任务数量）、queueCapacity(队列大小)
@@ -98,9 +100,9 @@ public class ServiceRegistryHandler {
         double memoryUsage = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) * 100.0 / Runtime.getRuntime().maxMemory();
         map.put("cpuUsage", String.valueOf(cpuUsage));
         map.put("memoryUsage", String.valueOf(memoryUsage));
-        int taskNums = threadPool.getTaskQueue().getTaskNums();
+        int taskNums = threadPool.getPartition().getEleNums();
         map.put("taskNums",String.valueOf(taskNums));
-        Integer capacity = threadPool.getTaskQueue().getCapacity();
+        Integer capacity = threadPool.getPartition().getCapacity();
         map.put("queueCapacity", String.valueOf(capacity));
         stringRedisTemplate.opsForHash().putAll(KEY, map);
         stringRedisTemplate.expire(KEY, EXPIRE, TimeUnit.SECONDS);

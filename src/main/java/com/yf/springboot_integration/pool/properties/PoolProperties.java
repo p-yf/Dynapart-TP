@@ -1,4 +1,4 @@
-package com.yf.springboot_integration.pool.auto_configuration;
+package com.yf.springboot_integration.pool.properties;
 
 import lombok.Data;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -19,7 +19,5 @@ public class PoolProperties {
     private Boolean isDaemon;//是否守护线程
     private Boolean coreDestroy;//核心线程是否可销毁
     private Integer aliveTime;//线程空闲时间
-    private String queueName;//队列名称
-    private Integer queueCapacity;//队列容量    可以为null，null代表无界
     private String rejectStrategyName;//拒绝策略名称
 }

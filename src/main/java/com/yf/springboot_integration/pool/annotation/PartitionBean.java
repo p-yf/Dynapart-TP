@@ -16,6 +16,6 @@ import java.lang.annotation.*;
 @Documented
 @Component
 @Conditional(TaskQueueCondition.class)  // 阻塞队列专属条件判断
-public @interface TaskQueueBean {
+public @interface PartitionBean {
     String value();// 队列名称
 }

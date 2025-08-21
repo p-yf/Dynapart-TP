@@ -4,7 +4,7 @@ import com.yf.pool.constant.OfQueue;
 import com.yf.pool.constant.OfRejectStrategy;
 import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
-import com.yf.pool.taskqueue.TaskQueue;
+import com.yf.pool.partition.Partition;
 import com.yf.pool.threadpool.ThreadPool;
 import com.yf.springboot_integration.monitor.properties.MonitorProperties;
 import lombok.AllArgsConstructor;
@@ -71,14 +71,14 @@ public class MonitorController {
         if(qName==null|| qName.isEmpty()){
             return false;
         }
-        TaskQueue q;
+        Partition q;
         try {
-            q = (TaskQueue) context.getBean(qName);
+            q = (Partition) context.getBean(qName);
         }catch(NoSuchBeanDefinitionException e){
             if(!OfQueue.TASK_QUEUE_MAP.containsKey(qName)){
                 return false;
             }else{
-                q = (TaskQueue) OfQueue.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(qCapacity);
+                q = (Partition) OfQueue.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(qCapacity);
             }
         }
         return threadPool.changeQueue(q,qName);

@@ -1,40 +1,37 @@
 package com.yf.test_springboot_integration.q;
 
-import com.yf.springboot_integration.pool.annotation.TaskQueueBean;
-import com.yf.pool.taskqueue.TaskQueue;
-import org.springframework.beans.factory.annotation.Value;
-
-import java.util.concurrent.locks.Lock;
+import com.yf.pool.partition.Partition;
+import com.yf.springboot_integration.pool.annotation.PartitionBean;
 
 /**
  * @author yyf
  * @description
  */
-@TaskQueueBean("myq")
-public class myq extends TaskQueue {
+@PartitionBean("myq")
+public class myq extends Partition {
 
     @Override
-    public Boolean offer(Runnable task) {
+    public Boolean offer(Object t) {
         return null;
     }
 
     @Override
-    public Runnable getTask(Integer waitTime) throws InterruptedException {
+    public Runnable getEle(Integer waitTime) throws InterruptedException {
         return null;
     }
 
     @Override
-    public Boolean removeTask() {
+    public Boolean removeEle() {
         return null;
     }
 
     @Override
-    public int getExactTaskNums() {
+    public int getExactEleNums() {
         return 0;
     }
 
     @Override
-    public int getTaskNums() {
+    public int getEleNums() {
         return 0;
     }
 

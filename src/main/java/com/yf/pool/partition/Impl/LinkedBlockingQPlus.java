@@ -1,5 +1,6 @@
-package com.yf.pool.taskqueue.Impl.parti_flow;
+package com.yf.pool.partition.Impl;
 
+import com.yf.pool.partition.Partition;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,7 +17,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Getter
 @Setter
-public class Partition<T> {
+public class LinkedBlockingQPlus<T> extends Partition<T> {
     private final Lock headLock = new ReentrantLock(false);
     private final Lock tailLock = new ReentrantLock(false);
     private final Condition notEmpty = headLock.newCondition();
@@ -25,10 +26,10 @@ public class Partition<T> {
     private final AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
 
-    public Partition(Integer capacity) {
+    public LinkedBlockingQPlus(Integer capacity) {
         this.capacity = capacity;
     }
-    public Partition() {
+    public LinkedBlockingQPlus() {
     }
 
     /**
@@ -62,10 +63,8 @@ public class Partition<T> {
         return c != -1;
     }
 
-    /**
-     * 从队列获取元素，支持超时
-     */
-    public T poll(Integer waitTime) throws InterruptedException {
+    @Override
+    public T getEle(Integer waitTime) throws InterruptedException {
         T x = null;
         int c = -1;
         headLock.lock();
@@ -100,7 +99,31 @@ public class Partition<T> {
         return x;
     }
 
-    public Boolean removeElement() {
+
+    @Override
+    public int getExactEleNums() {
+        return getEleNums();
+    }
+
+
+    @Override
+    public void lockGlobally() {
+        tailLock.lock();
+        headLock.lock();
+    }
+
+    @Override
+    public void unlockGlobally() {
+        tailLock.unlock();
+        headLock.unlock();
+    }
+
+    /**
+     * 从队列获取元素，支持超时
+     */
+
+
+    public Boolean removeEle() {
         // 无锁快速失败：空队列直接返回
         if (size.get() == 0) {
             return false;
@@ -125,7 +148,7 @@ public class Partition<T> {
         return true;
     }
 
-    public int getElementNums() {
+    public int getEleNums() {
         return size.get();
     }
 

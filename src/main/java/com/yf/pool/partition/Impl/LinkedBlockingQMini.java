@@ -1,6 +1,6 @@
-package com.yf.pool.taskqueue.Impl;
+package com.yf.pool.partition.Impl;
 
-import com.yf.pool.taskqueue.TaskQueue;
+import com.yf.pool.partition.Partition;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -22,33 +22,31 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  */
 @Setter
 @Getter
-public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有界
+public class LinkedBlockingQMini<T> extends Partition<T> {//可以无界可以有界
     private  final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
     private  final Lock rLock = rwLock.readLock();
     private  final Lock wLock = rwLock.writeLock();
     private final Condition wCondition= getWLock().newCondition();
 
-    private Queue<Runnable> q;
+    private Queue<T> q;
     private volatile Integer capacity;
-    public LinkedBlockingQueueMini(Integer capacity) {
+    public LinkedBlockingQMini(Integer capacity) {
         q = new LinkedList<>();
         this.capacity = capacity;
     }
-    public LinkedBlockingQueueMini() {
+    public LinkedBlockingQMini() {
         q = new LinkedList<>();
     }
 
     public void warning() {
-        if(getTaskNums()>10){
+        if(getEleNums()>10){
             System.out.println("任务数量已经超过10个!!!");
         }
     }
     /**
      * 添加任务
-     * @param task
-     * @return
      */
-    public Boolean offer(Runnable task) {
+    public Boolean offer(T task) {
         if (task == null) {
             throw new NullPointerException("任务不能为null");
         }
@@ -67,7 +65,7 @@ public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有�
             if(getCapacity()>q.size()){
                 getWLock().lock(); // 获取锁
                 try {
-                    if(getTaskNums()<getCapacity()) {
+                    if(getEleNums()<getCapacity()) {
                         // 添加任务到队列
                         boolean added = q.add(task);
                         // 唤醒等待的线程（可能有线程在poll时阻塞）
@@ -90,7 +88,7 @@ public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有�
      * @throws InterruptedException
      */
     @Override
-    public Runnable getTask(Integer waitTime) throws InterruptedException {
+    public T getEle(Integer waitTime) throws InterruptedException {
         getWLock().lock(); // 可中断地获取锁
         try {
             // 循环检查：避免虚假唤醒
@@ -117,7 +115,7 @@ public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有�
      * @return
      */
     @Override
-    public Boolean removeTask() {
+    public Boolean removeEle() {
         if (q.isEmpty()) {
             return false;
         }
@@ -135,7 +133,7 @@ public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有�
     }
 
     @Override
-    public int getExactTaskNums() {
+    public int getExactEleNums() {
         getRLock().lock();
         try {
             return q.size();
@@ -145,7 +143,7 @@ public class LinkedBlockingQueueMini extends TaskQueue {//可以无界可以有�
     }
 
     @Override
-    public int getTaskNums() {
+    public int getEleNums() {
         return q.size();
     }
 

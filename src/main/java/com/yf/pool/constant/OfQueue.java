@@ -1,9 +1,8 @@
 package com.yf.pool.constant;
 
-import com.yf.pool.taskqueue.Impl.LinkedBlockingQueuePlus;
-import com.yf.pool.taskqueue.Impl.LinkedBlockingQueueMini;
-import com.yf.pool.taskqueue.Impl.PartiFlowTaskQ;
-import com.yf.pool.taskqueue.Impl.PriorityBlockingQueue;
+import com.yf.pool.partition.Impl.LinkedBlockingQMini;
+import com.yf.pool.partition.Impl.LinkedBlockingQPlus;
+import com.yf.pool.partition.Impl.PriorityBlockingQueue;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -17,13 +16,11 @@ public class OfQueue {
     public final static String LINKED_MINI = "linked_mini";
     public final static String LINKED_PLUS = "linked_plus";//单链表
     public final static String PRIORITY = "priority";//优先级队列
-    public final static String PARTI_FLOW = "parti_flow";//分区流队列
     public final static Map<String, Class<?>> TASK_QUEUE_MAP = new HashMap<>();
 
     static {
-        TASK_QUEUE_MAP.put(LINKED_PLUS, LinkedBlockingQueuePlus.class);
+        TASK_QUEUE_MAP.put(LINKED_MINI, LinkedBlockingQMini.class);
+        TASK_QUEUE_MAP.put(LINKED_PLUS, LinkedBlockingQPlus.class);
         TASK_QUEUE_MAP.put(PRIORITY, PriorityBlockingQueue.class);
-        TASK_QUEUE_MAP.put(PARTI_FLOW, PartiFlowTaskQ.class);
-        TASK_QUEUE_MAP.put(LINKED_MINI, LinkedBlockingQueueMini.class);
     }
 }
