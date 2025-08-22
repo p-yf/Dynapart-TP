@@ -26,6 +26,7 @@ public class ThreadFactory {
         this.coreDestroy = coreDestroy;
         this.aliveTime = aliveTime;
     }
+    public ThreadFactory(){}
 
     public Worker createWorker(Boolean isCore, Runnable task){
         return new Worker(threadPool,isCore,threadName,isDaemon,coreDestroy,aliveTime,task);

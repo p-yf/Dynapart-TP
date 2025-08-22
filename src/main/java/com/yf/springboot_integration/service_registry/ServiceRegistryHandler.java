@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 public class ServiceRegistryHandler {
 
     //    每个节点信息包含字段：ip、port、cpuUsage(cpu使用率)、memoryUsage（内存使用率）、taskNums（任务数量）、queueCapacity(队列大小)
-//    节点启动时自动向 Redis 注册，设置 35 秒过期时间（比心跳周期多5秒）
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
     @Autowired

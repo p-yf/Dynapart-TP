@@ -334,7 +334,7 @@ public class OfRejectStrategy {
 - **前端监控界面**：使用HTML、Tailwind CSS和JavaScript实现可视化监控界面（豆包生成的哦）
 
 #### 6. 分区化概念
-- 将队列都抽象为`Partition`，可以轻松将队列分区化，通过`PartiFlow`类实现多队列并行处理
+- 将队列都抽象为`Partition`，利用抽象基类以及装饰器模式，可以轻松将队列分区化，通过`PartiFlow`类实现多队列并行处理
 - 支持多种分区策略：轮询、随机、Hash、填谷等入队策略；轮询、随机、削峰等出队策略
 - 极大降低锁粒度，提升系统并发性能和稳定性
 
