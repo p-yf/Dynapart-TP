@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PartitionQueuePerformanceTest {
     // 测试参数配置
     private static final int PARTITION_NUM = 32;         // 分区数量
-    private static final int CAPACITY = 1000;          // 总容量
+    private static final int CAPACITY = 10000;          // 总容量
     private static final int CORE_THREADS = 64;         // 核心线程数
     private static final int MAX_THREADS = 64;          // 最大线程数
     private static final int TASK_COUNT = 10000000;       // 总任务数

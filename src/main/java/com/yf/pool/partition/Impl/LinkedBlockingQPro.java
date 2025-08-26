@@ -83,65 +83,50 @@ public class LinkedBlockingQPro<T> extends Partition<T> {
     @Override
     public T getEle(Integer waitTime) throws InterruptedException {
         T x = null;
-        long nanos = 0;
-        if (waitTime != null) {
-            nanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
-        }
+        long nanos = waitTime != null ? TimeUnit.MILLISECONDS.toNanos(waitTime) : 0;
 
-        conditionLock.lock();
-        try {
-            // 等待直到队列不为空或超时
-            while (size.get() == 0) {
-                if (waitTime == null) {
-                    notEmpty.await();
-                } else {
-                    if (nanos <= 0) {
-                        return null;
-                    }
-                    nanos = notEmpty.awaitNanos(nanos);
-                    if (nanos <= 0) {
-                        return null;
-                    }
-                }
-            }
-        } finally {
-            conditionLock.unlock();
-        }
-
-        // 尝试出队操作
         while (true) {
+            // 尝试无锁出队
             Node<T> h = head.get();
             Node<T> first = h.next;
 
-            // 再次检查队列是否还有元素
-            if (first == null) {
-                // 队列变空了，重新等待
-                conditionLock.lock();
-                try {
-                    if (size.get() == 0) {
-                        notEmpty.await();
+            if (first != null) {
+                if (head.compareAndSet(h, first)) {
+                    x = first.value;
+                    first.value = null;
+
+                    int oldSize = size.getAndDecrement();
+                    if (oldSize > 1) {
+                        signalWaitForNotEmpty();
                     }
-                } finally {
-                    conditionLock.unlock();
+                    return x;
                 }
+                // CAS失败，继续尝试
                 continue;
             }
 
-            // 尝试CAS更新头节点
-            if (head.compareAndSet(h, first)) {
-                x = first.value;
-                first.value = null; // 帮助GC
+            // 队列为空，需要等待
+            if (waitTime != null && nanos <= 0) {
+                return null; // 超时
+            }
 
-                int oldSize = size.getAndDecrement();
-                // 如果还有元素，唤醒其他可能等待的消费者
-                if (oldSize > 1) {
-                    signalWaitForNotEmpty();
+            try {
+                // 再次检查队列是否为空（可能在其他线程添加了元素）
+                conditionLock.lock();
+                if (size.get() == 0) {
+                    if (waitTime == null) {
+                        notEmpty.await();
+                    } else {
+                        if (nanos <= 0) {
+                            return null;
+                        }
+                        nanos = notEmpty.awaitNanos(nanos);
+                    }
                 }
-                break;
+            } finally {
+                conditionLock.unlock();
             }
         }
-
-        return x;
     }
 
 
