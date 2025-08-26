@@ -1,7 +1,7 @@
 package com.yf.pool.partition.Impl.parti_flow;
 
 import com.yf.pool.constant.OfQueue;
-import com.yf.pool.partition.Impl.LinkedBlockingQPlus;
+import com.yf.pool.partition.Impl.LinkedBlockingQ;
 import com.yf.pool.partition.Impl.parti_flow.strategy.OfferStrategy;
 import com.yf.pool.partition.Impl.parti_flow.strategy.PollStrategy;
 import com.yf.pool.partition.Impl.parti_flow.strategy.RemoveStrategy;
@@ -88,7 +88,7 @@ public class PartiFlow<T> extends Partition<T>{
     public PartiFlow() {
         partitions = new Partition[DEFAULT_PARTITION_NUM];
         for (int i = 0; i < DEFAULT_PARTITION_NUM; i++) {
-            partitions[i] = new LinkedBlockingQPlus<>();
+            partitions[i] = new LinkedBlockingQ<>();
         }
     }
 
@@ -108,6 +108,9 @@ public class PartiFlow<T> extends Partition<T>{
 
     @Override
     public T getEle(Integer waitTime) throws InterruptedException {
+        if(pollStrategy==PollStrategy.THREAD_BINDING){//线程绑定不轮询
+            return partitions[pollStrategy.selectPartition( partitions)].getEle(waitTime);
+        }
         T element = null;
         int partitionIndex = pollStrategy.selectPartition(partitions);
         if(waitTime==null){//说明无限等待
@@ -132,7 +135,6 @@ public class PartiFlow<T> extends Partition<T>{
             return element;
         }
     }
-
     @Override
     public Boolean removeEle() {
         return partitions[removeStrategy.selectPartition(partitions)].removeEle();

@@ -1,6 +1,7 @@
 package com.yf.pool.partition.Impl;
 
 import com.yf.pool.partition.Partition;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -17,7 +18,20 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Getter
 @Setter
-public class LinkedBlockingQPlus<T> extends Partition<T> {
+public class LinkedBlockingQ<T> extends Partition<T> {
+    @Data
+    static class Node <T>{
+        private T value;
+
+        private Node<T> next;
+
+        public Node(T value) {
+            this.value =  value;
+        }
+        public Node() {
+        }
+    }
+
     private final Lock headLock = new ReentrantLock(false);
     private final Lock tailLock = new ReentrantLock(false);
     private final Condition notEmpty = headLock.newCondition();
@@ -26,10 +40,10 @@ public class LinkedBlockingQPlus<T> extends Partition<T> {
     private final AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
 
-    public LinkedBlockingQPlus(Integer capacity) {
+    public LinkedBlockingQ(Integer capacity) {
         this.capacity = capacity;
     }
-    public LinkedBlockingQPlus() {
+    public LinkedBlockingQ() {
     }
 
     /**

@@ -1,6 +1,7 @@
 package com.yf.pool.partition.Impl;
 
 import com.yf.pool.partition.Partition;
+import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -19,6 +20,18 @@ import java.util.concurrent.locks.ReentrantLock;
 @Getter
 @Setter
 public class LinkedBlockingQPro<T> extends Partition<T> {
+    @Data
+    static class Node <T>{
+        private volatile T value;
+
+        private volatile Node<T> next;
+
+        public Node(T value) {
+            this.value =  value;
+        }
+        public Node() {
+        }
+    }
     private final Lock tailLock = new ReentrantLock(false);
     private final Lock conditionLock = new ReentrantLock(false);
     private final Condition notEmpty = conditionLock.newCondition();
@@ -40,88 +53,88 @@ public class LinkedBlockingQPro<T> extends Partition<T> {
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
+
         // 有界队列且已满时直接返回false
-        if (capacity != null && size.get() == capacity) {
+        if (capacity != null && size.get() >= capacity) {
             return false;
         }
-        int c = -1;
+
         Node<T> newNode = new Node<>(element);
         tailLock.lock();
         try {
             // 再次检查容量，防止在获取锁前队列已被填满
-            if (capacity == null || size.get() < capacity) {
-                enqueue(newNode);
-                c = size.getAndIncrement();//先返回当前返回值，再加1
+            if (capacity != null && size.get() >= capacity) {
+                return false;
             }
+
+            enqueue(newNode);
+            int oldSize = size.getAndIncrement();
+
+            // 如果队列之前为空，唤醒等待的消费者
+            if (oldSize == 0) {
+                signalWaitForNotEmpty();
+            }
+            return true;
         } finally {
             tailLock.unlock();
         }
-        // 如果队列之前为空，唤醒等待的消费者
-        if (c == 0) {
-            signalWaitForNotEmpty();
-        }
-        return c != -1;
     }
 
     @Override
     public T getEle(Integer waitTime) throws InterruptedException {
         T x = null;
-        int c = -1;
         long nanos = 0;
-        long start = System.nanoTime();
-        // 将等待和CAS操作合并到一个循环中，解决竞态条件
-        while (true) {
-            // 检查队列是否有元素
-            if (size.get() == 0) {
-                // 队列为空时等待
+        if (waitTime != null) {
+            nanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
+        }
+
+        conditionLock.lock();
+        try {
+            // 等待直到队列不为空或超时
+            while (size.get() == 0) {
                 if (waitTime == null) {
-                    conditionLock.lock();
-                    try {
-                        notEmpty.await();
-                    } finally {
-                        conditionLock.unlock();
-                    }
+                    notEmpty.await();
                 } else {
-                    if (nanos == 0) {
-                        nanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
-                        if (nanos <= 0) {
-                            return null;
-                        }
+                    if (nanos <= 0) {
+                        return null;
                     }
-                    conditionLock.lock();
-                    try {
-                        nanos = notEmpty.awaitNanos(nanos);
-                        nanos -= System.nanoTime() - start;
-                    } finally {
-                        conditionLock.unlock();
-                    }
+                    nanos = notEmpty.awaitNanos(nanos);
                     if (nanos <= 0) {
                         return null;
                     }
                 }
-                // 等待后继续循环检查
-                continue;
             }
+        } finally {
+            conditionLock.unlock();
+        }
 
-            // 使用CAS操作出队
+        // 尝试出队操作
+        while (true) {
             Node<T> h = head.get();
-            Node<T> first = h.getNext();
+            Node<T> first = h.next;
 
-            // 双重检查：确保队列确实有元素
+            // 再次检查队列是否还有元素
             if (first == null) {
+                // 队列变空了，重新等待
+                conditionLock.lock();
+                try {
+                    if (size.get() == 0) {
+                        notEmpty.await();
+                    }
+                } finally {
+                    conditionLock.unlock();
+                }
                 continue;
             }
 
             // 尝试CAS更新头节点
             if (head.compareAndSet(h, first)) {
-                // CAS成功，完成出队操作
-                x = first.getValue();
-                first.setValue(null); // 帮助GC
-                h.setNext(h); // 原头节点自引用，帮助GC
+                x = first.value;
+                first.value = null; // 帮助GC
 
-                c = size.getAndDecrement();
+                int oldSize = size.getAndDecrement();
                 // 如果还有元素，唤醒其他可能等待的消费者
-                if (c > 1) {
+                if (oldSize > 1) {
                     signalWaitForNotEmpty();
                 }
                 break;

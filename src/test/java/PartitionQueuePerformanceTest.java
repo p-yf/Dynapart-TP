@@ -1,5 +1,6 @@
 import com.yf.pool.constant.OfQueue;
-import com.yf.pool.partition.Impl.LinkedBlockingQPlus;
+import com.yf.pool.partition.Impl.LinkedBlockingQ;
+import com.yf.pool.partition.Impl.LinkedBlockingQPro;
 import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
 import com.yf.pool.partition.Impl.parti_flow.strategy.OfferStrategy;
 import com.yf.pool.partition.Impl.parti_flow.strategy.PollStrategy;
@@ -20,72 +21,69 @@ import java.util.concurrent.atomic.AtomicInteger;
  * 分区队列性能比较测试
  * 测试LinkedBlockingQPro和LinkedBlockingQPlus在PartiFlow包装下的性能差异
  */
-public class PartitionQueuePerformanceTest {//     分区化            |        无分区化
-    //   |    分区  |   线程数  |    pro   |     plus    |    mini    |     plus(无分区化)    |    pro(无分区化)  |  jdk+linked
-    //   |    4    |    16    |    1857  |     1968    |            |                     |                  |
-    //   |    8    |    16    |    1383  |     1647    |            |                     |                  |
-    //   |    16   |    16    |    1255  |     1534    |            |                     |                  |
-    //   |         |          |          |             |            |                     |                  |
-    //   |    16   |     32   |    1160  |     1670    |     1676   |     1848   2674     |    1864    2523  |  2142   2679
-    //   |    16   |     64   |    1410  |     1730    |     2004   |     1987   3877     |    1997    2913  |  2207   4340
-    //   |    16   |     128  |    1338  |     2269    |     2873   |     2474   4075     |    3047    3971  |  2729   4453
+public class PartitionQueuePerformanceTest {
     // 测试参数配置
-    private static final int PARTITION_NUM = 16;         // 分区数量
-    private static final int CAPACITY = 10000;          // 总容量
-    private static final int CORE_THREADS = 128;         // 核心线程数
-    private static final int MAX_THREADS = 128;          // 最大线程数
+    private static final int PARTITION_NUM = 32;         // 分区数量
+    private static final int CAPACITY = 1000;          // 总容量
+    private static final int CORE_THREADS = 64;         // 核心线程数
+    private static final int MAX_THREADS = 64;          // 最大线程数
     private static final int TASK_COUNT = 10000000;       // 总任务数
     private static final int CONCURRENT_LEVEL = 64;     // 并发提交线程数
     private static final long AWAIT_TIMEOUT = 60;       // 等待超时时间(秒)
 
 
-    /**
-     * 测试LinkedBlockingQPro + PartiFlow的性能
-     */
     @Test
-    public void testLinkedBlockingQProPerformance() throws InterruptedException {
-        System.out.println("===== 开始测试 LinkedBlockingQPro + PartiFlow 性能 =====");
-
-        // 创建Pro版本的分区队列
-        PartiFlow<Runnable> proPartition = new PartiFlow<>(
-                PARTITION_NUM,
-                CAPACITY,
-                OfQueue.LINKED_MINI,
-                OfferStrategy.HASH,
-                PollStrategy.THREAD_BINDING,
-                RemoveStrategy.ROUND_ROBIN
-        );
-
-        // 执行性能测试
-        performTest(proPartition, "LinkedBlockingQPro");
+    public void testPartitionQueuePerformance() throws InterruptedException {
+        int count = 0;
+        long total = 0;
+        long max = 0;
+        long min = Long.MAX_VALUE;
+        for(int i = 0;i<150;i++) {
+            try {
+                long testTime = testLinkedBlockingQPerformance();
+                if(i==0){
+                    continue;
+                }
+                total += testTime;
+                max = Math.max(testTime, max);
+                min = Math.min(testTime, min);
+            }catch (Exception e){
+                count++;
+            }
+        }
+        System.out.println("平均每轮："+(double)total/50 );
+        System.out.println("最大：" + max);
+        System.out.println("最小：" + min);
+        System.out.println("失败次数：" + count);
     }
 
     /**
      * 测试LinkedBlockingQPlus + PartiFlow的性能
      */
-    @Test
-    public void testLinkedBlockingQPlusPerformance() throws InterruptedException {
-        System.out.println("===== 开始测试 LinkedBlockingQPlus + PartiFlow 性能 =====");
+//    @Test
+    public long testLinkedBlockingQPerformance() throws InterruptedException {
+        System.out.println("===== 开始测试 LinkedBlockingQ + PartiFlow 性能 =====");
 
         // 创建Plus版本的分区队列
-        PartiFlow<Runnable> plusPartition = new PartiFlow<>(
+        PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                OfQueue.LINKED_PLUS,
+                OfQueue.LINKED_PRO,
                 OfferStrategy.HASH,
                 PollStrategy.THREAD_BINDING,
                 RemoveStrategy.ROUND_ROBIN
         );
-        Partition<Runnable> partition = new LinkedBlockingQPlus<>(CAPACITY);
+        Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
+        Partition<Runnable> pro = new LinkedBlockingQPro<>(CAPACITY);
         // 执行性能测试
-        performTest( partition, "LinkedBlockingQPlus");
+        return performTest( partiFlow, "LinkedBlockingQ");
     }
 
     /**
      * 测试3：JDK原生 ThreadPoolExecutor + LinkedBlockingQueue 性能（与自定义队列测试逻辑完全对齐）
      */
-    @Test
-    public void testJdkThreadPoolWithLinkedBlockingQueue() throws InterruptedException {
+//    @Test
+    public long testJdkThreadPoolWithLinkedBlockingQueue() throws InterruptedException {
         System.out.println("===== 开始测试 JDK ThreadPoolExecutor + LinkedBlockingQueue 性能 =====");
 
         // 1. 初始化JDK队列（容量与自定义队列总容量一致：CAPACITY=10000）
@@ -132,15 +130,16 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
                         jdkThreadPool.execute(() -> {
                             long start = System.nanoTime();
                             try {
-                                // 模拟任务：1000次累加（与自定义完全一致）
+                                // 模拟任务：1000次累加（无异常）
                                 int sum = 0;
                                 for (int k = 0; k < 1000; k++) {
                                     sum += k;
                                 }
                             } finally {
                                 totalExecutionTime.addAndGet(System.nanoTime() - start);
-                                completeLatch.countDown();
+                                // 修复：先递增实际计数，再唤醒主线程
                                 actualTaskCount.incrementAndGet();
+                                completeLatch.countDown();
                             }
                         });
                     }
@@ -161,7 +160,7 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
         if (!isCompleted) {
             System.err.println("JDK测试超时！未完成的任务数：" + completeLatch.getCount());
             System.err.println("JDK测试实际提交的任务数：" + actualTaskCount.get());
-            return;
+            return 0;
         }
 
         // 7. 结果计算与输出（调用你现有的printTestResults方法，格式完全一致）
@@ -173,12 +172,13 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
                 TASK_COUNT,
                 actualTaskCount.get()
         );
+        return totalTestTime;
 
-        // 8. 关闭JDK线程池（对应自定义的destroyWorkers）
-        jdkThreadPool.shutdown();
-        if (!jdkThreadPool.awaitTermination(AWAIT_TIMEOUT, TimeUnit.SECONDS)) {
-            jdkThreadPool.shutdownNow();
-        }
+//        // 8. 关闭JDK线程池（对应自定义的destroyWorkers）
+//        jdkThreadPool.shutdown();
+//        if (!jdkThreadPool.awaitTermination(AWAIT_TIMEOUT, TimeUnit.SECONDS)) {
+//            jdkThreadPool.shutdownNow();
+//        }
     }
 
     /**
@@ -186,7 +186,7 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
      * @param partition 要测试的分区队列
      * @param queueName 队列名称，用于输出结果
      */
-    private void performTest(Partition<Runnable> partition, String queueName) throws InterruptedException {
+    private long performTest(Partition<Runnable> partition, String queueName) throws InterruptedException {
         // 创建线程工厂（修复存活时间单位错误：60秒=60*1000毫秒）
         ThreadFactory threadFactory = new ThreadFactory(
                 queueName + "-worker",
@@ -228,15 +228,16 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
                         threadPool.execute(() -> {
                             long start = System.nanoTime();
                             try {
-                                // 模拟任务执行（微秒级计算）
+                                // 模拟任务：1000次累加（无异常）
                                 int sum = 0;
                                 for (int k = 0; k < 1000; k++) {
                                     sum += k;
                                 }
                             } finally {
                                 totalExecutionTime.addAndGet(System.nanoTime() - start);
-                                completeLatch.countDown();
+                                // 修复：先递增实际计数，再唤醒主线程
                                 actualTaskCount.incrementAndGet();
+                                completeLatch.countDown();
                             }
                         });
                     }
@@ -259,7 +260,7 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
         if (!isCompleted) {
             System.err.println("测试超时！未完成的任务数：" + completeLatch.getCount());
             System.err.println("实际提交的任务数：" + actualTaskCount.get());
-            return;
+            return 0;
         }
 
         // 记录结束时间
@@ -276,7 +277,8 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
         );
 
         // 关闭线程池（先确认任务已完成）
-        threadPool.destroyWorkers(CORE_THREADS, MAX_THREADS - CORE_THREADS);
+//        threadPool.destroyWorkers(CORE_THREADS, MAX_THREADS - CORE_THREADS);
+        return totalTestTime;
     }
 
     /**
@@ -289,10 +291,7 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
             int expectedTaskCount,
             int actualTaskCount) {
 
-        // 校验任务数量是否匹配
-        if (expectedTaskCount != actualTaskCount) {
-            System.err.printf("任务数量不匹配：预期%d，实际%d\n", expectedTaskCount, actualTaskCount);
-        }
+
 
         // 计算吞吐量（任务/秒）
         double throughput = (double) expectedTaskCount / (totalTestTime / 1000.0);
@@ -306,5 +305,10 @@ public class PartitionQueuePerformanceTest {//     分区化            |       
         System.out.printf("  吞吐量: %.2f 任务/秒\n", throughput);
         System.out.printf("  平均任务执行延迟: %.4f ms\n", avgLatency);
         System.out.println("========================================\n");
+        // 校验任务数量是否匹配
+        if (expectedTaskCount != actualTaskCount) {
+            System.err.printf("任务数量不匹配：预期%d，实际%d\n", expectedTaskCount, actualTaskCount);
+            throw new RuntimeException("任务数量不匹配");
+        }
     }
 }

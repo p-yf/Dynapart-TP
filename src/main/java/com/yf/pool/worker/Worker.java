@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Getter
 @Setter
 public class Worker extends Thread {
-    volatile private static  AtomicInteger countId = new AtomicInteger(0);
+    private static  AtomicInteger countId = new AtomicInteger(0);
     volatile private Boolean flag = true;
     volatile private Boolean isCore;
     private ThreadPool threadPool;
@@ -78,14 +78,19 @@ public class Worker extends Thread {
 
     @Override
     public void run() {
-        if(onTimeTask !=null){
-            try {
-                onTimeTask.run();
-            } catch (Exception e) {
-                e.printStackTrace();
+        try {
+            if (onTimeTask != null) {
+                try {
+                    onTimeTask.run();
+                } catch (Throwable t) { // 捕获Exception + Error
+                    log.error("onTimeTask执行异常", t);
+                } finally {
+                    onTimeTask = null; // 无论是否异常，都清空初始任务
+                }
             }
-            onTimeTask = null;
+            loopTask.run();
+        } catch (Throwable t) {
+            log.error("Worker线程异常终止", t);
         }
-        loopTask.run();
     }
 }

@@ -75,7 +75,7 @@ public class ThreadPool {
     }
 
     public void execute(Runnable task) {
-        if (coreList.size() < coreNums) {
+        if (coreWorkerCount.get() < coreNums) {
             if (addWorker(task,true)) {
                 return;
             }
@@ -92,7 +92,7 @@ public class ThreadPool {
 
     public Future submit(Callable<Object> callable) {
         FutureTask task = new FutureTask(callable);
-        if (coreList.size() < coreNums) {
+        if (coreWorkerCount.get() < coreNums) {
             if (addWorker(task,true)) {
                 return  task;
             }
