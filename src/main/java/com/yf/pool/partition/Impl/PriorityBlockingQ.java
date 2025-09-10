@@ -14,7 +14,7 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @Setter
 @Getter
-public class PriorityBlockingQueue<T> extends Partition<T> {
+public class PriorityBlockingQ<T> extends Partition<T> {
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
     private final Lock rLock = rwLock.readLock();
     private final Lock wLock = rwLock.writeLock();
@@ -22,12 +22,12 @@ public class PriorityBlockingQueue<T> extends Partition<T> {
     private volatile Integer capacity;
     private final PriorityQueue<T> q;
 
-    public PriorityBlockingQueue(Integer capacity) {
+    public PriorityBlockingQ(Integer capacity) {
         this.q = new PriorityQueue<>(capacity);
         this.capacity = capacity;
     }
 
-    public PriorityBlockingQueue() {
+    public PriorityBlockingQ() {
         this.q = new PriorityQueue<>();
     }
 

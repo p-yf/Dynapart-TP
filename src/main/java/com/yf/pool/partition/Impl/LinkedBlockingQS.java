@@ -19,134 +19,151 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Getter
 @Setter
-public class LinkedBlockingQPro<T> extends Partition<T> {
+public class LinkedBlockingQS<T> extends Partition<T> {
     @Data
     static class Node <T>{
         private volatile T value;
-
         private volatile Node<T> next;
 
         public Node(T value) {
-            this.value =  value;
+            this.value = value;
         }
         public Node() {
         }
     }
     private final Lock tailLock = new ReentrantLock(false);
-    private final Lock conditionLock = new ReentrantLock(false);
-    private final Condition notEmpty = conditionLock.newCondition();
+    private final Lock headLock = new ReentrantLock(false);
+    private final Condition notEmpty = headLock.newCondition();
     private final AtomicReference<Node<T>> head = new AtomicReference<>(new Node<>());
-    private Node<T> tail = head.get();
+    private volatile Node<T> tail = head.get();
     private final AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
 
-    public LinkedBlockingQPro(Integer capacity) {
+    public LinkedBlockingQS(Integer capacity) {
         this.capacity = capacity;
     }
 
-    public LinkedBlockingQPro() {}
+    public LinkedBlockingQS() {
+        this.capacity = null;
+    }
 
     /**
      * 当队列有界且已满时返回false
+     * 教训：能直接返回明确的结果就直接返回，否则即使逻辑正确，也有可能由于各种奇葩的原因导致错误
+     * 例如下方我原本是将c设置为-1，在最后return c != -1,其实逻辑没问题，但是就是会出现问题。
      */
     public Boolean offer(T element) {
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
-
-        // 有界队列且已满时直接返回false
         if (capacity != null && size.get() >= capacity) {
             return false;
         }
-
+        final int c;
         Node<T> newNode = new Node<>(element);
         tailLock.lock();
         try {
-            // 再次检查容量，防止在获取锁前队列已被填满
-            if (capacity != null && size.get() >= capacity) {
+            if (capacity == null || size.get() < capacity) {
+                enqueue(newNode);
+                c = size.getAndIncrement();
+            } else {
                 return false;
             }
-
-            enqueue(newNode);
-            int oldSize = size.getAndIncrement();
-
-            // 如果队列之前为空，唤醒等待的消费者
-            if (oldSize == 0) {
-                signalWaitForNotEmpty();
-            }
-            return true;
         } finally {
             tailLock.unlock();
         }
+        // 如果添加的是第一个元素，唤醒等待的消费者
+        if (c == 0) {
+            signalWaitForNotEmpty();
+        }
+        return true;
     }
+
 
     @Override
     public T getEle(Integer waitTime) throws InterruptedException {
-        T x = null;
         long nanos = waitTime != null ? TimeUnit.MILLISECONDS.toNanos(waitTime) : 0;
+        Node<T> h, first;
+        int spinCount = 0;  // 限制自旋次数
 
-        while (true) {
-            // 尝试无锁出队
-            Node<T> h = head.get();
-            Node<T> first = h.next;
-
+        // 先尝试有限次CAS出队，减少锁竞争
+        while (spinCount < 3) {  // 自旋3次后切换策略
+            h = head.get();
+            first = h.next;
             if (first != null) {
+                // CAS替换头节点
                 if (head.compareAndSet(h, first)) {
-                    x = first.value;
+                    T result = first.value;
                     first.value = null;
-
-                    int oldSize = size.getAndDecrement();
-                    if (oldSize > 1) {
+                    h.next = h;
+                    int c = size.getAndDecrement();
+                    // 还有元素时唤醒其他消费者
+                    if (c > 1) {
                         signalWaitForNotEmpty();
                     }
-                    return x;
+                    return result;
                 }
-                // CAS失败，继续尝试
-                continue;
-            }
-
-            // 队列为空，需要等待
-            if (waitTime != null && nanos <= 0) {
-                return null; // 超时
-            }
-
-            try {
-                // 再次检查队列是否为空（可能在其他线程添加了元素）
-                conditionLock.lock();
-                if (size.get() == 0) {
-                    if (waitTime == null) {
-                        notEmpty.await();
-                    } else {
-                        if (nanos <= 0) {
-                            return null;
-                        }
-                        nanos = notEmpty.awaitNanos(nanos);
-                    }
+                spinCount++;
+                if (spinCount >= 3) {
+                    Thread.yield();  // 自旋多次失败后让步，减少CPU占用
                 }
-            } finally {
-                conditionLock.unlock();
+            } else {
+                break;  // 队列为空，退出自旋
             }
         }
+
+        // 队列空或CAS失败次数过多，进入锁等待逻辑
+        headLock.lock();
+        try {
+            while (true) {
+                h = head.get();
+                first = h.next;
+                if (first != null) {
+                    // 再次尝试CAS（此时竞争已减轻）
+                    if (head.compareAndSet(h, first)) {
+                        T result = first.value;
+                        first.value = null;
+                        h.next = h;
+                        int c = size.getAndDecrement();
+                        if (c > 1) {
+                            notEmpty.signal();  // 唤醒其他等待线程
+                        }
+                        return result;
+                    }
+                    continue;  // CAS失败，重新检查
+                }
+
+                // 队列为空，处理等待
+                if (waitTime != null) {
+                    if (nanos <= 0) {
+                        return null;  // 超时返回
+                    }
+                    nanos = notEmpty.awaitNanos(nanos);
+                } else {
+                    notEmpty.await();  // 无限等待
+                }
+            }
+        } finally {
+            headLock.unlock();
+        }
     }
-
-
 
     @Override
     public void lockGlobally() {
         tailLock.lock();
-        conditionLock.lock();
+        headLock.lock();
     }
 
     @Override
     public void unlockGlobally() {
-        conditionLock.unlock();
+        headLock.unlock();
         tailLock.unlock();
     }
 
-    /**
-     * 从队列获取元素，支持超时
-     */
-
+    @Override
+    public void setCapacity(Integer capacity) {
+        this.capacity = capacity;
+    }
 
     public Boolean removeEle() {
         // 无锁快速失败：空队列直接返回
@@ -167,7 +184,7 @@ public class LinkedBlockingQPro<T> extends Partition<T> {
         } while (!head.compareAndSet(h, first));
 
         first.setValue(null); // 帮助GC
-        h.setNext(h); // 原头节点自引用，帮助GC
+        // 注意：不再设置h.next = h，因为这会导致GC问题
 
         c = size.getAndDecrement();
         // 队列仍有元素：唤醒下一个消费者
@@ -194,11 +211,11 @@ public class LinkedBlockingQPro<T> extends Partition<T> {
      * 唤醒等待非空条件的线程
      */
     private void signalWaitForNotEmpty() {
-        conditionLock.lock();
+        headLock.lock();
         try {
             notEmpty.signal();
         } finally {
-            conditionLock.unlock();
+            headLock.unlock();
         }
     }
 }

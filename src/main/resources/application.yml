@@ -18,7 +18,7 @@ yf:
       partitioning: true  #是否分区化(如果是false，只需要读取capacity和queueName)
       partitionNum: 10      #分区数量
       capacity: 500         #队列容量（不写代表null，为无界）
-      queueName: linked_plus     #队列名称
+      queueName: linked     #队列名称
       offerStrategy:       #入队策略
       pollStrategy:        #出队策略
       removeStrategy:      #移除策略

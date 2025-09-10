@@ -57,15 +57,15 @@ public class LinkedBlockingQ<T> extends Partition<T> {
         if (capacity != null && size.get() == capacity) {
             return false;
         }
-        int c = -1;
+        final int c;
         Node<T> newNode = new Node<>(element);
         tailLock.lock();
         try {
             // 再次检查容量，防止在获取锁前队列已被填满
-            if (capacity == null || size.get() < capacity) {
-                enqueue(newNode);
-                c = size.getAndIncrement();//先返回当前返回值，再加1
-            }
+            if (size.get() == capacity)
+                return false;
+            enqueue(newNode);
+            c = size.getAndIncrement();
         } finally {
             tailLock.unlock();
         }
@@ -73,13 +73,13 @@ public class LinkedBlockingQ<T> extends Partition<T> {
         if (c == 0) {
             signalWaitForNotEmpty();
         }
-        return c != -1;
+        return true;
     }
 
     @Override
     public T getEle(Integer waitTime) throws InterruptedException {
         T x = null;
-        int c = -1;
+        final int c;
         headLock.lock();
         try {
             // 队列为空时等待

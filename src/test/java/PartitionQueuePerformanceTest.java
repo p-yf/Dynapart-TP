@@ -1,6 +1,6 @@
 import com.yf.pool.constant.OfQueue;
 import com.yf.pool.partition.Impl.LinkedBlockingQ;
-import com.yf.pool.partition.Impl.LinkedBlockingQPro;
+import com.yf.pool.partition.Impl.LinkedBlockingQS;
 import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
 import com.yf.pool.partition.Impl.parti_flow.strategy.OfferStrategy;
 import com.yf.pool.partition.Impl.parti_flow.strategy.PollStrategy;
@@ -23,12 +23,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class PartitionQueuePerformanceTest {
     // 测试参数配置
-    private static final int PARTITION_NUM = 32;         // 分区数量
+    private static final int PARTITION_NUM = 64;         // 分区数量
     private static final int CAPACITY = 10000;          // 总容量
-    private static final int CORE_THREADS = 64;         // 核心线程数
-    private static final int MAX_THREADS = 64;          // 最大线程数
+    private static final int CORE_THREADS = 256;         // 核心线程数
+    private static final int MAX_THREADS = 256;          // 最大线程数
     private static final int TASK_COUNT = 10000000;       // 总任务数
-    private static final int CONCURRENT_LEVEL = 64;     // 并发提交线程数
+    private static final int CONCURRENT_LEVEL = 256;     // 并发提交线程数
     private static final long AWAIT_TIMEOUT = 60;       // 等待超时时间(秒)
 
 
@@ -38,10 +38,31 @@ public class PartitionQueuePerformanceTest {
         long total = 0;
         long max = 0;
         long min = Long.MAX_VALUE;
-        for(int i = 0;i<150;i++) {
+        for(int i = 0;i<60;i++) {
             try {
-                long testTime = testLinkedBlockingQPerformance();
-                if(i==0){
+                /**
+                 * 平均每轮：1749.1
+                 * 最大：1911
+                 * 最小：1495
+                 * 失败次数：0
+                 */
+//                long testTime = testJdkThreadPoolWithLinkedBlockingQueue();
+                /**
+                 * 平均每轮：1338.98
+                 * 最大：1528
+                 * 最小：1194
+                 * 失败次数：0
+                 */
+//                long testTime = testLinkedBlockingQPerformance();
+
+                /**
+                 * 平均每轮：1387.36
+                 * 最大：1657
+                 * 最小：1164
+                 * 失败次数：0
+                 */
+                long testTime = testLinkedBlockingQProPerformance();
+                if(i<=9){
                     continue;
                 }
                 total += testTime;
@@ -51,7 +72,7 @@ public class PartitionQueuePerformanceTest {
                 count++;
             }
         }
-        System.out.println("平均每轮："+(double)total/50 );
+        System.out.println("平均每轮："+(double)total/50);
         System.out.println("最大：" + max);
         System.out.println("最小：" + min);
         System.out.println("失败次数：" + count);
@@ -68,16 +89,35 @@ public class PartitionQueuePerformanceTest {
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                OfQueue.LINKED_PRO,
+                OfQueue.LINKED,
                 OfferStrategy.HASH,
                 PollStrategy.THREAD_BINDING,
                 RemoveStrategy.ROUND_ROBIN
         );
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
-        Partition<Runnable> pro = new LinkedBlockingQPro<>(CAPACITY);
+        Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
         // 执行性能测试
         return performTest( partiFlow, "LinkedBlockingQ");
     }
+
+    public long testLinkedBlockingQProPerformance() throws InterruptedException {
+        System.out.println("===== 开始测试 LinkedBlockingQS + PartiFlow 性能 =====");
+
+        // 创建Plus版本的分区队列
+        PartiFlow<Runnable> partiFlow = new PartiFlow<>(
+                PARTITION_NUM,
+                CAPACITY,
+                OfQueue.LINKED_S,
+                OfferStrategy.HASH,
+                PollStrategy.THREAD_BINDING,
+                RemoveStrategy.ROUND_ROBIN
+        );
+        Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
+        Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
+        // 执行性能测试
+        return performTest( partiFlow, "LinkedBlockingQS");
+    }
+
 
     /**
      * 测试3：JDK原生 ThreadPoolExecutor + LinkedBlockingQueue 性能（与自定义队列测试逻辑完全对齐）
@@ -235,7 +275,6 @@ public class PartitionQueuePerformanceTest {
                                 }
                             } finally {
                                 totalExecutionTime.addAndGet(System.nanoTime() - start);
-                                // 修复：先递增实际计数，再唤醒主线程
                                 actualTaskCount.incrementAndGet();
                                 completeLatch.countDown();
                             }

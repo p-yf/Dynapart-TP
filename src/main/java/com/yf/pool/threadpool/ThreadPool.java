@@ -30,7 +30,6 @@ import java.util.concurrent.locks.ReentrantLock;
 @Getter
 @Setter
 public class ThreadPool {
-    private Boolean isSpringBootEnvironment;
     private Lock lock = new ReentrantLock();
     private ThreadFactory threadFactory;
     private Partition<Runnable> partition;
@@ -315,7 +314,7 @@ public class ThreadPool {
         try {
             oldQ.lockGlobally();
             while(oldQ.getEleNums() > 0){
-                Runnable task = oldQ.getEle(null);//虽然设置为null，代表无限期等待，但是条件为线程池中至少有一个任务，所以不会阻塞
+                Runnable task = oldQ.getEle(1000);
                 q.addEle(task);
             }
             this.queueName = qName;
