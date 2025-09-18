@@ -1,7 +1,7 @@
 package com.yf.springboot_integration.monitor.controller;
 
-import com.yf.pool.constant.OfQueue;
-import com.yf.pool.constant.OfRejectStrategy;
+import com.yf.pool.constant_or_registry.QueueRegistry;
+import com.yf.pool.constant_or_registry.RejectStrategyRegistry;
 import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.pool.partition.Partition;
@@ -65,9 +65,6 @@ public class MonitorController {
      */
     @PutMapping("/queue")
     public Boolean changeQ(String qName,Integer qCapacity) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        if(!monitorProperties.isQReplaceable()){
-            return false;
-        }
         if(qName==null|| qName.isEmpty()){
             return false;
         }
@@ -75,10 +72,10 @@ public class MonitorController {
         try {
             q = (Partition) context.getBean(qName);
         }catch(NoSuchBeanDefinitionException e){
-            if(!OfQueue.TASK_QUEUE_MAP.containsKey(qName)){
+            if(!QueueRegistry.TASK_QUEUE_MAP.containsKey(qName)){
                 return false;
             }else{
-                q = (Partition) OfQueue.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(qCapacity);
+                q = (Partition) QueueRegistry.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(qCapacity);
             }
         }
         return threadPool.changeQueue(q,qName);
@@ -90,9 +87,6 @@ public class MonitorController {
      */
     @PutMapping("/rejectStrategy")
     public Boolean changeRS(String rsName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        if(!monitorProperties.isRsReplaceable()){
-            return false;
-        }
         if(rsName == null|| rsName.isEmpty()){
             return false;
         }
@@ -100,10 +94,10 @@ public class MonitorController {
         try {
             rs = (RejectStrategy) context.getBean(rsName);
         }catch(NoSuchBeanDefinitionException e){
-            if(!OfRejectStrategy.REJECT_STRATEGY_MAP.containsKey(rsName)){
+            if(!RejectStrategyRegistry.REJECT_STRATEGY_MAP.containsKey(rsName)){
                 return false;
             }else{
-                rs = (RejectStrategy) OfRejectStrategy.REJECT_STRATEGY_MAP.get(rsName).getConstructor().newInstance();
+                rs = (RejectStrategy) RejectStrategyRegistry.REJECT_STRATEGY_MAP.get(rsName).getConstructor().newInstance();
             }
         }
         return threadPool.changeRejectStrategy(rs,rsName);

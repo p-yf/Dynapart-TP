@@ -1,6 +1,8 @@
 package com.yf.test_springboot_integration;
 
 import com.yf.pool.command.PoolCommandHandler;
+import com.yf.pool.constant_or_registry.QueueRegistry;
+import com.yf.pool.constant_or_registry.RejectStrategyRegistry;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;
@@ -16,5 +18,10 @@ public class Start {
 //        //命令行启动的流程  springboot环境不建议，建议用可视化界面。
 //        PoolCommandHandler poolCommandHandler = new PoolCommandHandler(run.getBean(com.yf.pool.threadpool.ThreadPool.class));
 //        poolCommandHandler.start();
+        System.out.println(QueueRegistry.TASK_QUEUE_MAP.get("myq"));
+        System.out.println(RejectStrategyRegistry.REJECT_STRATEGY_MAP.get("mys"));
+        System.out.println(run.getBean("myq"));
+        System.out.println(run.getBean("mys"));
+
     }
 }

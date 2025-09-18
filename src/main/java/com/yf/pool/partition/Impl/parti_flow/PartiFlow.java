@@ -1,6 +1,6 @@
 package com.yf.pool.partition.Impl.parti_flow;
 
-import com.yf.pool.constant.OfQueue;
+import com.yf.pool.constant_or_registry.QueueRegistry;
 import com.yf.pool.partition.Impl.LinkedBlockingQ;
 import com.yf.pool.partition.Impl.parti_flow.strategy.OfferStrategy;
 import com.yf.pool.partition.Impl.parti_flow.strategy.PollStrategy;
@@ -47,7 +47,7 @@ public class PartiFlow<T> extends Partition<T>{
 
     public PartiFlow(Integer partitionNum, Integer capacity,String QName) {
         //先获取队列类型
-        Class<?> qClass = OfQueue.TASK_QUEUE_MAP.get(QName);
+        Class<?> qClass = QueueRegistry.TASK_QUEUE_MAP.get(QName);
         partitions = new Partition[partitionNum];
         this.capacity = capacity;
         if (capacity != null) {//不为null，轮询分配

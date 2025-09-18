@@ -1,4 +1,4 @@
-import com.yf.pool.constant.OfQueue;
+import com.yf.pool.constant_or_registry.QueueRegistry;
 import com.yf.pool.partition.Impl.LinkedBlockingQ;
 import com.yf.pool.partition.Impl.LinkedBlockingQS;
 import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
@@ -89,7 +89,7 @@ public class PartitionQueuePerformanceTest {
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                OfQueue.LINKED,
+                QueueRegistry.LINKED,
                 OfferStrategy.HASH,
                 PollStrategy.THREAD_BINDING,
                 RemoveStrategy.ROUND_ROBIN
@@ -107,7 +107,7 @@ public class PartitionQueuePerformanceTest {
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                OfQueue.LINKED_S,
+                QueueRegistry.LINKED_S,
                 OfferStrategy.HASH,
                 PollStrategy.THREAD_BINDING,
                 RemoveStrategy.ROUND_ROBIN

@@ -16,6 +16,4 @@ import org.springframework.stereotype.Component;
 public class MonitorProperties {
     private boolean enabled;
     private Integer fixedDelay;
-    private boolean qReplaceable;
-    private boolean rsReplaceable;
 }

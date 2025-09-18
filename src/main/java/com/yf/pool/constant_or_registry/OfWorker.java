@@ -1,4 +1,4 @@
-package com.yf.pool.constant;
+package com.yf.pool.constant_or_registry;
 //worker相关的常量
 
 /**

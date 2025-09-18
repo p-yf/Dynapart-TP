@@ -25,8 +25,6 @@ yf:
     monitor:
       enabled: true       #是否开启监控
       fixedDelay: 5000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
-      qReplaceable: false  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
-      rsReplaceable: false #是否可更换拒绝策略
     service-registry:      #是否开启服务注册
         enabled: true
 

@@ -1,8 +1,8 @@
 package com.yf.pool.threadpool;
 
-import com.yf.pool.constant.OfQueue;
-import com.yf.pool.constant.OfRejectStrategy;
-import com.yf.pool.constant.OfWorker;
+import com.yf.pool.constant_or_registry.QueueRegistry;
+import com.yf.pool.constant_or_registry.RejectStrategyRegistry;
+import com.yf.pool.constant_or_registry.OfWorker;
 import com.yf.pool.entity.PoolInfo;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.pool.partition.Partition;
@@ -60,12 +60,12 @@ public class ThreadPool {
         this.maxNums = maxNums;
         this.name = name;
         //添加队列和策略的名称
-        OfQueue.TASK_QUEUE_MAP.forEach((qName, clazz) -> {
+        QueueRegistry.TASK_QUEUE_MAP.forEach((qName, clazz) -> {
             if (clazz == partition.getClass()) {
                 this.queueName = qName;
             }
         });
-        OfRejectStrategy.REJECT_STRATEGY_MAP.forEach((qName, clazz) -> {
+        RejectStrategyRegistry.REJECT_STRATEGY_MAP.forEach((qName, clazz) -> {
             if (clazz == rejectStrategy.getClass()) {
                 this.rejectStrategyName = qName;
             }
