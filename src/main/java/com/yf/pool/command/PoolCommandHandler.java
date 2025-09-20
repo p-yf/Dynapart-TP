@@ -1,7 +1,7 @@
 package com.yf.pool.command;
 
-import com.yf.pool.constant_or_registry.QueueRegistry;
-import com.yf.pool.constant_or_registry.RejectStrategyRegistry;
+import com.yf.pool.constant_or_registry.QueueManager;
+import com.yf.pool.constant_or_registry.RejectStrategyManager;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.pool.partition.Partition;
 import com.yf.pool.threadpool.ThreadPool;
@@ -426,7 +426,7 @@ public class PoolCommandHandler {
 
         String queueName = parts[2];
         // 简单验证队列名称是否存在
-        if (!QueueRegistry.TASK_QUEUE_MAP.containsKey(queueName)) {
+        if (!QueueManager.getResources().containsKey(queueName)) {
             System.out.println("❌ 未知的队列名称: " + queueName);
             System.out.println("   可用队列: " + getAvailableQueues());
             return;
@@ -449,7 +449,7 @@ public class PoolCommandHandler {
 
         String strategyName = parts[2];
         // 简单验证策略名称是否存在
-        if (!RejectStrategyRegistry.REJECT_STRATEGY_MAP.containsKey(strategyName)) {
+        if (!RejectStrategyManager.REJECT_STRATEGY_MAP.containsKey(strategyName)) {
             System.out.println("❌ 未知的拒绝策略: " + strategyName);
             System.out.println("   可用策略: " + getAvailableRejectStrategies());
             return;
@@ -495,14 +495,14 @@ public class PoolCommandHandler {
      * 获取可用队列列表
      */
     private String getAvailableQueues() {
-        return String.join(", ", QueueRegistry.TASK_QUEUE_MAP.keySet());
+        return String.join(", ", QueueManager.getResources().keySet());
     }
 
     /**
      * 获取可用拒绝策略列表
      */
     private String getAvailableRejectStrategies() {
-        return String.join(", ", RejectStrategyRegistry.REJECT_STRATEGY_MAP.keySet());
+        return String.join(", ", RejectStrategyManager.REJECT_STRATEGY_MAP.keySet());
     }
 
     /**
@@ -574,7 +574,7 @@ public class PoolCommandHandler {
     }
 
     private void changeQueue(String qName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        Partition newQ = (Partition) QueueRegistry.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(threadPool.getPartition().getCapacity());
+        Partition newQ = (Partition) QueueManager.getResources().get(qName).getConstructor(Integer.class).newInstance(threadPool.getPartition().getCapacity());
         if(threadPool.changeQueue(newQ, qName)){
             System.out.println("✅ 修改成功");
         }else{
@@ -583,7 +583,7 @@ public class PoolCommandHandler {
     }
 
     private void changeRejectStrategy(String rjName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        RejectStrategy newQ = (RejectStrategy) RejectStrategyRegistry.REJECT_STRATEGY_MAP.get(rjName).getConstructor().newInstance();
+        RejectStrategy newQ = (RejectStrategy) RejectStrategyManager.REJECT_STRATEGY_MAP.get(rjName).getConstructor().newInstance();
         if(threadPool.changeRejectStrategy(newQ,rjName)){
             System.out.println("✅ 修改成功");
         }else{

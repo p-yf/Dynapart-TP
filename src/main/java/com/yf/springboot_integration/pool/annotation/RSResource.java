@@ -13,6 +13,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Component
-public @interface PartitionBean {
-    String value();// 队列名称
+public @interface RSResource {//拒绝策略资源注解
+    String value();//拒绝策略名称
 }

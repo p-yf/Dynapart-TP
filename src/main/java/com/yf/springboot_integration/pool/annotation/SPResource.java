@@ -4,7 +4,6 @@ import org.springframework.stereotype.Component;
 
 import java.lang.annotation.*;
 
-
 /**
  * @author yyf
  * @description
@@ -13,6 +12,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Component
-public @interface RejectStrategyBean {
-    String value();//拒绝策略名称
+public @interface SPResource {//调度规则资源注解
+    String value();
 }

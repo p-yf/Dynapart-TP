@@ -3,616 +3,1143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>线程池监控中心 - 监控页</title>
-    <!-- 引入外部资源 -->
+    <title>线程池监控中心</title>
+    <!-- 添加Favicon图标 -->
+    <link rel="icon" type="image/png" href="/logo/logo.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
-    <link rel="icon" type="image/png" href="logo/logo.png">
-    <!-- 配置Tailwind自定义主题 -->
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
                         primary: '#165DFF',
-                        secondary: '#36CFC9',
                         success: '#52C41A',
                         warning: '#FAAD14',
                         danger: '#FF4D4F',
                         info: '#1890FF',
-                        purple: '#722ED1',
-                        dark: '#1F2937',
-                        light: '#F9FAFB'
+                        'time-wait': '#FF5252' // 显眼的限时等待色（亮红色）
                     },
-                    fontFamily: {
-                        inter: ['Inter', 'system-ui', 'sans-serif'],
-                    },
+                    fontFamily: { inter: ['Inter', 'sans-serif'] }
                 }
             }
         }
     </script>
-
-    <!-- 自定义工具类 -->
     <style type="text/tailwindcss">
         @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .stat-card {
-                @apply bg-white rounded-lg p-4 shadow-sm transition-all duration-300 hover:shadow-md;
-            }
-            .info-card {
-                @apply bg-white rounded-lg p-5 shadow-sm border border-gray-100;
-            }
-            .nav-active {
-                @apply text-primary border-primary font-medium;
-            }
-            .badge {
-                @apply text-xs px-2 py-1 rounded-full font-medium;
-            }
+            .stat-card { @apply bg-white rounded-lg p-4 shadow-sm hover:shadow-md transition-all; }
+            .config-card { @apply bg-white rounded-lg p-5 shadow-sm border border-gray-100 mb-6; }
+            .info-card { @apply bg-white rounded-lg p-5 shadow-sm border border-gray-100; }
+            .nav-active { @apply text-primary border-primary font-medium; }
+            .badge { @apply text-xs px-2 py-1 rounded-full font-medium; }
+            .form-input { @apply w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary/20 transition; }
+            .form-select { @apply w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary/20 transition bg-white; }
+            .form-label { @apply block text-sm font-medium text-gray-700 mb-1; }
+            .scrollable-table { @apply overflow-x-auto max-h-[400px] overflow-y-auto; } /* 调整高度以容纳10个分区 */
+            .ws-status-normal { @apply bg-success/10 text-success; }
+            .ws-status-reconnect { @apply bg-warning/10 text-warning; }
+            .ws-status-error { @apply bg-danger/10 text-danger; }
         }
     </style>
 </head>
-<body class="bg-gray-50 font-inter text-dark min-h-screen">
-<!-- 顶部导航栏 -->
+<body class="bg-gray-50 font-inter min-h-screen">
 <header class="bg-white sticky top-0 z-50 shadow-sm">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center py-4">
-            <div class="flex items-center space-x-2">
-                <i class="fa fa-tasks text-primary text-2xl"></i>
-                <h1 class="text-xl font-bold text-gray-800">线程池监控中心</h1>
-            </div>
-
-            <!-- 页面导航 -->
-            <nav class="flex items-center space-x-8">
-                <a href="index.html" class="nav-active border-b-2 px-1 py-5 transition-colors">
-                    <i class="fa fa-dashboard mr-1"></i> 监控页
-                </a>
-                <a href="configuration.html" class="text-gray-600 border-b-2 border-transparent hover:text-primary px-1 py-5 transition-colors">
-                    <i class="fa fa-cog mr-1"></i> 配置页
-                </a>
-            </nav>
-
-            <!-- 刷新控制 -->
-            <div class="flex items-center space-x-4">
-                <div class="flex items-center text-sm text-gray-500">
-                    <i class="fa fa-refresh mr-2" id="refresh-icon"></i>
-                    <span id="last-updated">最后更新: 从未更新</span>
-                </div>
-                <button id="refresh-btn" class="bg-primary hover:bg-primary/90 text-white px-3 py-1.5 rounded-md text-sm flex items-center transition-colors">
-                    <i class="fa fa-refresh mr-1"></i> 刷新
-                </button>
-            </div>
+    <div class="container mx-auto px-4 py-4 flex flex-col md:flex-row justify-between items-center">
+        <div class="flex items-center space-x-2 mb-4 md:mb-0">
+            <!-- 替换为自定义logo -->
+            <img src="/logo/logo.png" alt="线程池监控中心logo" class="h-8 w-8">
+            <h1 class="text-xl font-bold text-gray-800">线程池监控中心</h1>
         </div>
+        <nav class="hidden md:flex items-center space-x-8">
+            <a href="javascript:;" id="nav-monitor" class="nav-active border-b-2 px-1 py-2 transition-colors">
+                <i class="fa fa-dashboard mr-1"></i> 监控页
+            </a>
+            <a href="javascript:;" id="nav-config" class="text-gray-600 border-b-2 border-transparent hover:text-primary px-1 py-2 transition-colors">
+                <i class="fa fa-cog mr-1"></i> 配置页
+            </a>
+        </nav>
+        <div class="flex items-center space-x-3 flex-wrap">
+            <span id="ws-status" class="badge ws-status-reconnect flex items-center">
+                <i class="fa fa-circle-o-notch fa-spin mr-1"></i> WS连接中...
+            </span>
+            <span class="text-sm text-gray-500 flex items-center">
+                <i class="fa fa-signal mr-1 text-primary"></i>
+                <span id="last-ws-msg">未接收消息</span>
+            </span>
+            <button id="refresh-btn" class="bg-primary hover:bg-primary/90 text-white px-3 py-1.5 rounded-md text-sm flex items-center transition">
+                <i class="fa fa-refresh mr-1"></i> 刷新配置
+            </button>
+        </div>
+        <button class="md:hidden text-gray-600 hover:text-primary ml-auto" id="mobile-menu-btn">
+            <i class="fa fa-bars text-xl"></i>
+        </button>
+    </div>
+    <div class="md:hidden hidden px-4 pb-4" id="mobile-menu">
+        <a href="javascript:;" id="mobile-nav-monitor" class="nav-active block px-2 py-2 rounded-md mb-2">
+            <i class="fa fa-dashboard mr-1"></i> 监控页
+        </a>
+        <a href="javascript:;" id="mobile-nav-config" class="text-gray-600 hover:text-primary block px-2 py-2 rounded-md mb-2">
+            <i class="fa fa-cog mr-1"></i> 配置页
+        </a>
+        <span id="mobile-ws-status" class="badge ws-status-reconnect flex items-center px-2 mt-1">
+            <i class="fa fa-circle-o-notch fa-spin mr-1"></i> WS连接中...
+        </span>
+        <span class="text-xs text-gray-500 flex items-center px-2 mt-1">
+            <i class="fa fa-signal mr-1 text-primary"></i>
+            <span id="mobile-last-ws-msg">未接收消息</span>
+        </span>
     </div>
 </header>
 
-<!-- 主内容区 -->
-<main class="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-    <!-- 线程池名称和基本状态 -->
-    <div class="info-card mb-6">
-        <div class="flex flex-col md:flex-row md:items-center justify-between">
-            <div>
-                <h2 class="text-xl font-bold text-gray-800 mb-1" id="pool-name">-</h2>
-                <p class="text-gray-500 text-sm">线程命名: <span id="thread-name" class="font-medium">-</span></p>
+<main class="container mx-auto px-4 py-6">
+    <div id="monitor-page" class="block">
+        <div class="info-card mb-6">
+            <div class="flex flex-col md:flex-row md:items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800 mb-1" id="pool-name">-</h2>
+                    <p class="text-gray-500 text-sm">线程命名: <span id="thread-name" class="font-medium">-</span></p>
+                </div>
+                <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
+                    <span class="badge bg-blue-100 text-blue-800" id="queue-info">队列加载中...</span>
+                    <span class="badge bg-purple-100 text-purple-800" id="reject-strategy">-</span>
+                    <span id="daemon-badge" class="badge bg-gray-100 text-gray-800">-</span>
+                    <span id="core-destroy-badge" class="badge bg-gray-100 text-gray-800">-</span>
+                </div>
             </div>
-            <div class="flex flex-wrap gap-2 mt-3 md:mt-0">
-                <span class="badge bg-blue-100 text-blue-800" id="queue-name">-</span>
-                <span class="badge bg-purple-100 text-purple-800" id="reject-strategy">-</span>
-                <span id="daemon-badge" class="badge bg-gray-100 text-gray-800">-</span>
-                <span id="core-destroy-badge" class="badge bg-gray-100 text-gray-800">-</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="stat-card border-l-4 border-primary">
+                <div class="text-sm text-gray-500">核心线程数</div>
+                <div class="text-2xl font-bold mt-1" id="core-nums">-</div>
+            </div>
+            <div class="stat-card border-l-4 border-info">
+                <div class="text-sm text-gray-500">最大线程数</div>
+                <div class="text-2xl font-bold mt-1" id="max-nums">-</div>
+            </div>
+            <div class="stat-card border-l-4 border-warning">
+                <div class="text-sm text-gray-500">队列任务数（总）</div>
+                <div class="text-2xl font-bold mt-1" id="queue-size">-</div>
+                <div class="mt-1 text-xs text-gray-400">容量: <span id="queue-capacity">-</span></div>
+            </div>
+            <div class="stat-card border-l-4 border-primary/70">
+                <div class="text-sm text-gray-500">空闲时间(ms)</div>
+                <div class="text-2xl font-bold mt-1" id="alive-time">-</div>
+            </div>
+        </div>
+
+        <div class="info-card mb-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fa fa-line-chart text-primary mr-2"></i> 线程状态趋势
+            </h3>
+            <div class="h-80">
+                <canvas id="thread-trend-chart"></canvas>
+            </div>
+            <div class="mt-3 flex flex-wrap gap-3 text-xs text-gray-500">
+                <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-success inline-block mr-1"></span> 运行中</div>
+                <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-warning inline-block mr-1"></span> 阻塞中</div>
+                <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-info inline-block mr-1"></span> 等待中</div>
+                <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-time-wait inline-block mr-1"></span> 限时等待</div>
+            </div>
+        </div>
+
+        <div class="info-card mb-6">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fa fa-list-alt text-primary mr-2"></i> 线程状态详情
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">线程类型</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">运行中</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">阻塞中</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">等待中</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">限时等待</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">总数</th>
+                    </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tr id="core-thread-row">
+                        <td class="px-4 py-3 text-sm font-medium text-primary">核心线程</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 core-run">0</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 core-block">0</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 core-wait">0</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 core-timewait">0</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900 core-total">0</td>
+                    </tr>
+                    <tr id="extra-thread-row">
+                        <td class="px-4 py-3 text-sm font-medium text-info">额外线程</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 extra-run">0</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 extra-block">0</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 extra-wait">0</td>
+                        <td class="px-4 py-3 text-sm text-gray-500 extra-timewait">0</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-900 extra-total">0</td>
+                    </tr>
+                    <tr class="bg-gray-50">
+                        <td class="px-4 py-3 text-sm font-bold text-gray-700">总计</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-700 total-run">0</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-700 total-block">0</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-700 total-wait">0</td>
+                        <td class="px-4 py-3 text-sm font-medium text-gray-700 total-timewait">0</td>
+                        <td class="px-4 py-3 text-sm font-bold text-gray-700 total-all">0</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h3 class="text-lg font-semibold mb-4 flex items-center">
+                <i class="fa fa-th-list text-primary mr-2"></i> 分区任务数量
+                <span class="ml-2 text-sm text-gray-500">(共 <span id="partition-total">0</span> 个分区)</span>
+            </h3>
+            <div class="scrollable-table">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">分区ID</th>
+                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">任务数量</th>
+                    </tr>
+                    </thead>
+                    <tbody id="partition-tbody" class="bg-white divide-y divide-gray-200">
+                    <tr><td class="px-4 py-3 text-sm text-gray-500" colspan="2">等待WS推送分区数据...</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
-    <!-- 主要指标区域 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <!-- 核心线程数 -->
-        <div class="stat-card border-l-4 border-primary">
-            <div class="text-sm text-gray-500">核心线程数</div>
-            <div class="text-2xl font-bold mt-1" id="core-nums">-</div>
-            <div class="mt-2 text-xs text-gray-400">配置的核心线程数量</div>
-        </div>
-
-        <!-- 最大线程数 -->
-        <div class="stat-card border-l-4 border-info">
-            <div class="text-sm text-gray-500">最大线程数</div>
-            <div class="text-2xl font-bold mt-1" id="max-nums">-</div>
-            <div class="mt-2 text-xs text-gray-400">允许的最大线程数量</div>
-        </div>
-
-        <!-- 队列任务数 -->
-        <div class="stat-card border-l-4 border-warning">
-            <div class="text-sm text-gray-500">队列任务数</div>
-            <div class="text-2xl font-bold mt-1" id="queue-size">-</div>
-            <div class="mt-2 text-xs text-gray-400">
-                队列容量: <span id="queue-capacity" class="font-medium">-</span>
-                <span class="ml-1" id="queue-usage">(-%)</span>
+    <div id="config-page" class="hidden">
+        <div class="bg-blue-50 border-l-4 border-primary p-4 mb-6 rounded-r">
+            <div class="flex">
+                <i class="fa fa-lightbulb-o text-primary mt-0.5"></i>
+                <p class="ml-3 text-sm text-blue-700">
+                    注意：修改配置会实时生效，核心线程数不能大于最大线程数；队列和拒绝策略从下拉列表选择
+                </p>
             </div>
         </div>
 
-        <!-- 线程空闲时间 -->
-        <div class="stat-card border-l-4 border-secondary">
-            <div class="text-sm text-gray-500">线程空闲时间</div>
-            <div class="text-2xl font-bold mt-1" id="alive-time">-</div>
-            <div class="mt-2 text-xs text-gray-400">超过此时长将被回收</div>
+        <div id="config-msg" class="hidden mb-6 p-4 rounded-md flex items-center">
+            <i id="msg-icon" class="mr-3 text-xl"></i>
+            <span id="msg-text"></span>
+            <button id="close-msg" class="ml-auto text-gray-500 hover:text-gray-700">
+                <i class="fa fa-times"></i>
+            </button>
         </div>
-    </div>
 
-    <!-- 线程状态趋势图 -->
-    <div class="info-card mb-6">
-        <h3 class="text-lg font-semibold mb-4 flex items-center">
-            <i class="fa fa-line-chart text-primary mr-2"></i> 线程状态变化趋势
-        </h3>
-        <div class="h-80">
-            <canvas id="thread-trend-chart"></canvas>
+        <div class="config-card">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fa fa-sliders text-primary mr-2"></i> 线程参数
+            </h2>
+            <form id="worker-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div>
+                        <label for="core-nums-cfg" class="form-label">核心线程数</label>
+                        <input type="number" id="core-nums-cfg" name="coreNums" min="1" class="form-input px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label for="max-nums-cfg" class="form-label">最大线程数</label>
+                        <input type="number" id="max-nums-cfg" name="maxNums" min="1" class="form-input px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label for="alive-time-cfg" class="form-label">空闲时间(毫秒)</label>
+                        <input type="number" id="alive-time-cfg" name="aliveTime" min="0" class="form-input px-3 py-2" required>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="core-destroy-cfg" name="coreDestroy" class="h-4 w-4 text-primary focus:ring-primary">
+                        <label for="core-destroy-cfg" class="ml-2 text-sm text-gray-700">允许核心线程销毁</label>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="is-daemon-cfg" name="isDaemon" class="h-4 w-4 text-primary focus:ring-primary">
+                        <label for="is-daemon-cfg" class="ml-2 text-sm text-gray-700">使用守护线程</label>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" id="reset-worker" class="mr-3 px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 transition">重置</button>
+                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 transition">
+                        <i class="fa fa-save mr-1"></i> 保存
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="mt-3 flex flex-wrap gap-2 text-xs text-gray-500">
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-success inline-block mr-1"></span> 运行中 (RUNNABLE)</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-warning inline-block mr-1"></span> 阻塞中 (BLOCKED)</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-info inline-block mr-1"></span> 等待中 (WAITING)</div>
-            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-purple inline-block mr-1"></span> 限时等待 (TIMED_WAITING)</div>
-        </div>
-    </div>
 
-    <!-- 线程状态详情 -->
-    <div class="info-card mb-6">
-        <h3 class="text-lg font-semibold mb-4 flex items-center">
-            <i class="fa fa-list-alt text-primary mr-2"></i> 线程状态详情
-        </h3>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead>
-                <tr>
-                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">线程类型</th>
-                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">运行中 (RUNNABLE)</th>
-                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">阻塞中 (BLOCKED)</th>
-                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">等待中 (WAITING)</th>
-                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">限时等待 (TIMED_WAITING)</th>
-                    <th class="px-4 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">总数</th>
-                </tr>
-                </thead>
-                <tbody class="bg-white divide-y divide-gray-200">
-                <tr id="core-threads-row">
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-primary">核心线程</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-runnable">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-blocked">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-waiting">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 core-timed-waiting">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 core-total">-</td>
-                </tr>
-                <tr id="extra-threads-row">
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-info">额外线程</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-runnable">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-blocked">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-waiting">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 extra-timed-waiting">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 extra-total">-</td>
-                </tr>
-                <tr class="bg-gray-50">
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-700">总计</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-runnable">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-blocked">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-waiting">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-700 total-timed-waiting">-</td>
-                    <td class="px-4 py-3 whitespace-nowrap text-sm font-bold text-gray-700 total-all">-</td>
-                </tr>
-                </tbody>
-            </table>
+        <div class="config-card">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fa fa-list-ol text-primary mr-2"></i> 队列配置
+            </h2>
+            <form id="queue-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="queue-name-cfg" class="form-label">队列名称</label>
+                        <select id="queue-name-cfg" name="queueName" class="form-select px-3 py-2" required>
+                            <option value="">加载中...</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">从可用队列中选择（已在QueueRegistry注册）</p>
+                    </div>
+                    <div>
+                        <label for="queue-capacity-cfg" class="form-label">队列容量（单分区）</label>
+                        <input type="number" id="queue-capacity-cfg" name="capacity" class="form-input px-3 py-2" min="0">
+                        <p class="mt-1 text-xs text-gray-500">留空表示无界</p>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="is-partition-cfg" name="partitioning" class="h-4 w-4 text-primary focus:ring-primary">
+                        <label for="is-partition-cfg" class="ml-2 text-sm text-gray-700">启用分区队列（仅PartiFlow生效）</label>
+                    </div>
+                </div>
+                <div id="partition-cfg" class="grid grid-cols-1 md:grid-cols-3 gap-6 hidden">
+                    <div>
+                        <label for="partition-num-cfg" class="form-label">分区数量</label>
+                        <input type="number" id="partition-num-cfg" name="partitionNum" min="1" class="form-input px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label for="offer-strategy-cfg" class="form-label">入队策略（如ROUND_ROBIN）</label>
+                        <input type="text" id="offer-strategy-cfg" name="offerStrategy" class="form-input px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label for="poll-strategy-cfg" class="form-label">出队策略（如ROUND_ROBIN）</label>
+                        <input type="text" id="poll-strategy-cfg" name="pollStrategy" class="form-input px-3 py-2" required>
+                    </div>
+                    <div>
+                        <label for="remove-strategy-cfg" class="form-label">移除策略（如FIFO）</label>
+                        <input type="text" id="remove-strategy-cfg" name="removeStrategy" class="form-input px-3 py-2" required>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" id="reset-queue" class="mr-3 px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 transition">重置</button>
+                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 transition">
+                        <i class="fa fa-save mr-1"></i> 保存
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="config-card">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fa fa-ban text-primary mr-2"></i> 拒绝策略
+            </h2>
+            <form id="reject-form" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label for="reject-name-cfg" class="form-label">拒绝策略</label>
+                        <select id="reject-name-cfg" name="rsName" class="form-select px-3 py-2" required>
+                            <option value="">加载中...</option>
+                        </select>
+                        <p class="mt-1 text-xs text-gray-500">从可用策略中选择（已在RejectStrategyRegistry注册）</p>
+                    </div>
+                    <div class="bg-yellow-50 p-3 rounded border border-yellow-100 flex items-center">
+                        <i class="fa fa-exclamation-triangle text-yellow-500 mt-0.5"></i>
+                        <p class="ml-2 text-sm text-yellow-700">选择后将立即应用到线程池</p>
+                    </div>
+                </div>
+                <div class="flex justify-end">
+                    <button type="button" id="reset-reject" class="mr-3 px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 transition">重置</button>
+                    <button type="submit" class="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary/90 transition">
+                        <i class="fa fa-save mr-1"></i> 保存
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </main>
 
-<!-- 页脚 -->
-<footer class="bg-white border-t border-gray-200 py-4">
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center text-sm text-gray-500">
-            <p>线程池监控系统 &copy;</p>
-        </div>
+<footer class="bg-white border-t border-gray-200 py-4 mt-8">
+    <div class="container mx-auto px-4 text-center text-sm text-gray-500">
+        <p>线程池监控系统 &copy; | WS状态：<span id="footer-ws-status" class="ws-status-reconnect">连接中...</span></p>
     </div>
 </footer>
 
 <script>
-    // 图表实例
-    let threadTrendChart;
-
-    // 存储历史数据用于趋势图 (最多保留30个数据点)
+    const OfWorker = { CORE: 'core', EXTRA: 'extra' };
+    const BASE_URL = `${window.location.protocol}//${window.location.host}`;
+    let trendChart, originalConfig = { worker: {}, queue: {}, reject: {} };
+    let queueNames = []; // 存储所有队列名称
+    let rejectStrategyNames = []; // 存储所有拒绝策略名称
     const trendData = {
         timestamps: [],
-        runnable: [],
-        blocked: [],
-        waiting: [],
-        timedWaiting: []
+        runnable: [0],
+        blocked: [0],
+        waiting: [0],
+        timedWaiting: [0]
     };
-    const MAX_DATA_POINTS = 30;
+    let wsInstance = null;
+    let reconnectCount = 0;
+    const MAX_RECONNECT = 5;
+    let chartUpdateTimeout = null; // 用于节流图表更新
 
-    // 页面加载完成后初始化
-    document.addEventListener('DOMContentLoaded', function() {
-        // 初始化图表
-        initCharts();
+    // --------------- 核心优化1：DOM元素缓存，减少重复查询 ---------------
+    const DOM = {
+        // 监控页元素
+        monitor: {
+            queueInfo: document.getElementById('queue-info'),
+            rejectStrategy: document.getElementById('reject-strategy'),
+            queueCapacity: document.getElementById('queue-capacity'),
+            partitionTotal: document.getElementById('partition-total'),
+            partitionTbody: document.getElementById('partition-tbody')
+        },
+        // 配置页表单元素
+        form: {
+            queue: {
+                name: document.getElementById('queue-name-cfg'),
+                capacity: document.getElementById('queue-capacity-cfg'),
+                isPartition: document.getElementById('is-partition-cfg'),
+                partitionNum: document.getElementById('partition-num-cfg'),
+                offerStrategy: document.getElementById('offer-strategy-cfg'),
+                pollStrategy: document.getElementById('poll-strategy-cfg'),
+                removeStrategy: document.getElementById('remove-strategy-cfg'),
+                partitionCfg: document.getElementById('partition-cfg')
+            },
+            reject: {
+                name: document.getElementById('reject-name-cfg')
+            }
+        }
+    };
 
-        // 绑定事件
+    document.addEventListener('DOMContentLoaded', () => {
+        initChart();
         bindEvents();
-
-        // 加载初始数据
-        loadThreadPoolInfo();
-        loadInitialQueueCapacity();
-
-        // 连接WebSocket
-        connectWebSocket();
+        loadBaseConfig();
+        initWebSocket();
+        loadQueueNames();
+        loadRejectStrategyNames();
     });
 
-    // 初始化图表
-    function initCharts() {
-        // 线程状态趋势图
-        const trendCtx = document.getElementById('thread-trend-chart').getContext('2d');
-        threadTrendChart = new Chart(trendCtx, {
+    function initChart() {
+        const ctx = document.getElementById('thread-trend-chart').getContext('2d');
+        if (trendChart) return;
+
+        trendChart = new Chart(ctx, {
             type: 'line',
             data: {
-                labels: trendData.timestamps,
+                labels: trendData.timestamps.length === 0 ? ['初始化'] : trendData.timestamps,
                 datasets: [
-                    {
-                        label: '运行中 (RUNNABLE)',
-                        data: trendData.runnable,
-                        borderColor: '#52C41A',
-                        backgroundColor: 'rgba(82, 196, 26, 0.1)',
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 2,
-                        pointHoverRadius: 4
-                    },
-                    {
-                        label: '阻塞中 (BLOCKED)',
-                        data: trendData.blocked,
-                        borderColor: '#FAAD14',
-                        backgroundColor: 'rgba(250, 173, 20, 0.1)',
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 2,
-                        pointHoverRadius: 4
-                    },
-                    {
-                        label: '等待中 (WAITING)',
-                        data: trendData.waiting,
-                        borderColor: '#1890FF',
-                        backgroundColor: 'rgba(24, 144, 255, 0.1)',
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 2,
-                        pointHoverRadius: 4
-                    },
-                    {
-                        label: '限时等待 (TIMED_WAITING)',
-                        data: trendData.timedWaiting,
-                        borderColor: '#722ED1',
-                        backgroundColor: 'rgba(114, 46, 209, 0.1)',
-                        tension: 0.3,
-                        fill: false,
-                        pointRadius: 2,
-                        pointHoverRadius: 4
-                    }
+                    { label: '运行中', data: trendData.runnable, borderColor: '#52C41A', tension: 0.3, pointRadius: 2, pointHoverRadius: 4 },
+                    { label: '阻塞中', data: trendData.blocked, borderColor: '#FAAD14', tension: 0.3, pointRadius: 2, pointHoverRadius: 4 },
+                    { label: '等待中', data: trendData.waiting, borderColor: '#1890FF', tension: 0.3, pointRadius: 2, pointHoverRadius: 4 },
+                    { label: '限时等待', data: trendData.timedWaiting, borderColor: '#FF5252', tension: 0.3, pointRadius: 2, pointHoverRadius: 4 }
                 ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                interaction: {
-                    mode: 'index',
-                    intersect: false,
-                },
                 scales: {
                     x: {
-                        title: {
-                            display: true,
-                            text: '时间'
-                        },
-                        ticks: {
-                            maxRotation: 0,
-                            autoSkip: true,
-                            maxTicksLimit: 8
-                        }
+                        title: { display: true, text: '时间' },
+                        ticks: { maxRotation: 0 },
+                        min: 0,
+                        max: Math.max(5, trendData.timestamps.length)
                     },
                     y: {
-                        title: {
-                            display: true,
-                            text: '线程数量'
-                        },
+                        title: { display: true, text: '线程数' },
                         beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
+                        stepSize: 1,
+                        min: 0,
+                        max: 20
                     }
                 },
                 plugins: {
-                    legend: {
-                        display: false // 图例在图表下方单独展示
-                    },
+                    legend: { display: false },
                     tooltip: {
+                        enabled: true,
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                        borderColor: '#E5E7EB',
+                        borderWidth: 1,
+                        borderRadius: 6,
+                        padding: 10,
+                        titleColor: '#1F2937',
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyColor: '#4B5563',
+                        bodyFont: { size: 13 },
+                        displayColors: true,
                         callbacks: {
-                            title: function(tooltipItems) {
-                                return `时间: ${tooltipItems[0].label}`;
+                            title: function(context) {
+                                return `时间: ${context[0].label}`;
+                            },
+                            label: function(context) {
+                                const label = context.dataset.label || '';
+                                const value = context.raw || 0;
+                                return `${label}: ${value} 个`;
                             }
                         }
                     }
+                },
+                animation: { duration: 0 },
+                elements: {
+                    line: { tension: 0.3 },
+                    point: {
+                        radius: 2,
+                        hoverRadius: 4,
+                        hoverBackgroundColor: '#FFFFFF',
+                        hoverBorderColor: context => context.dataset.borderColor,
+                        hoverBorderWidth: 2
+                    }
+                },
+                interaction: {
+                    mode: 'index',
+                    intersect: false
                 }
             }
         });
     }
 
-    // 绑定事件
     function bindEvents() {
-        // 刷新按钮
-        document.getElementById('refresh-btn').addEventListener('click', refreshData);
-    }
-
-    // 刷新数据
-    function refreshData() {
-        // 显示加载状态
-        const refreshIcon = document.getElementById('refresh-icon');
-        refreshIcon.classList.add('fa-spin');
-
-        // 加载数据
-        loadThreadPoolInfo()
-            .then(() => {
-                // 更新时间
-                updateLastUpdatedTime();
-
-                // 停止加载动画
-                refreshIcon.classList.remove('fa-spin');
-            })
-            .catch(error => {
-                console.error('刷新数据失败:', error);
-                refreshIcon.classList.remove('fa-spin');
-            });
-    }
-
-    // 获取基础URL（自动适应端口）
-    function getBaseUrl() {
-        const protocol = window.location.protocol;
-        const host = window.location.host;
-        return `${protocol}//${host}`;
-    }
-
-    // 加载线程池信息
-    function loadThreadPoolInfo() {
-        return fetch(`${getBaseUrl()}/monitor/pool`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('获取线程池信息失败');
+        const navPairs = [
+            { nav: 'nav-monitor', mobileNav: 'mobile-nav-monitor', showPage: 'monitor-page', hidePage: 'config-page' },
+            { nav: 'nav-config', mobileNav: 'mobile-nav-config', showPage: 'config-page', hidePage: 'monitor-page' }
+        ];
+        navPairs.forEach(pair => {
+            document.getElementById(pair.nav).addEventListener('click', () => {
+                switchPage(pair.showPage, pair.hidePage);
+                if (pair.showPage === 'config-page') {
+                    // --------------- 优化2：切换到配置页时强制加载最新数据 ---------------
+                    loadBaseConfig().then(() => loadConfigData());
+                    if (queueNames.length === 0) loadQueueNames();
+                    if (rejectStrategyNames.length === 0) loadRejectStrategyNames();
                 }
-                return response.json();
-            })
-            .then(data => {
-                // 更新页面数据
-                document.getElementById('pool-name').textContent = data.poolName || '未知';
-                document.getElementById('thread-name').textContent = data.threadName || '未知';
-                document.getElementById('core-nums').textContent = data.coreNums || 0;
-                document.getElementById('max-nums').textContent = data.maxNums || 0;
-                document.getElementById('queue-name').textContent = data.queueName || '未知队列';
-                document.getElementById('queue-capacity').textContent = data.queueCapacity || 0;
-                document.getElementById('reject-strategy').textContent = data.rejectStrategyName || '未知策略';
-                document.getElementById('alive-time').textContent = (data.aliveTime || 0) + ' s';
-
-                // 更新徽章状态
-                document.getElementById('daemon-badge').textContent =
-                    data.isDaemon ? '守护线程' : '非守护线程';
-                document.getElementById('daemon-badge').className =
-                    data.isDaemon ? 'badge bg-blue-100 text-blue-800' : 'badge bg-gray-100 text-gray-800';
-
-                document.getElementById('core-destroy-badge').textContent =
-                    data.coreDestroy ? '核心线程可销毁' : '核心线程不可销毁';
-                document.getElementById('core-destroy-badge').className =
-                    data.coreDestroy ? 'badge bg-green-100 text-green-800' : 'badge bg-orange-100 text-orange-800';
-            })
-            .catch(error => {
-                console.error('加载线程池信息失败:', error);
-                throw error;
             });
-    }
-
-    // 加载初始队列容量
-    function loadInitialQueueCapacity() {
-        return fetch(`${getBaseUrl()}/monitor/tasks`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('获取初始队列容量失败');
+            document.getElementById(pair.mobileNav).addEventListener('click', () => {
+                switchPage(pair.showPage, pair.hidePage);
+                document.getElementById('mobile-menu').classList.add('hidden');
+                if (pair.showPage === 'config-page') {
+                    loadBaseConfig().then(() => loadConfigData());
+                    if (queueNames.length === 0) loadQueueNames();
+                    if (rejectStrategyNames.length === 0) loadRejectStrategyNames();
                 }
-                return response.text().then(text => parseInt(text));
-            })
-            .then(size => {
-                // 初始更新队列大小
-                updateQueueSize(size);
-            })
-            .catch(error => {
-                console.error('加载初始队列容量失败:', error);
             });
+        });
+
+        document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        });
+
+        document.getElementById('refresh-btn').addEventListener('click', () => {
+            const btn = document.getElementById('refresh-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa fa-refresh fa-spin mr-1"></i> 刷新中...';
+
+            // --------------- 优化3：刷新时强制同步所有数据 ---------------
+            Promise.all([
+                loadBaseConfig(),
+                loadQueueNames(),
+                loadRejectStrategyNames()
+            ]).then(() => {
+                // 刷新后如果在配置页，同步更新表单
+                if (document.getElementById('config-page').classList.contains('block')) {
+                    loadConfigData();
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-refresh mr-1"></i> 刷新配置';
+            }).catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa fa-refresh mr-1"></i> 刷新配置';
+            });
+        });
+
+        DOM.form.queue.isPartition.addEventListener('change', (e) => {
+            DOM.form.queue.partitionCfg.classList.toggle('hidden', !e.target.checked);
+        });
+        document.getElementById('close-msg').addEventListener('click', () => {
+            document.getElementById('config-msg').classList.add('hidden');
+        });
+        document.getElementById('worker-form').addEventListener('submit', (e) => { e.preventDefault(); saveWorker(); });
+        document.getElementById('queue-form').addEventListener('submit', (e) => { e.preventDefault(); saveQueue(); });
+        document.getElementById('reject-form').addEventListener('submit', (e) => { e.preventDefault(); saveReject(); });
+        document.getElementById('reset-worker').addEventListener('click', () => updateWorkerForm(originalConfig.worker));
+        document.getElementById('reset-queue').addEventListener('click', () => updateQueueForm(originalConfig.queue));
+        document.getElementById('reset-reject').addEventListener('click', () => updateRejectForm(originalConfig.reject));
+
+        DOM.form.queue.name.addEventListener('change', (e) => {
+            const selectedQueue = e.target.value;
+            const isPartitionQueue = selectedQueue.includes('Parti');
+            DOM.form.queue.isPartition.checked = isPartitionQueue;
+            DOM.form.queue.partitionCfg.classList.toggle('hidden', !isPartitionQueue);
+        });
     }
 
-    // 处理WebSocket推送的队列任务数量
-    function updateQueueSize(size) {
-        const queueSizeEl = document.getElementById('queue-size');
-        const queueCapacityEl = document.getElementById('queue-capacity');
-        const queueUsageEl = document.getElementById('queue-usage');
+    function switchPage(showId, hideId) {
+        document.getElementById(showId).classList.remove('hidden');
+        document.getElementById(hideId).classList.add('hidden');
+        document.querySelectorAll('.nav-active').forEach(el => el.classList.remove('nav-active'));
+        document.getElementById(showId === 'monitor-page' ? 'nav-monitor' : 'nav-config').classList.add('nav-active');
+        document.getElementById(showId === 'monitor-page' ? 'mobile-nav-monitor' : 'mobile-nav-config').classList.add('nav-active');
+    }
 
-        // 更新显示的队列任务数
-        queueSizeEl.textContent = size;
+    // --------------- 核心优化4：增强loadBaseConfig，确保数据完整性 ---------------
+    function loadBaseConfig() {
+        return Promise.all([
+            fetch(`${BASE_URL}/monitor/pool`).then(res => {
+                if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
+                return res.json();
+            }),
+            fetch(`${BASE_URL}/monitor/queue`).then(res => {
+                if (!res.ok) throw new Error(`HTTP错误: ${res.status}`);
+                return res.json();
+            })
+        ]).then(([poolInfo, queueInfo]) => {
+            // 1. 更新监控页基础信息
+            document.getElementById('pool-name').textContent = poolInfo.poolName || '未知线程池';
+            document.getElementById('thread-name').textContent = poolInfo.threadName || '未知线程名';
+            document.getElementById('core-nums').textContent = poolInfo.coreNums || 0;
+            document.getElementById('max-nums').textContent = poolInfo.maxNums || 0;
+            document.getElementById('alive-time').textContent = poolInfo.aliveTime || 0;
 
-        // 计算并更新队列使用率及样式
-        const capacity = parseInt(queueCapacityEl.textContent) || 0;
-        if (capacity > 0) {
-            const usage = Math.round((size / capacity) * 100);
-            queueUsageEl.textContent = `(${usage}%)`;
+            // --------------- 关键修复：实时更新监控页队列和拒绝策略 ---------------
+            DOM.monitor.rejectStrategy.textContent = poolInfo.rejectStrategyName || '未知策略';
+            const queueDesc = queueInfo.queueName
+                ? `${queueInfo.queueName}(${queueInfo.partitioning ? '分区队列' : '普通队列'})`
+                : '未知队列';
+            DOM.monitor.queueInfo.textContent = queueDesc;
+            DOM.monitor.queueCapacity.textContent = queueInfo.capacity === null ? '无界' : queueInfo.capacity;
 
-            // 根据使用率设置颜色警告
-            if (usage > 80) {
-                queueSizeEl.className = 'text-2xl font-bold mt-1 text-danger';
-                queueUsageEl.className = 'ml-1 text-danger';
-            } else if (usage > 50) {
-                queueSizeEl.className = 'text-2xl font-bold mt-1 text-warning';
-                queueUsageEl.className = 'ml-1 text-warning';
-            } else {
-                queueSizeEl.className = 'text-2xl font-bold mt-1';
-                queueUsageEl.className = 'ml-1';
+            // 2. 更新守护线程/核心销毁状态徽章
+            const daemonBadge = document.getElementById('daemon-badge');
+            daemonBadge.textContent = poolInfo.isDaemon ? '守护线程' : '非守护线程';
+            daemonBadge.className = poolInfo.isDaemon ? 'badge bg-blue-100 text-blue-800' : 'badge bg-gray-100 text-gray-800';
+
+            const coreDestroyBadge = document.getElementById('core-destroy-badge');
+            coreDestroyBadge.textContent = poolInfo.coreDestroy ? '核心可销毁' : '核心不可销毁';
+            coreDestroyBadge.className = poolInfo.coreDestroy ? 'badge bg-green-100 text-green-800' : 'badge bg-orange-100 text-orange-800';
+
+            // 3. 强制更新originalConfig（关键：确保数据是最新的）
+            originalConfig = {
+                worker: {
+                    coreNums: poolInfo.coreNums,
+                    maxNums: poolInfo.maxNums,
+                    coreDestroy: poolInfo.coreDestroy || false,
+                    aliveTime: poolInfo.aliveTime,
+                    isDaemon: poolInfo.isDaemon || false
+                },
+                queue: {
+                    // --------------- 修复：补全所有队列字段，包括分区配置 ---------------
+                    queueName: queueInfo.queueName || '',
+                    capacity: queueInfo.capacity,
+                    partitioning: queueInfo.partitioning || false,
+                    partitionNum: queueInfo.partitionNum || 1,
+                    offerStrategy: queueInfo.offerStrategy || '',
+                    pollStrategy: queueInfo.pollStrategy || '',
+                    removeStrategy: queueInfo.removeStrategy || ''
+                },
+                reject: { rsName: poolInfo.rejectStrategyName || '' }
+            };
+
+            // 4. 同步更新下拉框选中状态
+            if (queueNames.length > 0) {
+                updateQueueSelect(originalConfig.queue.queueName);
             }
+            if (rejectStrategyNames.length > 0) {
+                updateRejectSelect(originalConfig.reject.rsName);
+            }
+
+            // 5. 同步更新分区统计（如果有数据）
+            if (queueInfo.partitionData) {
+                updatePartitionTable(queueInfo.partitionData);
+            }
+        });
+    }
+
+    function loadQueueNames() {
+        return fetch(`${BASE_URL}/monitor/queueName`)
+            .then(res => {
+                if (!res.ok) throw new Error(`加载队列名称失败: ${res.status}`);
+                return res.json();
+            })
+            .then(names => {
+                queueNames = names || [];
+                DOM.form.queue.name.innerHTML = '';
+
+                if (queueNames.length === 0) {
+                    DOM.form.queue.name.innerHTML = '<option value="" disabled>无可用队列</option>';
+                    return;
+                }
+
+                queueNames.forEach(getName => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    DOM.form.queue.name.appendChild(option);
+                });
+
+                // --------------- 修复：加载后立即同步选中状态 ---------------
+                if (originalConfig.queue?.queueName) {
+                    updateQueueSelect(originalConfig.queue.queueName);
+                }
+            })
+            .catch(err => {
+                console.error('加载队列名称错误:', err);
+                DOM.form.queue.name.innerHTML = '<option value="" disabled>加载队列失败</option>';
+            });
+    }
+
+    function loadRejectStrategyNames() {
+        return fetch(`${BASE_URL}/monitor/rejectStrategyName`)
+            .then(res => {
+                if (!res.ok) throw new Error(`加载拒绝策略失败: ${res.status}`);
+                return res.json();
+            })
+            .then(names => {
+                rejectStrategyNames = names || [];
+                DOM.form.reject.name.innerHTML = '';
+
+                if (rejectStrategyNames.length === 0) {
+                    DOM.form.reject.name.innerHTML = '<option value="" disabled>无可用策略</option>';
+                    return;
+                }
+
+                rejectStrategyNames.forEach(getName => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    DOM.form.reject.name.appendChild(option);
+                });
+
+                // --------------- 修复：加载后立即同步选中状态 ---------------
+                if (originalConfig.reject?.rsName) {
+                    updateRejectSelect(originalConfig.reject.rsName);
+                }
+            })
+            .catch(err => {
+                console.error('加载拒绝策略错误:', err);
+                DOM.form.reject.name.innerHTML = '<option value="" disabled>加载策略失败</option>';
+            });
+    }
+
+    function updateQueueSelect(queueName) {
+        if (DOM.form.queue.name && queueName) {
+            DOM.form.queue.name.value = queueName;
+            // 触发change事件，同步分区配置显示状态
+            DOM.form.queue.name.dispatchEvent(new Event('change'));
         }
     }
 
-    // 连接WebSocket
-    function connectWebSocket() {
-        // 确定WebSocket协议（http对应ws，https对应wss）
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = window.location.host;
-        const wsUri = `${protocol}//${host}/monitor/threads`;
+    function updateRejectSelect(strategyName) {
+        if (DOM.form.reject.name && strategyName) {
+            DOM.form.reject.name.value = strategyName;
+        }
+    }
 
-        const websocket = new WebSocket(wsUri);
+    function initWebSocket() {
+        if (wsInstance) {
+            wsInstance.close(1000, '重新初始化连接');
+            wsInstance = null;
+        }
 
-        websocket.onopen = function(evt) {
-            console.log('WebSocket连接已打开');
-            // 连接成功后更新状态
-            document.getElementById('refresh-icon').classList.add('text-success');
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/monitor/threads`;
+
+        try {
+            wsInstance = new WebSocket(wsUrl);
+        } catch (err) {
+            handleWsReconnect();
+            return;
+        }
+
+        wsInstance.onopen = () => {
+            reconnectCount = 0;
+            updateWsStatus('normal', 'WS连接正常');
         };
 
-        websocket.onclose = function(evt) {
-            console.log('WebSocket连接已关闭，将在5秒后尝试重连');
-            // 连接关闭后更新状态
-            document.getElementById('refresh-icon').classList.remove('text-success');
-            // 5秒后重连
-            setTimeout(connectWebSocket, 5000);
-        };
+        wsInstance.onmessage = (evt) => {
+            const now = new Date();
+            const timeStr = `${now.toLocaleDateString()} ${now.toLocaleTimeString()}`;
+            document.getElementById('last-ws-msg').textContent = `最后接收: ${timeStr}`;
+            document.getElementById('mobile-last-ws-msg').textContent = `最后接收: ${timeStr}`;
 
-        websocket.onmessage = function(evt) {
+            const rawData = evt.data.trim();
             try {
-                const data = JSON.parse(evt.data);
-
-                // 区分消息类型：整数为队列任务数量，对象为线程状态
-                if (typeof data === 'number') {
-                    // 处理队列任务数量更新
-                    updateQueueSize(data);
-                } else if (typeof data === 'object' && data !== null) {
-                    // 处理线程状态更新
-                    updateThreadsInfo(data);
+                if (rawData.startsWith('{') && (rawData.includes(`"${OfWorker.CORE}"`) || rawData.includes(`"${OfWorker.EXTRA}"`))) {
+                    const threadData = JSON.parse(rawData);
+                    updateThreadStats(threadData);
+                } else if (/^\d+$/.test(rawData) && rawData.length < 20) {
+                    const totalTasks = parseInt(rawData);
+                    document.getElementById('queue-size').textContent = totalTasks;
+                } else if (rawData.startsWith('{') && !rawData.includes(`"${OfWorker.CORE}"`)) {
+                    const partitionData = JSON.parse(rawData);
+                    const isPartitionData = Object.keys(partitionData).every(key => !isNaN(parseInt(key)));
+                    if (isPartitionData) {
+                        updatePartitionTable(partitionData);
+                    }
                 }
-
-                // 更新最后更新时间
-                updateLastUpdatedTime();
-            } catch (e) {
-                console.error('解析WebSocket数据失败:', e, '原始数据:', evt.data);
+            } catch (err) {
+                // 静默处理解析错误
             }
         };
 
-        websocket.onerror = function(evt) {
-            console.error('WebSocket错误:', evt);
-            document.getElementById('refresh-icon').classList.remove('text-success');
+        wsInstance.onclose = (event) => {
+            if (event.code !== 1000 && reconnectCount < MAX_RECONNECT) {
+                handleWsReconnect();
+            } else if (reconnectCount >= MAX_RECONNECT) {
+                updateWsStatus('error', 'WS重连失败，请刷新页面');
+            } else {
+                updateWsStatus('error', 'WS连接已关闭');
+            }
+        };
+
+        wsInstance.onerror = (error) => {
+            updateWsStatus('error', 'WS连接错误');
         };
     }
 
-    // 更新线程信息
-    function updateThreadsInfo(data) {
-        // 确保数据结构正确（core和extra为对象，包含线程状态字段）
-        const coreThreads = data.core || { RUNNABLE: 0, BLOCKED: 0, WAITING: 0, TIMED_WAITING: 0 };
-        const extraThreads = data.extra || { RUNNABLE: 0, BLOCKED: 0, WAITING: 0, TIMED_WAITING: 0 };
+    function handleWsReconnect() {
+        reconnectCount++;
+        const delay = Math.pow(2, reconnectCount) * 1000;
+        updateWsStatus('reconnect', `WS重连中（${reconnectCount}/${MAX_RECONNECT}，${delay/1000}s后）`);
 
-        // 更新核心线程数据
-        updateThreadStats('core', coreThreads);
-        // 更新额外线程数据
-        updateThreadStats('extra', extraThreads);
-        // 计算总计
-        const totals = calculateTotalStats();
-        // 更新趋势图
-        updateTrendData(totals);
+        setTimeout(() => {
+            initWebSocket();
+        }, delay);
     }
 
-    // 更新线程状态统计
-    function updateThreadStats(prefix, threads) {
-        // 从线程状态对象中提取各状态数量（默认0）
-        const runnable = threads.RUNNABLE || 0;
-        const blocked = threads.BLOCKED || 0;
-        const waiting = threads.WAITING || 0;
-        const timedWaiting = threads.TIMED_WAITING || 0;
-        const total = runnable + blocked + waiting + timedWaiting;
+    function updateWsStatus(type, text) {
+        const statusElements = [
+            { id: 'ws-status', mobileId: 'mobile-ws-status' },
+            { id: 'footer-ws-status', mobileId: null }
+        ];
 
-        // 更新表格对应单元格
-        document.querySelector(`.${prefix}-runnable`).textContent = runnable;
-        document.querySelector(`.${prefix}-blocked`).textContent = blocked;
-        document.querySelector(`.${prefix}-waiting`).textContent = waiting;
-        document.querySelector(`.${prefix}-timed-waiting`).textContent = timedWaiting;
-        document.querySelector(`.${prefix}-total`).textContent = total;
+        statusElements.forEach(item => {
+            const desktopEl = document.getElementById(item.id);
+            if (desktopEl) {
+                desktopEl.classList.remove('ws-status-normal', 'ws-status-reconnect', 'ws-status-error');
+                desktopEl.classList.add(`ws-status-${type}`);
+                if (type === 'normal') {
+                    desktopEl.innerHTML = `<i class="fa fa-check mr-1"></i> ${text}`;
+                } else if (type === 'reconnect') {
+                    desktopEl.innerHTML = `<i class="fa fa-circle-o-notch fa-spin mr-1"></i> ${text}`;
+                } else if (type === 'error') {
+                    desktopEl.innerHTML = `<i class="fa fa-exclamation-circle mr-1"></i> ${text}`;
+                }
+            }
+
+            if (item.mobileId) {
+                const mobileEl = document.getElementById(item.mobileId);
+                if (mobileEl) {
+                    mobileEl.classList.remove('ws-status-normal', 'ws-status-reconnect', 'ws-status-error');
+                    mobileEl.classList.add(`ws-status-${type}`);
+                    mobileEl.innerHTML = desktopEl.innerHTML;
+                }
+            }
+        });
     }
 
-    // 计算总统计
-    function calculateTotalStats() {
-        const coreRunnable = parseInt(document.querySelector('.core-runnable').textContent) || 0;
-        const coreBlocked = parseInt(document.querySelector('.core-blocked').textContent) || 0;
-        const coreWaiting = parseInt(document.querySelector('.core-waiting').textContent) || 0;
-        const coreTimedWaiting = parseInt(document.querySelector('.core-timed-waiting').textContent) || 0;
+    function updateThreadStats(threadData) {
+        const coreStates = threadData[OfWorker.CORE] || {};
+        const extraStates = threadData[OfWorker.EXTRA] || {};
 
-        const extraRunnable = parseInt(document.querySelector('.extra-runnable').textContent) || 0;
-        const extraBlocked = parseInt(document.querySelector('.extra-blocked').textContent) || 0;
-        const extraWaiting = parseInt(document.querySelector('.extra-waiting').textContent) || 0;
-        const extraTimedWaiting = parseInt(document.querySelector('.extra-timed-waiting').textContent) || 0;
+        const coreRun = coreStates.RUNNABLE || 0;
+        const coreBlock = coreStates.BLOCKED || 0;
+        const coreWait = coreStates.WAITING || 0;
+        const coreTimeWait = coreStates.TIMED_WAITING || 0;
+        const coreTotal = coreRun + coreBlock + coreWait + coreTimeWait;
 
-        const totalRunnable = coreRunnable + extraRunnable;
-        const totalBlocked = coreBlocked + extraBlocked;
-        const totalWaiting = coreWaiting + extraWaiting;
-        const totalTimedWaiting = coreTimedWaiting + extraTimedWaiting;
-        const totalAll = totalRunnable + totalBlocked + totalWaiting + totalTimedWaiting;
+        const extraRun = extraStates.RUNNABLE || 0;
+        const extraBlock = extraStates.BLOCKED || 0;
+        const extraWait = extraStates.WAITING || 0;
+        const extraTimeWait = extraStates.TIMED_WAITING || 0;
+        const extraTotal = extraRun + extraBlock + extraWait + extraTimeWait;
 
-        document.querySelector('.total-runnable').textContent = totalRunnable;
-        document.querySelector('.total-blocked').textContent = totalBlocked;
-        document.querySelector('.total-waiting').textContent = totalWaiting;
-        document.querySelector('.total-timed-waiting').textContent = totalTimedWaiting;
-        document.querySelector('.total-all').textContent = totalAll;
+        // 缓存DOM元素引用以提高性能
+        const coreRunEl = document.querySelector('.core-run');
+        const coreBlockEl = document.querySelector('.core-block');
+        const coreWaitEl = document.querySelector('.core-wait');
+        const coreTimeWaitEl = document.querySelector('.core-timewait');
+        const coreTotalEl = document.querySelector('.core-total');
 
-        // 返回总计数据用于趋势图
-        return {
-            runnable: totalRunnable,
-            blocked: totalBlocked,
-            waiting: totalWaiting,
-            timedWaiting: totalTimedWaiting
-        };
-    }
+        const extraRunEl = document.querySelector('.extra-run');
+        const extraBlockEl = document.querySelector('.extra-block');
+        const extraWaitEl = document.querySelector('.extra-wait');
+        const extraTimeWaitEl = document.querySelector('.extra-timewait');
+        const extraTotalEl = document.querySelector('.extra-total');
 
-    // 更新趋势图数据
-    function updateTrendData(totals) {
-        const now = new Date();
-        // 格式化时间为 HH:MM:SS
-        const timeStr = now.toTimeString().slice(0, 8);
+        // 仅在值变化时更新DOM
+        if (coreRunEl.textContent != coreRun) coreRunEl.textContent = coreRun;
+        if (coreBlockEl.textContent != coreBlock) coreBlockEl.textContent = coreBlock;
+        if (coreWaitEl.textContent != coreWait) coreWaitEl.textContent = coreWait;
+        if (coreTimeWaitEl.textContent != coreTimeWait) coreTimeWaitEl.textContent = coreTimeWait;
+        if (coreTotalEl.textContent != coreTotal) coreTotalEl.textContent = coreTotal;
 
-        // 添加新数据点
-        trendData.timestamps.push(timeStr);
-        trendData.runnable.push(totals.runnable);
-        trendData.blocked.push(totals.blocked);
-        trendData.waiting.push(totals.waiting);
-        trendData.timedWaiting.push(totals.timedWaiting);
+        if (extraRunEl.textContent != extraRun) extraRunEl.textContent = extraRun;
+        if (extraBlockEl.textContent != extraBlock) extraBlockEl.textContent = extraBlock;
+        if (extraWaitEl.textContent != extraWait) extraWaitEl.textContent = extraWait;
+        if (extraTimeWaitEl.textContent != extraTimeWait) extraTimeWaitEl.textContent = extraTimeWait;
+        if (extraTotalEl.textContent != extraTotal) extraTotalEl.textContent = extraTotal;
 
-        // 如果数据点超过最大值，移除最旧的数据
-        if (trendData.timestamps.length > MAX_DATA_POINTS) {
-            trendData.timestamps.shift();
-            trendData.runnable.shift();
-            trendData.blocked.shift();
-            trendData.waiting.shift();
-            trendData.timedWaiting.shift();
+        const totalRun = coreRun + extraRun;
+        const totalBlock = coreBlock + extraBlock;
+        const totalWait = coreWait + extraWait;
+        const totalTimeWait = coreTimeWait + extraTimeWait;
+
+        const totalRunEl = document.querySelector('.total-run');
+        const totalBlockEl = document.querySelector('.total-block');
+        const totalWaitEl = document.querySelector('.total-wait');
+        const totalTimeWaitEl = document.querySelector('.total-timewait');
+        const totalAllEl = document.querySelector('.total-all');
+
+        if (totalRunEl.textContent != totalRun) totalRunEl.textContent = totalRun;
+        if (totalBlockEl.textContent != totalBlock) totalBlockEl.textContent = totalBlock;
+        if (totalWaitEl.textContent != totalWait) totalWaitEl.textContent = totalWait;
+        if (totalTimeWaitEl.textContent != totalTimeWait) totalTimeWaitEl.textContent = totalTimeWait;
+        if (totalAllEl.textContent != (totalRun + totalBlock + totalWait + totalTimeWait)) {
+            totalAllEl.textContent = totalRun + totalBlock + totalWait + totalTimeWait;
         }
 
-        // 更新图表
-        threadTrendChart.data.labels = trendData.timestamps;
-        threadTrendChart.data.datasets[0].data = trendData.runnable;
-        threadTrendChart.data.datasets[1].data = trendData.blocked;
-        threadTrendChart.data.datasets[2].data = trendData.waiting;
-        threadTrendChart.data.datasets[3].data = trendData.timedWaiting;
-        threadTrendChart.update();
+        // 节流图表更新，限制在每500ms一次
+        if (!chartUpdateTimeout) {
+            chartUpdateTimeout = setTimeout(() => {
+                updateTrendChart(totalRun, totalBlock, totalWait, totalTimeWait);
+                chartUpdateTimeout = null;
+            }, 500);
+        }
     }
 
-    // 更新最后更新时间
-    function updateLastUpdatedTime() {
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString();
-        const dateStr = now.toLocaleDateString();
-        const formattedTime = `${dateStr} ${timeStr}`;
+    function updateTrendChart(run, block, wait, timeWait) {
+        if (!trendChart) return;
 
-        document.getElementById('last-updated').textContent = `最后更新: ${formattedTime}`;
+        const time = new Date().toTimeString().slice(0, 8);
+        trendData.timestamps.push(time);
+        trendData.runnable.push(run || 0);
+        trendData.blocked.push(block || 0);
+        trendData.waiting.push(wait || 0);
+        trendData.timedWaiting.push(timeWait || 0);
+
+        // 保持数据点不超过30个
+        if (trendData.timestamps.length > 30) {
+            Object.values(trendData).forEach(arr => arr.shift());
+        }
+
+        // 更新图表数据
+        trendChart.data.labels = trendData.timestamps;
+        trendChart.data.datasets[0].data = trendData.runnable;
+        trendChart.data.datasets[1].data = trendData.blocked;
+        trendChart.data.datasets[2].data = trendData.waiting;
+        trendChart.data.datasets[3].data = trendData.timedWaiting;
+
+        // 动态调整Y轴最大值
+        const maxData = Math.max(
+            ...trendData.runnable,
+            ...trendData.blocked,
+            ...trendData.waiting,
+            ...trendData.timedWaiting
+        );
+        trendChart.options.scales.y.max = maxData + 2;
+
+        trendChart.update('none');
     }
+
+    // --------------- 优化5：增强分区表格更新，确保与配置同步 ---------------
+    function updatePartitionTable(partitionData) {
+        if (!partitionData || Object.keys(partitionData).length === 0) {
+            DOM.monitor.partitionTbody.innerHTML = '<tr><td class="px-4 py-3 text-sm text-gray-500" colspan="2">无分区数据</td></tr>';
+            DOM.monitor.partitionTotal.textContent = '0';
+            return;
+        }
+
+        const sortedIds = Object.keys(partitionData).sort((a, b) => parseInt(a) - parseInt(b));
+        DOM.monitor.partitionTotal.textContent = sortedIds.length;
+
+        // 使用文档片段减少DOM重绘
+        const fragment = document.createDocumentFragment();
+        sortedIds.forEach(id => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td class="px-4 py-3 text-sm font-medium text-primary">${id}</td>
+                <td class="px-4 py-3 text-sm text-gray-900">${partitionData[id]}</td>
+            `;
+            fragment.appendChild(tr);
+        });
+
+        // 一次性替换内容
+        DOM.monitor.partitionTbody.innerHTML = '';
+        DOM.monitor.partitionTbody.appendChild(fragment);
+
+        // 同步更新originalConfig中的分区数据
+        originalConfig.queue.partitionData = partitionData;
+    }
+
+    // --------------- 优化6：完善loadConfigData，确保表单全字段回显 ---------------
+    function loadConfigData() {
+        if (originalConfig.queue.queueName === undefined) {
+            return loadBaseConfig().then(() => {
+                updateWorkerForm(originalConfig.worker);
+                updateQueueForm(originalConfig.queue);
+                updateRejectForm(originalConfig.reject);
+            });
+        }
+
+        updateWorkerForm(originalConfig.worker);
+        updateQueueForm(originalConfig.queue);
+        updateRejectForm(originalConfig.reject);
+        return Promise.resolve();
+    }
+
+    function updateWorkerForm(data) {
+        document.getElementById('core-nums-cfg').value = data.coreNums || '';
+        document.getElementById('max-nums-cfg').value = data.maxNums || '';
+        document.getElementById('alive-time-cfg').value = data.aliveTime || '';
+        document.getElementById('core-destroy-cfg').checked = data.coreDestroy || false;
+        document.getElementById('is-daemon-cfg').checked = data.isDaemon || false;
+    }
+
+    // --------------- 核心修复7：完善updateQueueForm，确保分区字段回显 ---------------
+    function updateQueueForm(data) {
+        const isPartition = data.partitioning || false;
+
+        // 基础队列字段
+        updateQueueSelect(data.queueName);
+        DOM.form.queue.capacity.value = data.capacity !== null ? data.capacity : '';
+        DOM.form.queue.isPartition.checked = isPartition;
+        DOM.form.queue.partitionCfg.classList.toggle('hidden', !isPartition);
+
+        // 分区字段（关键：之前可能遗漏）
+        if (isPartition) {
+            DOM.form.queue.partitionNum.value = data.partitionNum || 1;
+            DOM.form.queue.offerStrategy.value = data.offerStrategy || '';
+            DOM.form.queue.pollStrategy.value = data.pollStrategy || '';
+            DOM.form.queue.removeStrategy.value = data.removeStrategy || '';
+        }
+    }
+
+    function updateRejectForm(data) {
+        updateRejectSelect(data.rsName);
+    }
+
+    function saveWorker() {
+        const formData = {
+            coreNums: parseInt(document.getElementById('core-nums-cfg').value),
+            maxNums: parseInt(document.getElementById('max-nums-cfg').value),
+            coreDestroy: document.getElementById('core-destroy-cfg').checked,
+            aliveTime: parseInt(document.getElementById('alive-time-cfg').value),
+            isDaemon: document.getElementById('is-daemon-cfg').checked
+        };
+
+        if (isNaN(formData.coreNums) || isNaN(formData.maxNums)) {
+            return showConfigMsg('线程数必须为有效数字', 'error');
+        }
+        if (formData.coreNums > formData.maxNums) {
+            return showConfigMsg('核心线程数不能大于最大线程数', 'error');
+        }
+
+        fetch(`${BASE_URL}/monitor/worker?${new URLSearchParams(formData)}`, { method: 'PUT' })
+            .then(res => res.json())
+            .then(success => {
+                if (success) {
+                    showConfigMsg('线程配置保存成功', 'success');
+                    // --------------- 优化8：保存后立即加载最新数据 ---------------
+                    loadBaseConfig().then(() => {
+                        originalConfig.worker = { ...formData };
+                        // 如果在配置页，同步更新表单
+                        if (document.getElementById('config-page').classList.contains('block')) {
+                            updateWorkerForm(originalConfig.worker);
+                        }
+                    });
+                } else {
+                    showConfigMsg('线程配置保存失败（参数无效）', 'error');
+                }
+            }).catch(err => {
+            showConfigMsg('网络错误，保存失败', 'error');
+        });
+    }
+
+    // --------------- 核心修复9：修复队列保存逻辑，确保保存后数据同步 ---------------
+    function saveQueue() {
+        const isPartition = DOM.form.queue.isPartition.checked;
+        const formData = {
+            queueName: DOM.form.queue.name.value.trim(),
+            capacity: DOM.form.queue.capacity.value.trim() ? parseInt(DOM.form.queue.capacity.value) : null,
+            partitioning: isPartition,
+            partitionNum: isPartition ? parseInt(DOM.form.queue.partitionNum.value) : null,
+            offerStrategy: isPartition ? DOM.form.queue.offerStrategy.value.trim() : null,
+            pollStrategy: isPartition ? DOM.form.queue.pollStrategy.value.trim() : null,
+            removeStrategy: isPartition ? DOM.form.queue.removeStrategy.value.trim() : null
+        };
+
+        if (!formData.queueName) return showConfigMsg('请选择队列名称', 'error');
+        if (isPartition && (isNaN(formData.partitionNum) || !formData.offerStrategy)) {
+            return showConfigMsg('分区队列需填写完整的分区数量和策略', 'error');
+        }
+
+        // 注意：保持与后端一致的请求方法（这里用POST，根据实际后端调整）
+        fetch(`${BASE_URL}/monitor/queue`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        }).then(res => res.json())
+            .then(success => {
+                if (success) {
+                    showConfigMsg('队列配置保存成功', 'success');
+                    // --------------- 关键：保存后强制重新加载所有相关数据 ---------------
+                    Promise.all([
+                        loadBaseConfig(),
+                        loadQueueNames()
+                    ]).then(() => {
+                        // 更新originalConfig并同步表单和监控页
+                        originalConfig.queue = { ...formData };
+                        updateQueueForm(originalConfig.queue);
+                        // 强制刷新监控页队列信息
+                        const queueDesc = formData.queueName
+                            ? `${formData.queueName}(${formData.partitioning ? '分区队列' : '普通队列'})`
+                            : '未知队列';
+                        DOM.monitor.queueInfo.textContent = queueDesc;
+                        DOM.monitor.queueCapacity.textContent = formData.capacity === null ? '无界' : formData.capacity;
+                    });
+                } else {
+                    showConfigMsg('队列保存失败（参数错误）', 'error');
+                }
+            }).catch(err => {
+            showConfigMsg('网络错误，保存失败', 'error');
+        });
+    }
+
+    // --------------- 核心修复10：修复拒绝策略保存后同步问题 ---------------
+    function saveReject() {
+        const rsName = DOM.form.reject.name.value.trim();
+        if (!rsName) return showConfigMsg('请选择拒绝策略', 'error');
+
+        fetch(`${BASE_URL}/monitor/rejectStrategy?rsName=${encodeURIComponent(rsName)}`, { method: 'PUT' })
+            .then(res => res.json())
+            .then(success => {
+                if (success) {
+                    showConfigMsg('拒绝策略保存成功', 'success');
+                    // --------------- 关键：保存后同步更新所有相关位置 ---------------
+                    loadBaseConfig().then(() => {
+                        originalConfig.reject.rsName = rsName;
+                        // 同步表单选中状态
+                        updateRejectForm(originalConfig.reject);
+                        // 同步监控页显示
+                        DOM.monitor.rejectStrategy.textContent = rsName;
+                    });
+                } else {
+                    showConfigMsg('策略保存失败', 'error');
+                }
+            }).catch(err => {
+            showConfigMsg('网络错误，保存失败', 'error');
+        });
+    }
+
+    function showConfigMsg(text, type, duration = 5000) {
+        const msgEl = document.getElementById('config-msg');
+        const iconEl = document.getElementById('msg-icon');
+        if (type === 'success') {
+            msgEl.className = 'mb-6 p-4 rounded-md flex items-center bg-green-50 text-green-800';
+            iconEl.className = 'mr-3 text-xl fa fa-check-circle text-green-500';
+        } else {
+            msgEl.className = 'mb-6 p-4 rounded-md flex items-center bg-red-50 text-red-800';
+            iconEl.className = 'mr-3 text-xl fa fa-exclamation-circle text-red-500';
+        }
+        document.getElementById('msg-text').textContent = text;
+        msgEl.classList.remove('hidden');
+
+        if (duration > 0) {
+            setTimeout(() => msgEl.classList.add('hidden'), duration);
+        }
+    }
+
+    window.addEventListener('beforeunload', () => {
+        if (wsInstance) {
+            wsInstance.close(1000, '页面关闭');
+        }
+    });
 </script>
 </body>
 </html>

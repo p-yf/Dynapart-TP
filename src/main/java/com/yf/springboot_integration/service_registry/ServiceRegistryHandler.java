@@ -1,22 +1,19 @@
 package com.yf.springboot_integration.service_registry;
 
+import com.yf.pool.constant_or_registry.Logo;
 import com.yf.pool.threadpool.ThreadPool;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,18 +26,12 @@ import java.util.concurrent.TimeUnit;
  * @date 2025/8/20 0:20
  * @description
  */
-@Component
-@ConditionalOnProperty(prefix = "yf.service-registry",name = "enabled",havingValue = "true")
 public class ServiceRegistryHandler {
 
     //    每个节点信息包含字段：ip、port、memoryUsage（内存使用率）、taskNums（任务数量）、queueCapacity(队列大小)
-    @Autowired
     private StringRedisTemplate stringRedisTemplate;
-    @Autowired
     private ResourceLoader resourceLoader;
-    @Autowired
     private ThreadPool threadPool;
-    @Autowired
     private ServerProperties serverProperties;
 
     private static String IP;
@@ -53,15 +44,21 @@ public class ServiceRegistryHandler {
     private final static List<String> zsetKeys = Arrays.asList(SORT_BY_MEMORY, SORT_BY_Queue);
     // Lua脚本
     DefaultRedisScript<Long> redisScript;
+    @Value("${yf.thread-pool.service-registry.expireTime}")
+    private static int EXPIRE;
 
-    private final static int HEART_BEAT = 10;
-    private final static int EXPIRE = 12;
-
-    @PostConstruct
-    public void firstRegister(){//启动服务，向redis进行注册
+    public ServiceRegistryHandler(StringRedisTemplate srt, ResourceLoader rl, ThreadPool tp, ServerProperties sp) {
+        this.stringRedisTemplate = srt;
+        this.resourceLoader = rl;
+        this.threadPool = tp;
+        this.serverProperties = sp;
         IP = serverProperties.getAddress().getHostAddress();
         PORT = serverProperties.getPort().toString();
         KEY = REGISTRY_KEY_PREFIX+":"+IP+ ":"+ PORT;
+    }
+
+    @PostConstruct
+    public void firstRegister(){//启动服务，向redis进行注册
         register();
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {//进程退出时，删除redis中hash的key 以及zset的元素
             stringRedisTemplate.opsForHash().delete(KEY,"ip", "port", "memoryUsage", "taskNums", "queueCapacity");
@@ -72,7 +69,7 @@ public class ServiceRegistryHandler {
         loadAndPrecompileLuaScript();
     }
 
-    @Scheduled(fixedDelay = HEART_BEAT*1000)
+    @Scheduled(fixedDelayString = "${yf.thread-pool.service-registry.heartBeat}")
     public void heartBeating(){//心跳机制
         register();
         //清理ZSet中无效元素
@@ -80,6 +77,7 @@ public class ServiceRegistryHandler {
                 redisScript,
                 zsetKeys
         );
+        System.out.println(Logo.log_logo+"beating....");
     }
 
     public void register(){//注册服务

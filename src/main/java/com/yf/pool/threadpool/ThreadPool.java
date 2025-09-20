@@ -1,9 +1,9 @@
 package com.yf.pool.threadpool;
 
-import com.yf.pool.constant_or_registry.QueueRegistry;
-import com.yf.pool.constant_or_registry.RejectStrategyRegistry;
-import com.yf.pool.constant_or_registry.OfWorker;
+import com.yf.pool.constant_or_registry.*;
 import com.yf.pool.entity.PoolInfo;
+import com.yf.pool.entity.QueueInfo;
+import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.pool.partition.Partition;
 import com.yf.pool.threadfactory.ThreadFactory;
@@ -11,9 +11,7 @@ import com.yf.pool.worker.Worker;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
@@ -30,14 +28,15 @@ import java.util.concurrent.locks.ReentrantLock;
 @Getter
 @Setter
 public class ThreadPool {
+    static {
+        System.out.println(Logo.START_LOGO);
+    }
     private Lock lock = new ReentrantLock();
     private ThreadFactory threadFactory;
     private Partition<Runnable> partition;
     private RejectStrategy rejectStrategy;
     private Integer coreNums;//核心线程数
     private Integer maxNums;//最大线程数
-    private String queueName = null;//非springboot环境直接用类，反之用名字,拒绝策略同理
-    private String rejectStrategyName = null;
     private Set<Worker> coreList = ConcurrentHashMap.newKeySet();
     private Set<Worker> extraList = ConcurrentHashMap.newKeySet();
     private final AtomicInteger coreWorkerCount = new AtomicInteger(0); // 核心线程存活数
@@ -55,22 +54,9 @@ public class ThreadPool {
         threadFactory.setThreadPool(this);
         this.partition = partition;
         this.rejectStrategy = rejectStrategy;
-        rejectStrategy.setThreadPool(this);
         this.coreNums = coreNums;
         this.maxNums = maxNums;
         this.name = name;
-        //添加队列和策略的名称
-        QueueRegistry.TASK_QUEUE_MAP.forEach((qName, clazz) -> {
-            if (clazz == partition.getClass()) {
-                this.queueName = qName;
-            }
-        });
-        RejectStrategyRegistry.REJECT_STRATEGY_MAP.forEach((qName, clazz) -> {
-            if (clazz == rejectStrategy.getClass()) {
-                this.rejectStrategyName = qName;
-            }
-        });
-
     }
 
     public void execute(Runnable task) {
@@ -85,7 +71,7 @@ public class ThreadPool {
         if (addWorker(task,false)) {
             return;
         }
-        rejectStrategy.reject(task);
+        rejectStrategy.reject(this,task);
     }
 
 
@@ -102,7 +88,7 @@ public class ThreadPool {
         if (addWorker(task,false)) {
             return  task;
         }
-        rejectStrategy.reject(task);
+        rejectStrategy.reject(this,task);
         task.cancel(true);
         return task;
     }
@@ -207,20 +193,109 @@ public class ThreadPool {
         info.setIsDaemon(threadFactory.getIsDaemon());
         info.setMaxNums(maxNums);
         info.setCoreNums(coreNums);
-        info.setQueueCapacity(partition.getCapacity());
-        info.setQueueName(queueName);
-        info.setRejectStrategyName(rejectStrategyName);
+        //获取当前队列名字
+        for(Map.Entry entry : QueueManager.getResources().entrySet()){
+            if (entry.getValue() == partition.getClass()) {
+                info.setQueueName(entry.getKey().toString());
+                break;
+            }
+        }
+        for(Map.Entry entry : RejectStrategyManager.REJECT_STRATEGY_MAP.entrySet()){
+            if (entry.getValue() == rejectStrategy.getClass()) {
+                info.setRejectStrategyName(entry.getKey().toString());
+                break;
+            }
+        }
         return info;
     }
 
     /**
-     * 获取队列中任务数量
+     * 获取队列的任务数量
      * @return
      */
     public int getTaskNums() {
         return partition.getEleNums();
     }
 
+    /**
+     * 获取每个分区的任务数量
+     * @return
+     */
+    public Map<Integer,Integer> getPartitionTaskNums(){
+        Map<Integer,Integer> map = new HashMap<>();
+        if(!(partition instanceof PartiFlow)){//不是分区队列
+            map.put(0,partition.getEleNums());
+        }else {//是分区队列
+            Partition<Runnable>[] partitions = ((PartiFlow<Runnable>) partition).getPartitions();
+            for(int i = 0;i<partitions.length;i++){
+                map.put(i,partitions[i].getEleNums());
+            }
+        }
+        return map;
+    }
+
+    /**
+     * 获取队列信息
+     * @return
+     */
+    public QueueInfo getQueueInfo(){
+        QueueInfo queueInfo = new QueueInfo();
+        queueInfo.setCapacity(partition.getCapacity());
+        if(partition instanceof PartiFlow<Runnable>){
+            for(Map.Entry entry : QueueManager.getResources().entrySet()){
+                if (entry.getValue() == ((PartiFlow<Runnable>) partition).getPartitions()[0].getClass()) {
+                    queueInfo.setQueueName(entry.getKey().toString());
+                    break;
+                }
+            }
+            queueInfo.setPartitionNum(((PartiFlow<Runnable>) partition).getPartitions().length);
+            queueInfo.setPartitioning(true);
+            //找到offer的名字
+            for(Map.Entry entry : SchedulePolicyManager.getOfferResources().entrySet()){
+                if (entry.getValue() == ((PartiFlow<Runnable>) partition).getOfferPolicy().getClass()) {
+                    queueInfo.setOfferPolicy(entry.getKey().toString());
+                    break;
+                }
+            }
+            //找到poll的名字
+            for(Map.Entry entry : SchedulePolicyManager.getPollResources().entrySet()){
+                if (entry.getValue() == ((PartiFlow<Runnable>) partition).getPollPolicy().getClass()) {
+                    queueInfo.setPollPolicy(entry.getKey().toString());
+                    break;
+                }
+            }
+            //找到remove的名字
+            for(Map.Entry entry : SchedulePolicyManager.getRemoveResources().entrySet()){
+                if (entry.getValue() == ((PartiFlow<Runnable>) partition).getRemovePolicy().getClass()) {
+                    queueInfo.setRemovePolicy(entry.getKey().toString());
+                    break;
+                }
+            }
+        }
+        //获取队列的名字
+        for(Map.Entry entry : QueueManager.getResources().entrySet()){
+            if (entry.getValue() == partition.getClass()) {
+                queueInfo.setQueueName(entry.getKey().toString());
+                break;
+            }
+        }
+        return queueInfo;
+    }
+
+
+    /**
+     * 获取所有的队列的名称
+     */
+    public List<String> getAllQueueName(){
+        return new ArrayList<>(QueueManager.getResources().keySet());
+    }
+
+    /**
+     * 获取所有的拒绝策略的名称
+     */
+    public List<String> getAllRejectStrategyName(){
+        return new ArrayList<>(RejectStrategyManager.getResources().keySet());
+    }
 
     /**
      * 改变worker相关参数，直接赋值就好，会动态平衡的
@@ -317,7 +392,6 @@ public class ThreadPool {
                 Runnable task = oldQ.getEle(1000);
                 q.addEle(task);
             }
-            this.queueName = qName;
             this.partition = q;
         } catch (Exception e) {
             e.printStackTrace();
@@ -334,7 +408,6 @@ public class ThreadPool {
         if(rejectStrategy == null|| rejectStrategyName == null){
             return false;
         }
-        this.rejectStrategyName = rejectStrategyName;
         this.rejectStrategy = rejectStrategy;
         return true;
     }

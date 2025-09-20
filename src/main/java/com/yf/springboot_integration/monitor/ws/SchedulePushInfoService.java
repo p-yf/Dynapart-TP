@@ -28,15 +28,19 @@ public class SchedulePushInfoService {
     public void pushInfo() {
         ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(threadPool.getThreadsInfo());
         ThreadPoolWebSocketHandler.broadcastTaskNums(threadPool.getTaskNums());
-        for(int i = 0;i<100000;i++){
+        ThreadPoolWebSocketHandler.broadcastPartitionTaskNums(threadPool.getPartitionTaskNums());
             threadPool.execute(()->{
-                boolean flag = true;
-                while(flag){
-                    if(System.currentTimeMillis()%2==0&&System.currentTimeMillis()%3==0){
-                        flag = false;
-                    }
+                for(int i = 0; i < 100; i++){
+                    threadPool.execute(()->{
+                        for(int j = 0;j<1000000;j++){
+                            try {
+                                Thread.sleep(1);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+                    });
                 }
             });
-        }
     }
 }

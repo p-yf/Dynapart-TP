@@ -1,13 +1,13 @@
 package com.yf.test_springboot_integration.q;
 
 import com.yf.pool.partition.Partition;
-import com.yf.springboot_integration.pool.annotation.PartitionBean;
+import com.yf.springboot_integration.pool.annotation.PartiResource;
 
 /**
  * @author yyf
  * @description
  */
-@PartitionBean("myq")
+@PartiResource("myq")
 public class myq extends Partition {
 
     @Override

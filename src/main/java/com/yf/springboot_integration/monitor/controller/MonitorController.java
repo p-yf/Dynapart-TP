@@ -1,18 +1,25 @@
 package com.yf.springboot_integration.monitor.controller;
 
-import com.yf.pool.constant_or_registry.QueueRegistry;
-import com.yf.pool.constant_or_registry.RejectStrategyRegistry;
+import com.yf.pool.constant_or_registry.QueueManager;
+import com.yf.pool.constant_or_registry.RejectStrategyManager;
+import com.yf.pool.constant_or_registry.SchedulePolicyManager;
 import com.yf.pool.entity.PoolInfo;
+import com.yf.pool.entity.QueueInfo;
+import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
+import com.yf.pool.partition.Impl.parti_flow.strategy.OfferPolicy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.PollPolicy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.RemovePolicy;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.pool.partition.Partition;
 import com.yf.pool.threadpool.ThreadPool;
-import com.yf.springboot_integration.monitor.properties.MonitorProperties;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author yyf
@@ -25,7 +32,6 @@ public class MonitorController {
 
     private ThreadPool threadPool;
     private ApplicationContext context;
-    private MonitorProperties monitorProperties;
 
     /**
      * 获取线程池的信息
@@ -37,7 +43,7 @@ public class MonitorController {
     }
 
     /**
-     * 获取队列中任务数量
+     * 获取队列中总任务数量
      * return int 队列中任务数量
      */
     @GetMapping("/tasks")
@@ -45,10 +51,43 @@ public class MonitorController {
         return threadPool.getTaskNums();
     }
 
+    /**
+     * 获取各个分区任务数量
+     * @return
+     */
+    @GetMapping("/partitionTaskNums")
+    public Map<Integer,Integer> getPartitionTaskNums() {
+        return threadPool.getPartitionTaskNums();
+    }
+
+    /**
+     * 获取队列信息
+     */
+    @GetMapping("/queue")
+    public QueueInfo getQueueInfo() {
+        return threadPool.getQueueInfo();
+    }
+
+    /**
+     * 获取所有队列名称
+     */
+    @GetMapping("/queueName")
+    public List<String> getAllQueueName() {
+        return threadPool.getAllQueueName();
+    }
+
+    /**
+     * 获取所有拒绝策略名称
+     */
+    @GetMapping("/rejectStrategyName")
+    public List<String> getAllRejectStrategyName() {
+        return threadPool.getAllRejectStrategyName();
+    }
+
 
     /**
      * 更改worker相关的参数
-      * return true/false 表示成功与否
+     * return true/false 表示成功与否
      */
     @PutMapping("/worker")
     public Boolean changeWorkerParams(Integer coreNums,
@@ -56,29 +95,32 @@ public class MonitorController {
                                       Boolean coreDestroy,
                                       Integer aliveTime,
                                       Boolean isDaemon) {
-        return threadPool.changeWorkerParams(coreNums, maxNums, coreDestroy, aliveTime,isDaemon);
+        return threadPool.changeWorkerParams(coreNums, maxNums, coreDestroy, aliveTime, isDaemon);
     }
 
     /**
      * 改变队列
      * return true/false 示成功与否
      */
-    @PutMapping("/queue")
-    public Boolean changeQ(String qName,Integer qCapacity) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        if(qName==null|| qName.isEmpty()){
+    @PostMapping("/queue")
+    public Boolean changeQ(@RequestBody QueueInfo queueInfo) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+        if (queueInfo.getQueueName() == null || queueInfo.getQueueName().isEmpty()) {
             return false;
         }
         Partition q;
-        try {
-            q = (Partition) context.getBean(qName);
-        }catch(NoSuchBeanDefinitionException e){
-            if(!QueueRegistry.TASK_QUEUE_MAP.containsKey(qName)){
-                return false;
-            }else{
-                q = (Partition) QueueRegistry.TASK_QUEUE_MAP.get(qName).getConstructor(Integer.class).newInstance(qCapacity);
+        if (!QueueManager.getResources().containsKey(queueInfo.getQueueName())) {//队列不存在
+            return false;
+        } else {//队列存在
+            if(!queueInfo.isPartitioning()) {//不分区
+                q = QueueManager.getResources().get(queueInfo.getQueueName()).getConstructor(Integer.class).newInstance(queueInfo.getCapacity());
+            }else{//分区
+                q = new PartiFlow(queueInfo.getPartitionNum(), queueInfo.getCapacity(), queueInfo.getQueueName(),
+                        (OfferPolicy) SchedulePolicyManager.getOfferResource(queueInfo.getOfferPolicy()).getConstructor().newInstance(),
+                        (PollPolicy) SchedulePolicyManager.getPollResource(queueInfo.getPollPolicy()).getConstructor().newInstance(),
+                        (RemovePolicy) SchedulePolicyManager.getRemoveResource(queueInfo.getRemovePolicy()).getConstructor().newInstance());
             }
         }
-        return threadPool.changeQueue(q,qName);
+        return threadPool.changeQueue(q, queueInfo.getQueueName());
     }
 
     /**
@@ -87,20 +129,20 @@ public class MonitorController {
      */
     @PutMapping("/rejectStrategy")
     public Boolean changeRS(String rsName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
-        if(rsName == null|| rsName.isEmpty()){
+        if (rsName == null || rsName.isEmpty()) {
             return false;
         }
         RejectStrategy rs;
         try {
             rs = (RejectStrategy) context.getBean(rsName);
-        }catch(NoSuchBeanDefinitionException e){
-            if(!RejectStrategyRegistry.REJECT_STRATEGY_MAP.containsKey(rsName)){
+        } catch (NoSuchBeanDefinitionException e) {
+            if (!RejectStrategyManager.REJECT_STRATEGY_MAP.containsKey(rsName)) {
                 return false;
-            }else{
-                rs = (RejectStrategy) RejectStrategyRegistry.REJECT_STRATEGY_MAP.get(rsName).getConstructor().newInstance();
+            } else {
+                rs = (RejectStrategy) RejectStrategyManager.REJECT_STRATEGY_MAP.get(rsName).getConstructor().newInstance();
             }
         }
-        return threadPool.changeRejectStrategy(rs,rsName);
+        return threadPool.changeRejectStrategy(rs, rsName);
     }
 
 }

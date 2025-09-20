@@ -12,7 +12,7 @@ import java.util.Map;
  * @author yyf
  * @description
  */
-public class RejectStrategyRegistry {
+public class RejectStrategyManager {
     public final static String CALLER_RUNS = "callerRuns";//调用当前线程运行
     public final static String DISCARD_OLDEST = "discardOldest";//丢弃最老的
     public final static String DISCARD = "discard";
@@ -25,5 +25,13 @@ public class RejectStrategyRegistry {
 
     public static void  register(String rejectStrategyName, Class<? extends RejectStrategy> rejectStrategyClass) {
         REJECT_STRATEGY_MAP.put(rejectStrategyName, rejectStrategyClass);
+    }
+
+    public static Class<? extends RejectStrategy> getResource(String name) {
+        return REJECT_STRATEGY_MAP.get(name);
+    }
+
+    public static Map<String,Class<? extends RejectStrategy>> getResources(){
+        return REJECT_STRATEGY_MAP;
     }
 }

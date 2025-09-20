@@ -1,6 +1,7 @@
 package com.yf.pool.rejectstrategy.impl;
 
 import com.yf.pool.rejectstrategy.RejectStrategy;
+import com.yf.pool.threadpool.ThreadPool;
 
 /**
  * @author yyf
@@ -9,8 +10,8 @@ import com.yf.pool.rejectstrategy.RejectStrategy;
  */
 public class DiscardOldestStrategy extends RejectStrategy {
     @Override
-    public void reject(Runnable task) {
-        getThreadPool().getPartition().removeEle();
+    public void reject(ThreadPool threadPool,Runnable task) {
+        threadPool.getPartition().removeEle();
     }
 
 }

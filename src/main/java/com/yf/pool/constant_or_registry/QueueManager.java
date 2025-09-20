@@ -12,12 +12,12 @@ import java.util.Map;
  * @author yyf
  * @description
  */
-public class QueueRegistry {
+public class QueueManager {
     //这个mini队列之所以没被删除，因为这是本项目的第一个任务队列，也是我实现的第一个阻塞队列，已经对它产生感情了
     public final static String LINKED = "linked";//单链表
     public final static String PRIORITY = "priority";//优先级队列
     public final static String LINKED_S = "linkedS";
-    public final static Map<String, Class<? extends Partition>> TASK_QUEUE_MAP = new HashMap<>();
+    private final static Map<String, Class<? extends Partition>> TASK_QUEUE_MAP = new HashMap<>();
 
     static {
         TASK_QUEUE_MAP.put(LINKED, LinkedBlockingQ.class);
@@ -27,5 +27,13 @@ public class QueueRegistry {
 
     public static void register(String name, Class<? extends Partition> clazz) {
         TASK_QUEUE_MAP.put(name, clazz);
+    }
+
+    public static Class<? extends Partition> getResource(String name) {
+        return TASK_QUEUE_MAP.get(name);
+    }
+
+    public static Map<String,Class<? extends Partition>> getResources(){
+        return TASK_QUEUE_MAP;
     }
 }

@@ -1,10 +1,14 @@
 package com.yf.pool.partition.Impl.parti_flow;
 
-import com.yf.pool.constant_or_registry.QueueRegistry;
+import com.yf.pool.constant_or_registry.QueueManager;
 import com.yf.pool.partition.Impl.LinkedBlockingQ;
-import com.yf.pool.partition.Impl.parti_flow.strategy.OfferStrategy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.PollStrategy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.RemoveStrategy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.OfferPolicy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.PollPolicy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.RemovePolicy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.RoundRobinOffer;
+import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.RoundRobinPoll;
+import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.pool.partition.Impl.parti_flow.strategy.impl.remove_policy.RoundRobinRemove;
 import com.yf.pool.partition.Partition;
 import lombok.Getter;
 import lombok.Setter;
@@ -28,9 +32,9 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class PartiFlow<T> extends Partition<T>{
     private Partition<T>[] partitions;
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
-    private OfferStrategy offerStrategy = OfferStrategy.ROUND_ROBIN;
-    private PollStrategy pollStrategy = PollStrategy.ROUND_ROBIN;
-    private RemoveStrategy removeStrategy = RemoveStrategy.ROUND_ROBIN;
+    private OfferPolicy offerPolicy = new RoundRobinOffer();
+    private PollPolicy pollPolicy = new RoundRobinPoll();
+    private RemovePolicy removePolicy = new RoundRobinRemove();
     private AtomicInteger offerRound = new AtomicInteger(0);
     private AtomicInteger pollRound = new AtomicInteger(0);
     private AtomicInteger removeRound = new AtomicInteger(0);
@@ -38,16 +42,16 @@ public class PartiFlow<T> extends Partition<T>{
     private Integer DEFAULT_PARTITION_NUM = 5;
     private static final Integer DEFAULT_WAIT_TIME = 100;
 
-    public PartiFlow(Integer partitionNum, Integer capacity,String QName, OfferStrategy offerStrategy, PollStrategy pollStrategy, RemoveStrategy removeStrategy) {
+    public PartiFlow(Integer partitionNum, Integer capacity, String QName, OfferPolicy offerPolicy, PollPolicy pollPolicy, RemovePolicy removePolicy) {
         this(partitionNum, capacity,QName);
-        this.offerStrategy = offerStrategy;
-        this.pollStrategy = pollStrategy;
-        this.removeStrategy = removeStrategy;
+        this.offerPolicy = offerPolicy;
+        this.pollPolicy = pollPolicy;
+        this.removePolicy = removePolicy;
     }
 
     public PartiFlow(Integer partitionNum, Integer capacity,String QName) {
         //先获取队列类型
-        Class<?> qClass = QueueRegistry.TASK_QUEUE_MAP.get(QName);
+        Class<?> qClass = QueueManager.getResources().get(QName);
         partitions = new Partition[partitionNum];
         this.capacity = capacity;
         if (capacity != null) {//不为null，轮询分配
@@ -97,7 +101,7 @@ public class PartiFlow<T> extends Partition<T>{
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
-        int index = offerStrategy.selectPartition(partitions, element);
+        int index = offerPolicy.selectPartition(partitions, element);
         Boolean suc = false;
         for(int i = 0;i<partitions.length&&!suc;i++) {
             suc = partitions[index].offer(element);
@@ -108,11 +112,11 @@ public class PartiFlow<T> extends Partition<T>{
 
     @Override
     public T getEle(Integer waitTime) throws InterruptedException {
-        if(pollStrategy==PollStrategy.THREAD_BINDING){//线程绑定不轮询
-            return partitions[pollStrategy.selectPartition( partitions)].getEle(waitTime);
+        if(pollPolicy instanceof ThreadBindingPoll){//线程绑定不轮询
+            return partitions[pollPolicy.selectPartition( partitions)].getEle(waitTime);
         }
         T element = null;
-        int partitionIndex = pollStrategy.selectPartition(partitions);
+        int partitionIndex = pollPolicy.selectPartition(partitions);
         if(waitTime==null){//说明无限等待
             int emptyCount = 0;
             while(element==null) {
@@ -137,7 +141,7 @@ public class PartiFlow<T> extends Partition<T>{
     }
     @Override
     public Boolean removeEle() {
-        return partitions[removeStrategy.selectPartition(partitions)].removeEle();
+        return partitions[removePolicy.selectPartition(partitions)].removeEle();
     }
 
 

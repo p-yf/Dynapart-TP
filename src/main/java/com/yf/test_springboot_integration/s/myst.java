@@ -1,6 +1,7 @@
 package com.yf.test_springboot_integration.s;
 
 import com.yf.pool.rejectstrategy.RejectStrategy;
+import com.yf.pool.threadpool.ThreadPool;
 
 
 /**
@@ -9,7 +10,7 @@ import com.yf.pool.rejectstrategy.RejectStrategy;
  */
 public class myst extends RejectStrategy {
     @Override
-    public void reject(Runnable task) {
+    public void reject(ThreadPool threadPool,Runnable task) {
     }
 
 }

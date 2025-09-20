@@ -1,6 +1,8 @@
 package com.yf.springboot_integration.monitor.ws;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.yf.pool.constant_or_registry.Logo;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -15,6 +17,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  * @author yyf
  * @description
  */
+@Slf4j
 public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
 
     // 存储所有活跃的WebSocket会话
@@ -52,7 +55,7 @@ public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (IOException e) {
-            System.err.println("推送线程池信息失败: " + e.getMessage());
+            log.info(Logo.log_logo+"推送线程池信息失败: " + e.getMessage());
         }
     }
 
@@ -72,7 +75,27 @@ public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (IOException e) {
-            System.err.println("推送任务数量失败: " + e.getMessage());
+            log.info(Logo.log_logo+"推送任务数量失败: " + e.getMessage());
+        }
+    }
+
+    public static void broadcastPartitionTaskNums(Map<Integer,Integer> partitionTaskNums) {
+        if (sessions.isEmpty()) {
+            return;
+        }
+        try {
+            // 将线程池信息转换为JSON字符串
+            String jsonMessage = objectMapper.writeValueAsString(partitionTaskNums);
+            TextMessage message = new TextMessage(jsonMessage);
+
+            // 向每个会话发送消息
+            for (WebSocketSession session : sessions) {
+                if (session.isOpen()) {
+                    session.sendMessage(message);
+                }
+            }
+        } catch (IOException e) {
+            log.info(Logo.log_logo+"推送分区任务数量失败: " + e.getMessage());
         }
     }
 }

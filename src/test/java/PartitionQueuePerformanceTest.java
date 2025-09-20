@@ -1,10 +1,10 @@
-import com.yf.pool.constant_or_registry.QueueRegistry;
+import com.yf.pool.constant_or_registry.QueueManager;
 import com.yf.pool.partition.Impl.LinkedBlockingQ;
 import com.yf.pool.partition.Impl.LinkedBlockingQS;
 import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
-import com.yf.pool.partition.Impl.parti_flow.strategy.OfferStrategy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.PollStrategy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.RemoveStrategy;
+import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.HashOffer;
+import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.pool.partition.Impl.parti_flow.strategy.impl.remove_policy.RoundRobinRemove;
 import com.yf.pool.partition.Partition;
 import com.yf.pool.threadfactory.ThreadFactory;
 import com.yf.pool.threadpool.ThreadPool;
@@ -89,10 +89,10 @@ public class PartitionQueuePerformanceTest {
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                QueueRegistry.LINKED,
-                OfferStrategy.HASH,
-                PollStrategy.THREAD_BINDING,
-                RemoveStrategy.ROUND_ROBIN
+                QueueManager.LINKED,
+                new HashOffer(),
+                new ThreadBindingPoll(),
+                new RoundRobinRemove()
         );
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
         Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
@@ -107,10 +107,10 @@ public class PartitionQueuePerformanceTest {
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                QueueRegistry.LINKED_S,
-                OfferStrategy.HASH,
-                PollStrategy.THREAD_BINDING,
-                RemoveStrategy.ROUND_ROBIN
+                QueueManager.LINKED_S,
+                new HashOffer(),
+                new ThreadBindingPoll(),
+                new RoundRobinRemove()
         );
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
         Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);

@@ -1,13 +1,13 @@
 package com.yf.test_springboot_integration.q;
 
-import com.yf.springboot_integration.pool.annotation.PartitionBean;
+import com.yf.springboot_integration.pool.annotation.PartiResource;
 import com.yf.pool.partition.Partition;
 
 /**
  * @author yyf
  * @description
  */
-@PartitionBean("myqn")
+@PartiResource("myqn")
 public class myqn extends Partition {
     @Override
     public Boolean offer(Object t) {
