@@ -15,8 +15,6 @@ import lombok.Setter;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author yyf
@@ -24,14 +22,13 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
  * @description
  * 分区流：多队列、细粒度、扁平化、高性能
  * 可选任务入队策略：轮询、随机、hash、填谷
- * 可选任务出队策略：轮询、随机、削峰
+ * 可选任务出队策略：轮询、随机、削峰、线程绑定
  * 可选移除任务策略：轮询、随机、削峰
  */
 @Setter
 @Getter
 public class PartiFlow<T> extends Partition<T>{
     private Partition<T>[] partitions;
-    private final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
     private OfferPolicy offerPolicy = new RoundRobinOffer();
     private PollPolicy pollPolicy = new RoundRobinPoll();
     private RemovePolicy removePolicy = new RoundRobinRemove();
@@ -111,16 +108,16 @@ public class PartiFlow<T> extends Partition<T>{
     }
 
     @Override
-    public T getEle(Integer waitTime) throws InterruptedException {
+    public T poll(Integer waitTime) throws InterruptedException {
         if(pollPolicy instanceof ThreadBindingPoll){//线程绑定不轮询
-            return partitions[pollPolicy.selectPartition( partitions)].getEle(waitTime);
+            return partitions[pollPolicy.selectPartition( partitions)].poll(waitTime);
         }
         T element = null;
         int partitionIndex = pollPolicy.selectPartition(partitions);
         if(waitTime==null){//说明无限等待
             int emptyCount = 0;
             while(element==null) {
-                element = partitions[partitionIndex].getEle(DEFAULT_WAIT_TIME);
+                element = partitions[partitionIndex].poll(DEFAULT_WAIT_TIME);
                 if (element == null) {
                     emptyCount++;
                     //所有分区为空count清零
@@ -133,7 +130,7 @@ public class PartiFlow<T> extends Partition<T>{
             return element;
         }else{//说明有等待时间
             for(int i = 0;i<partitions.length&&element==null;i++) {
-                element = partitions[partitionIndex].getEle(waitTime/partitions.length);
+                element = partitions[partitionIndex].poll(waitTime/partitions.length);
                 partitionIndex = (partitionIndex+1)%partitions.length;
             }
             return element;

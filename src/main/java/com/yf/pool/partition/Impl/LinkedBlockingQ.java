@@ -77,7 +77,7 @@ public class LinkedBlockingQ<T> extends Partition<T> {
     }
 
     @Override
-    public T getEle(Integer waitTime) throws InterruptedException {
+    public T poll(Integer waitTime) throws InterruptedException {
         T x = null;
         final int c;
         headLock.lock();

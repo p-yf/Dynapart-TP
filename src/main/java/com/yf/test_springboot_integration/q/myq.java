@@ -16,7 +16,7 @@ public class myq extends Partition {
     }
 
     @Override
-    public Runnable getEle(Integer waitTime) throws InterruptedException {
+    public Runnable poll(Integer waitTime) throws InterruptedException {
         return null;
     }
 

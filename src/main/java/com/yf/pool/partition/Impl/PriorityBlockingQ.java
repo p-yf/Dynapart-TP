@@ -60,7 +60,7 @@ public class PriorityBlockingQ<T> extends Partition<T> {
      * 阻塞获取任务（保留出队等待逻辑）
      */
     @Override
-    public T getEle(Integer waitTime) throws InterruptedException {
+    public T poll(Integer waitTime) throws InterruptedException {
         wLock.lock();
         try {
             while (q.isEmpty()) {

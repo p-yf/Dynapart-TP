@@ -30,7 +30,7 @@ public class Worker extends Thread {
                 Runnable runnable;
                 if(isCore) {
                     if(coreDestroy) {//核心线程并且允许销毁
-                        runnable = threadPool.getPartition().getEle(aliveTime*2);
+                        runnable = threadPool.getPartition().poll(aliveTime*2);
                         if(runnable == null){
                             threadPool.getCoreList().remove(this);
                             threadPool.getCoreWorkerCount().getAndDecrement();
@@ -38,10 +38,10 @@ public class Worker extends Thread {
                             break;
                         }
                     }else{//核心线程并且不允许销毁
-                        runnable = threadPool.getPartition().getEle(null);
+                        runnable = threadPool.getPartition().poll(null);
                     }
                 }else{//非核心线程
-                    runnable = threadPool.getPartition().getEle(aliveTime);
+                    runnable = threadPool.getPartition().poll(aliveTime);
                     if(runnable == null){
                         threadPool.getExtraList().remove(this);
                         threadPool.getExtraWorkerCount().getAndDecrement();

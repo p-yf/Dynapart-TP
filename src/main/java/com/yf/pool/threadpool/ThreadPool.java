@@ -389,8 +389,8 @@ public class ThreadPool {
         try {
             oldQ.lockGlobally();
             while(oldQ.getEleNums() > 0){
-                Runnable task = oldQ.getEle(1000);
-                q.addEle(task);
+                Runnable task = oldQ.poll(1000);
+                q.offer(task);
             }
             this.partition = q;
         } catch (Exception e) {

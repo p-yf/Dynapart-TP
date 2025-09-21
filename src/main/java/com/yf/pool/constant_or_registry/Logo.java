@@ -6,20 +6,20 @@ package com.yf.pool.constant_or_registry;
  * @description
  */
 public class Logo {
-    public static final String START_LOGO = """
-                       ╔═══════════════════════════════════════╗
-                       ║ o ██████╗     ████████╗    ██████╗  o ║
-                       ║   ██╔══██╗    ╚══██╔══╝    ██╔══██╗   ║
-                       ║   ██║  ██║   *   ██║   *   ██████╔╝   ║
-                       ║   ██║  ██║       ██║       ██╔═══╝    ║
-                       ║   ██████╔╝   *   ██║   *   ██║        ║
-                       ║   ╚═════╝        ╚═╝       ╚═╝        ║
-                       ║        dynamic high-performance       ║
-                       ║              thread pool              ║
-                       ║ o           written by yf           o ║
-                       ╚═══════════════════════════════════════╝
-                                  FASTER AND STABLER
-            """;
+    public static final String START_LOGO = "\033[34m"+"""
+            ╔═══════════════════════════════════════╗
+            ║ o ██████╗     ████████╗    ██████╗  o ║
+            ║   ██╔══██╗    ╚══██╔══╝    ██╔══██╗   ║
+            ║   ██║  ██║   *   ██║   *   ██████╔╝   ║
+            ║   ██║  ██║       ██║       ██╔═══╝    ║
+            ║   ██████╔╝   *   ██║   *   ██║        ║
+            ║   ╚═════╝        ╚═╝       ╚═╝        ║
+            ║        dynamic high-performance       ║
+            ║            * thread pool *            ║
+            ║ o           written by yf           o ║
+            ╚═══════════════════════════════════════╝
+                       FASTER AND STABLER
+            """ + "\033[0m";
 
-    public static final String log_logo = "YF:D--T--P===>";
+    public static final String log_logo = "\033[34mYF:D--T--P===>\033[0m";
 }

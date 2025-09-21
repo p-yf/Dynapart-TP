@@ -81,7 +81,7 @@ public class LinkedBlockingQS<T> extends Partition<T> {
 
 
     @Override
-    public T getEle(Integer waitTime) throws InterruptedException {
+    public T poll(Integer waitTime) throws InterruptedException {
         long nanos = waitTime != null ? TimeUnit.MILLISECONDS.toNanos(waitTime) : 0;
         Node<T> h, first;
         int spinCount = 0;  // 限制自旋次数

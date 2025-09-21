@@ -17,32 +17,17 @@ public abstract class Partition<T> {
 
 
     /**
-     * 添加任务
+     * 添加
      *
      * @param t@return
-     */
-    public Boolean addEle(T t){
-        Boolean offer = offer(t);
-        warning();
-        return offer;
-    };
-
-    /**
-     * 添加任务的方法
-     * @return
      */
     public abstract Boolean offer(T t);
 
     /**
-     * 警告
-     */
-    public void warning(){};
-
-    /**
-     * 获取任务
+     * 获取
       * @return
      */
-    public abstract T getEle(Integer waitTime) throws InterruptedException;
+    public abstract T poll(Integer waitTime) throws InterruptedException;
 
     /**
      * 移除任务(用于丢弃策略)

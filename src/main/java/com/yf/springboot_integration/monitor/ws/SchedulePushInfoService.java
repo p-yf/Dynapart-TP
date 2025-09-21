@@ -29,18 +29,5 @@ public class SchedulePushInfoService {
         ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(threadPool.getThreadsInfo());
         ThreadPoolWebSocketHandler.broadcastTaskNums(threadPool.getTaskNums());
         ThreadPoolWebSocketHandler.broadcastPartitionTaskNums(threadPool.getPartitionTaskNums());
-            threadPool.execute(()->{
-                for(int i = 0; i < 100; i++){
-                    threadPool.execute(()->{
-                        for(int j = 0;j<1000000;j++){
-                            try {
-                                Thread.sleep(1);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
-                    });
-                }
-            });
     }
 }
