@@ -1,16 +1,16 @@
 package com.yf.springboot_integration.pool.auto_configuration;
 
-import com.yf.pool.constant_or_registry.QueueManager;
-import com.yf.pool.constant_or_registry.RejectStrategyManager;
-import com.yf.pool.constant_or_registry.SchedulePolicyManager;
-import com.yf.partition.Impl.partitioning.strategy.OfferPolicy;
-import com.yf.partition.Impl.partitioning.strategy.PollPolicy;
-import com.yf.partition.Impl.partitioning.strategy.RemovePolicy;
-import com.yf.pool.rejectstrategy.RejectStrategy;
-import com.yf.partition.Impl.partitioning.PartiFlow;
-import com.yf.partition.Partition;
-import com.yf.pool.threadfactory.ThreadFactory;
-import com.yf.pool.threadpool.ThreadPool;
+import com.yf.core.resource_manager.PartiResourceManager;
+import com.yf.core.resource_manager.RSResourceManager;
+import com.yf.core.resource_manager.SPResourceManager;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
+import com.yf.core.rejectstrategy.RejectStrategy;
+import com.yf.core.partition.Impl.partitioning.PartiFlow;
+import com.yf.core.partition.Partition;
+import com.yf.core.threadfactory.ThreadFactory;
+import com.yf.core.threadpool.ThreadPool;
 import com.yf.springboot_integration.pool.post_processor.RegisterPostProcessor;
 import com.yf.springboot_integration.pool.properties.PoolProperties;
 import com.yf.springboot_integration.pool.properties.QueueProperties;
@@ -43,19 +43,19 @@ public class ThreadPoolAutoConfiguration {
         Partition partition;
         RejectStrategy rejectStrategy;
         if (!queueProperties.isPartitioning()) {//非分区化
-            Class<?> taskQueueClass = QueueManager.getResources().get(queueName);
+            Class<?> taskQueueClass = PartiResourceManager.getResources().get(queueName);
             Constructor<?> queueClassConstructor = taskQueueClass.getConstructor();
             partition = (Partition) queueClassConstructor.newInstance();
             partition.setCapacity(queueProperties.getCapacity());
         } else {//分区化
             partition = new PartiFlow(queueProperties.getPartitionNum(), queueProperties.getCapacity(), queueProperties.getQueueName(),
-                    (OfferPolicy) SchedulePolicyManager.getOfferResource(queueProperties.getOfferPolicy()).getConstructor().newInstance(),
-                    (PollPolicy) SchedulePolicyManager.getPollResource(queueProperties.getPollPolicy()).getConstructor().newInstance(),
-                    (RemovePolicy) SchedulePolicyManager.getRemoveResource(queueProperties.getRemovePolicy()).getConstructor().newInstance());
+                    (OfferPolicy) SPResourceManager.getOfferResource(queueProperties.getOfferPolicy()).getConstructor().newInstance(),
+                    (PollPolicy) SPResourceManager.getPollResource(queueProperties.getPollPolicy()).getConstructor().newInstance(),
+                    (RemovePolicy) SPResourceManager.getRemoveResource(queueProperties.getRemovePolicy()).getConstructor().newInstance());
 
         }
 
-        Class<?> rejectStrategyClass = RejectStrategyManager.REJECT_STRATEGY_MAP.get(rejectStrategyName);
+        Class<?> rejectStrategyClass = RSResourceManager.REJECT_STRATEGY_MAP.get(rejectStrategyName);
         Constructor<?> rejectStrategyClassConstructor = rejectStrategyClass.getConstructor();
         rejectStrategy = (RejectStrategy) rejectStrategyClassConstructor.newInstance();
         ThreadPool threadPool = new ThreadPool(threadPoolProperties.getCoreNums(),

@@ -1,14 +1,14 @@
-import com.yf.partition.Impl.LinkedBlockingQ;
-import com.yf.partition.Impl.LinkedBlockingQS;
-import com.yf.partition.Impl.partitioning.PartiFlow;
-import com.yf.partition.Impl.partitioning.PartiStill;
-import com.yf.partition.Impl.partitioning.strategy.impl.offer_policy.HashOffer;
-import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.ThreadBindingPoll;
-import com.yf.partition.Impl.partitioning.strategy.impl.remove_policy.RoundRobinRemove;
-import com.yf.partition.Partition;
-import com.yf.pool.constant_or_registry.QueueManager;
-import com.yf.pool.threadpool.ThreadPool;
-import com.yf.pool.rejectstrategy.impl.CallerRunsStrategy;
+import com.yf.core.partition.Impl.LinkedBlockingQ;
+import com.yf.core.partition.Impl.LinkedBlockingQS;
+import com.yf.core.partition.Impl.partitioning.PartiFlow;
+import com.yf.core.partition.Impl.partitioning.PartiStill;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.HashOffer;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
+import com.yf.core.partition.Partition;
+import com.yf.core.resource_manager.PartiResourceManager;
+import com.yf.core.threadpool.ThreadPool;
+import com.yf.core.rejectstrategy.impl.CallerRunsStrategy;
 import org.junit.Test;
 
 import java.util.ArrayList;
@@ -96,7 +96,7 @@ public class PartitionQueuePerformanceTest {
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                QueueManager.LINKED,
+                PartiResourceManager.LINKED,
                 new HashOffer(),
                 new ThreadBindingPoll(),
                 new RoundRobinRemove()
@@ -104,7 +104,7 @@ public class PartitionQueuePerformanceTest {
         PartiStill<Runnable> partiStill = new PartiStill<>(
                 PARTITION_NUM,
                 CAPACITY,
-                QueueManager.LINKED,
+                PartiResourceManager.LINKED,
                 new HashOffer(),
                 new ThreadBindingPoll(),
                 new RoundRobinRemove()
@@ -122,7 +122,7 @@ public class PartitionQueuePerformanceTest {
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
                 PARTITION_NUM,
                 CAPACITY,
-                QueueManager.LINKED_S,
+                PartiResourceManager.LINKED_S,
                 new HashOffer(),
                 new ThreadBindingPoll(),
                 new RoundRobinRemove()
@@ -243,7 +243,7 @@ public class PartitionQueuePerformanceTest {
      */
     private long performTest(Partition<Runnable> partition, String queueName) throws InterruptedException {
         // 创建线程工厂（修复存活时间单位错误：60秒=60*1000毫秒）
-        com.yf.pool.threadfactory.ThreadFactory threadFactory = new com.yf.pool.threadfactory.ThreadFactory(
+        com.yf.core.threadfactory.ThreadFactory threadFactory = new com.yf.core.threadfactory.ThreadFactory(
                 queueName + "-worker",
                 false,  // 非守护线程
                 false,  // 核心线程不销毁

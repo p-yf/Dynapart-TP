@@ -1,7 +1,7 @@
 package com.yf.springboot_integration.monitor.ws;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yf.pool.constant_or_registry.Logo;
+import com.yf.core.constant.Logo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;

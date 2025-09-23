@@ -1,6 +1,5 @@
 package com.yf.test_springboot_integration;
 
-import com.yf.pool.command.PoolCommandHandler;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.ConfigurableApplicationContext;

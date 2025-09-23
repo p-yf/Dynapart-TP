@@ -1,6 +1,6 @@
 package com.yf.springboot_integration.monitor.ws;
 
-import com.yf.pool.threadpool.ThreadPool;
+import com.yf.core.threadpool.ThreadPool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;

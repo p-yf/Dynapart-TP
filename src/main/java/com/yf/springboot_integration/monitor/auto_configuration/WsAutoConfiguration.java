@@ -3,7 +3,7 @@ package com.yf.springboot_integration.monitor.auto_configuration;
 import com.yf.springboot_integration.monitor.ws.SchedulePushInfoService;
 import com.yf.springboot_integration.monitor.ws.ThreadPoolWebSocketHandler;
 import com.yf.springboot_integration.pool.auto_configuration.ThreadPoolAutoConfiguration;
-import com.yf.pool.threadpool.ThreadPool;
+import com.yf.core.threadpool.ThreadPool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;

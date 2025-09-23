@@ -1,17 +1,17 @@
 package com.yf.springboot_integration.monitor.controller;
 
-import com.yf.pool.constant_or_registry.QueueManager;
-import com.yf.pool.constant_or_registry.RejectStrategyManager;
-import com.yf.pool.constant_or_registry.SchedulePolicyManager;
-import com.yf.pool.entity.PoolInfo;
-import com.yf.pool.entity.QueueInfo;
-import com.yf.partition.Impl.partitioning.PartiFlow;
-import com.yf.partition.Impl.partitioning.strategy.OfferPolicy;
-import com.yf.partition.Impl.partitioning.strategy.PollPolicy;
-import com.yf.partition.Impl.partitioning.strategy.RemovePolicy;
-import com.yf.pool.rejectstrategy.RejectStrategy;
-import com.yf.partition.Partition;
-import com.yf.pool.threadpool.ThreadPool;
+import com.yf.core.resource_manager.PartiResourceManager;
+import com.yf.core.resource_manager.RSResourceManager;
+import com.yf.core.resource_manager.SPResourceManager;
+import com.yf.common.entity.PoolInfo;
+import com.yf.common.entity.QueueInfo;
+import com.yf.core.partition.Impl.partitioning.PartiFlow;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
+import com.yf.core.rejectstrategy.RejectStrategy;
+import com.yf.core.partition.Partition;
+import com.yf.core.threadpool.ThreadPool;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
@@ -108,16 +108,16 @@ public class MonitorController {
             return false;
         }
         Partition q;
-        if (!QueueManager.getResources().containsKey(queueInfo.getQueueName())) {//队列不存在
+        if (!PartiResourceManager.getResources().containsKey(queueInfo.getQueueName())) {//队列不存在
             return false;
         } else {//队列存在
             if(!queueInfo.isPartitioning()) {//不分区
-                q = QueueManager.getResources().get(queueInfo.getQueueName()).getConstructor(Integer.class).newInstance(queueInfo.getCapacity());
+                q = PartiResourceManager.getResources().get(queueInfo.getQueueName()).getConstructor(Integer.class).newInstance(queueInfo.getCapacity());
             }else{//分区
                 q = new PartiFlow(queueInfo.getPartitionNum(), queueInfo.getCapacity(), queueInfo.getQueueName(),
-                        (OfferPolicy) SchedulePolicyManager.getOfferResource(queueInfo.getOfferPolicy()).getConstructor().newInstance(),
-                        (PollPolicy) SchedulePolicyManager.getPollResource(queueInfo.getPollPolicy()).getConstructor().newInstance(),
-                        (RemovePolicy) SchedulePolicyManager.getRemoveResource(queueInfo.getRemovePolicy()).getConstructor().newInstance());
+                        (OfferPolicy) SPResourceManager.getOfferResource(queueInfo.getOfferPolicy()).getConstructor().newInstance(),
+                        (PollPolicy) SPResourceManager.getPollResource(queueInfo.getPollPolicy()).getConstructor().newInstance(),
+                        (RemovePolicy) SPResourceManager.getRemoveResource(queueInfo.getRemovePolicy()).getConstructor().newInstance());
             }
         }
         return threadPool.changeQueue(q, queueInfo.getQueueName());
@@ -136,10 +136,10 @@ public class MonitorController {
         try {
             rs = (RejectStrategy) context.getBean(rsName);
         } catch (NoSuchBeanDefinitionException e) {
-            if (!RejectStrategyManager.REJECT_STRATEGY_MAP.containsKey(rsName)) {
+            if (!RSResourceManager.REJECT_STRATEGY_MAP.containsKey(rsName)) {
                 return false;
             } else {
-                rs = (RejectStrategy) RejectStrategyManager.REJECT_STRATEGY_MAP.get(rsName).getConstructor().newInstance();
+                rs = (RejectStrategy) RSResourceManager.REJECT_STRATEGY_MAP.get(rsName).getConstructor().newInstance();
             }
         }
         return threadPool.changeRejectStrategy(rs, rsName);

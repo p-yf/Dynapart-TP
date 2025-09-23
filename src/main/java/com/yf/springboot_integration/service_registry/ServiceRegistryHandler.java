@@ -1,9 +1,8 @@
 package com.yf.springboot_integration.service_registry;
 
-import com.yf.pool.constant_or_registry.Logo;
-import com.yf.pool.threadpool.ThreadPool;
+import com.yf.core.constant.Logo;
+import com.yf.core.threadpool.ThreadPool;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.core.io.Resource;

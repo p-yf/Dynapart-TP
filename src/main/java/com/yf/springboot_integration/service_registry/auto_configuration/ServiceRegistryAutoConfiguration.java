@@ -1,10 +1,8 @@
 package com.yf.springboot_integration.service_registry.auto_configuration;
 
-import com.yf.pool.threadpool.ThreadPool;
+import com.yf.core.threadpool.ThreadPool;
 import com.yf.springboot_integration.service_registry.ServiceRegistryHandler;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.context.annotation.Bean;
