@@ -1,7 +1,7 @@
 package com.yf.test_springboot_integration.q;
 
 import com.yf.springboot_integration.pool.annotation.PartiResource;
-import com.yf.pool.partition.Partition;
+import com.yf.partition.Partition;
 
 /**
  * @author yyf

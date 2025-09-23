@@ -1,12 +1,12 @@
+import com.yf.partition.Impl.LinkedBlockingQ;
+import com.yf.partition.Impl.LinkedBlockingQS;
+import com.yf.partition.Impl.partitioning.PartiFlow;
+import com.yf.partition.Impl.partitioning.PartiStill;
+import com.yf.partition.Impl.partitioning.strategy.impl.offer_policy.HashOffer;
+import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.partition.Impl.partitioning.strategy.impl.remove_policy.RoundRobinRemove;
+import com.yf.partition.Partition;
 import com.yf.pool.constant_or_registry.QueueManager;
-import com.yf.pool.partition.Impl.LinkedBlockingQ;
-import com.yf.pool.partition.Impl.LinkedBlockingQS;
-import com.yf.pool.partition.Impl.parti_flow.PartiFlow;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.HashOffer;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.ThreadBindingPoll;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.remove_policy.RoundRobinRemove;
-import com.yf.pool.partition.Partition;
-import com.yf.pool.threadfactory.ThreadFactory;
 import com.yf.pool.threadpool.ThreadPool;
 import com.yf.pool.rejectstrategy.impl.CallerRunsStrategy;
 import org.junit.Test;
@@ -38,30 +38,37 @@ public class PartitionQueuePerformanceTest {
         long total = 0;
         long max = 0;
         long min = Long.MAX_VALUE;
-        for(int i = 0;i<60;i++) {
+        for(int i = 0;i<20;i++) {
             try {
                 /**
-                 * 平均每轮：1749.1
-                 * 最大：1911
-                 * 最小：1495
+                 * 平均每轮：1708.5
+                 * 最大：1830
+                 * 最小：1537
                  * 失败次数：0
                  */
 //                long testTime = testJdkThreadPoolWithLinkedBlockingQueue();
                 /**
-                 * 平均每轮：1338.98
-                 * 最大：1528
-                 * 最小：1194
+                 * PartiFlow
+                 * 平均每轮：1164.2
+                 * 最大：1239
+                 * 最小：1093
+                 * 失败次数：0
+                 *
+                 * PartiStill
+                 * 平均每轮：1008.7
+                 * 最大：1064
+                 * 最小：960
                  * 失败次数：0
                  */
-//                long testTime = testLinkedBlockingQPerformance();
+                long testTime = testLinkedBlockingQPerformance();
 
                 /**
-                 * 平均每轮：1387.36
-                 * 最大：1657
-                 * 最小：1164
+                 * 平均每轮：1265.4
+                 * 最大：1316
+                 * 最小：1227
                  * 失败次数：0
                  */
-                long testTime = testLinkedBlockingQProPerformance();
+//                long testTime = testLinkedBlockingQProPerformance();
                 if(i<=9){
                     continue;
                 }
@@ -72,7 +79,7 @@ public class PartitionQueuePerformanceTest {
                 count++;
             }
         }
-        System.out.println("平均每轮："+(double)total/50);
+        System.out.println("平均每轮："+(double)total/10);
         System.out.println("最大：" + max);
         System.out.println("最小：" + min);
         System.out.println("失败次数：" + count);
@@ -87,6 +94,14 @@ public class PartitionQueuePerformanceTest {
 
         // 创建Plus版本的分区队列
         PartiFlow<Runnable> partiFlow = new PartiFlow<>(
+                PARTITION_NUM,
+                CAPACITY,
+                QueueManager.LINKED,
+                new HashOffer(),
+                new ThreadBindingPoll(),
+                new RoundRobinRemove()
+        );
+        PartiStill<Runnable> partiStill = new PartiStill<>(
                 PARTITION_NUM,
                 CAPACITY,
                 QueueManager.LINKED,
@@ -228,12 +243,13 @@ public class PartitionQueuePerformanceTest {
      */
     private long performTest(Partition<Runnable> partition, String queueName) throws InterruptedException {
         // 创建线程工厂（修复存活时间单位错误：60秒=60*1000毫秒）
-        ThreadFactory threadFactory = new ThreadFactory(
+        com.yf.pool.threadfactory.ThreadFactory threadFactory = new com.yf.pool.threadfactory.ThreadFactory(
                 queueName + "-worker",
                 false,  // 非守护线程
                 false,  // 核心线程不销毁
                 60 * 1000      // 空闲存活时间(毫秒)
         );
+
 
         // 创建线程池
         ThreadPool threadPool = new ThreadPool(

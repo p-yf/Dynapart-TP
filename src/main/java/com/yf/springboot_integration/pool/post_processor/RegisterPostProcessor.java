@@ -4,7 +4,7 @@ import com.yf.pool.constant_or_registry.Logo;
 import com.yf.pool.constant_or_registry.QueueManager;
 import com.yf.pool.constant_or_registry.RejectStrategyManager;
 import com.yf.pool.constant_or_registry.SchedulePolicyManager;
-import com.yf.pool.partition.Partition;
+import com.yf.partition.Partition;
 import com.yf.pool.rejectstrategy.RejectStrategy;
 import com.yf.springboot_integration.pool.annotation.PartiResource;
 import com.yf.springboot_integration.pool.annotation.RSResource;

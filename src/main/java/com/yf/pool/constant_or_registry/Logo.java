@@ -7,6 +7,7 @@ package com.yf.pool.constant_or_registry;
  */
 public class Logo {
     public static final String START_LOGO = "\033[34m"+"""
+            
             ╔═══════════════════════════════════════╗
             ║ o ██████╗     ████████╗    ██████╗  o ║
             ║   ██╔══██╗    ╚══██╔══╝    ██╔══██╗   ║

@@ -1,20 +1,19 @@
 package com.yf.pool.constant_or_registry;
 
 
-import com.yf.pool.partition.Impl.parti_flow.strategy.OfferPolicy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.PollPolicy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.RemovePolicy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.HashOffer;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.RandomOffer;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.RoundRobinOffer;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.ValleyFillingOffer;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.PeekShavingPoll;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.RandomPoll;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.RoundRobinPoll;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.ThreadBindingPoll;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.remove_policy.PeekShavingRemove;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.remove_policy.RoundRobinRemove;
-import com.yf.pool.rejectstrategy.RejectStrategy;
+import com.yf.partition.Impl.partitioning.strategy.OfferPolicy;
+import com.yf.partition.Impl.partitioning.strategy.PollPolicy;
+import com.yf.partition.Impl.partitioning.strategy.RemovePolicy;
+import com.yf.partition.Impl.partitioning.strategy.impl.offer_policy.HashOffer;
+import com.yf.partition.Impl.partitioning.strategy.impl.offer_policy.RandomOffer;
+import com.yf.partition.Impl.partitioning.strategy.impl.offer_policy.RoundRobinOffer;
+import com.yf.partition.Impl.partitioning.strategy.impl.offer_policy.ValleyFillingOffer;
+import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.PeekShavingPoll;
+import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.RandomPoll;
+import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.RoundRobinPoll;
+import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.partition.Impl.partitioning.strategy.impl.remove_policy.PeekShavingRemove;
+import com.yf.partition.Impl.partitioning.strategy.impl.remove_policy.RoundRobinRemove;
 
 import java.util.HashMap;
 import java.util.Map;

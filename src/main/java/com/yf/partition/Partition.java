@@ -1,4 +1,4 @@
-package com.yf.pool.partition;
+package com.yf.partition;
 
 import lombok.Getter;
 import lombok.Setter;

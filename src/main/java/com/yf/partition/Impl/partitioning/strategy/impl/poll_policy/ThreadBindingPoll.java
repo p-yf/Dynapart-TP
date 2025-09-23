@@ -1,7 +1,7 @@
-package com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy;
+package com.yf.partition.Impl.partitioning.strategy.impl.poll_policy;
 
-import com.yf.pool.partition.Impl.parti_flow.strategy.PollPolicy;
-import com.yf.pool.partition.Partition;
+import com.yf.partition.Impl.partitioning.strategy.PollPolicy;
+import com.yf.partition.Partition;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -10,14 +10,26 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @date 2025/9/21 0:08
  * @description
  */
-public class ThreadBindingPoll implements PollPolicy {
+public class ThreadBindingPoll extends PollPolicy {
     final AtomicInteger round = new AtomicInteger(0);
     final ThreadLocal<Integer> threadLocal = new ThreadLocal<>();
+    private volatile boolean roundRobin = false;
+
     @Override
     public int selectPartition(Partition[] partitions) {
         if(threadLocal.get()==null){
             threadLocal.set(round.getAndIncrement()%partitions.length);
         }
         return threadLocal.get();
+    }
+
+    @Override
+    public boolean getRoundRobin() {
+        return roundRobin;
+    }
+
+    @Override
+    public void setRoundRobin(boolean roundRobin) {
+        this.roundRobin = roundRobin;
     }
 }

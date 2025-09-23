@@ -1,9 +1,9 @@
 package com.yf.pool.constant_or_registry;
 
-import com.yf.pool.partition.Impl.LinkedBlockingQ;
-import com.yf.pool.partition.Impl.LinkedBlockingQS;
-import com.yf.pool.partition.Impl.PriorityBlockingQ;
-import com.yf.pool.partition.Partition;
+import com.yf.partition.Impl.LinkedBlockingQ;
+import com.yf.partition.Impl.LinkedBlockingQS;
+import com.yf.partition.Impl.PriorityBlockingQ;
+import com.yf.partition.Partition;
 
 import java.util.HashMap;
 import java.util.Map;

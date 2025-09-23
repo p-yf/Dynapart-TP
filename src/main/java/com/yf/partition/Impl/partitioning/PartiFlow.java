@@ -1,15 +1,15 @@
-package com.yf.pool.partition.Impl.parti_flow;
+package com.yf.partition.Impl.partitioning;
 
 import com.yf.pool.constant_or_registry.QueueManager;
-import com.yf.pool.partition.Impl.LinkedBlockingQ;
-import com.yf.pool.partition.Impl.parti_flow.strategy.OfferPolicy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.PollPolicy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.RemovePolicy;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.offer_policy.RoundRobinOffer;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.RoundRobinPoll;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.poll_policy.ThreadBindingPoll;
-import com.yf.pool.partition.Impl.parti_flow.strategy.impl.remove_policy.RoundRobinRemove;
-import com.yf.pool.partition.Partition;
+import com.yf.partition.Impl.LinkedBlockingQ;
+import com.yf.partition.Impl.partitioning.strategy.OfferPolicy;
+import com.yf.partition.Impl.partitioning.strategy.PollPolicy;
+import com.yf.partition.Impl.partitioning.strategy.RemovePolicy;
+import com.yf.partition.Impl.partitioning.strategy.impl.offer_policy.RoundRobinOffer;
+import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.RoundRobinPoll;
+import com.yf.partition.Impl.partitioning.strategy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.partition.Impl.partitioning.strategy.impl.remove_policy.RoundRobinRemove;
+import com.yf.partition.Partition;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -98,6 +98,9 @@ public class PartiFlow<T> extends Partition<T>{
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
+        if(!offerPolicy.getRoundRobin()){//不轮询
+            return partitions[offerPolicy.selectPartition(partitions, element)].offer(element);
+        }
         int index = offerPolicy.selectPartition(partitions, element);
         Boolean suc = false;
         for(int i = 0;i<partitions.length&&!suc;i++) {
@@ -109,9 +112,10 @@ public class PartiFlow<T> extends Partition<T>{
 
     @Override
     public T poll(Integer waitTime) throws InterruptedException {
-        if(pollPolicy instanceof ThreadBindingPoll){//线程绑定不轮询
-            return partitions[pollPolicy.selectPartition( partitions)].poll(waitTime);
+        if(!pollPolicy.getRoundRobin()){//不轮询
+            return partitions[pollPolicy.selectPartition(partitions)].poll(waitTime);
         }
+
         T element = null;
         int partitionIndex = pollPolicy.selectPartition(partitions);
         if(waitTime==null){//说明无限等待

@@ -1,6 +1,6 @@
-package com.yf.pool.partition.Impl;
+package com.yf.partition.Impl;
 
-import com.yf.pool.partition.Partition;
+import com.yf.partition.Partition;
 import lombok.Data;
 import lombok.Getter;
 import lombok.Setter;
