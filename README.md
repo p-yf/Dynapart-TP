@@ -6,13 +6,15 @@
 
 DynaPart-TP 是一个高性能、可动态调整的轻量级线程池框架，专为需要精细控制并发任务执行的Java应用程序设计。该框架提供了丰富的线程池管理功能，包括参数动态调整、实时监控和灵活的任务调度策略。
 
+前置知识：“资源”指的就是项目中的队列、拒绝策略、调度规则等。“分区化”是项目的重点创新，是一种队列降低锁粒度的方式
+
 ### 核心功能
 - **动态参数调整**：无需重启应用，实时调整核心线程数、最大线程数，甚至是任务队列等参数
-- **多队列支持**：可切换不同类型的任务队列（如阻塞队列、优先级队列）
-- **灵活的拒绝策略**：支持多种任务拒绝策略，并可动态切换
+- **灵活自定义**：可自定义各种组件资源，如：任务队列、拒绝策略、调度规则等
 - **实时监控**：通过REST API和WebSocket实时监控线程池状态
-- **Spring Boot集成**：与Spring Boot框架无缝集成，支持自动配置
+- **Spring Boot集成**：与Spring Boot框架无缝集成，支持自动配置，同时利用注解驱动的开发思想
 - **轻松扩展**：只需要实现接口就能轻松自定义任务队列、拒绝策略
+- **分区化队列模型**：支持分区化队列（PartiFlow和PartiStill用来实现分区化），降低锁粒度，提高吞吐量，提升稳定性
 
 ## 💡 实现亮点
 
@@ -22,15 +24,19 @@ DynaPart-TP 是一个高性能、可动态调整的轻量级线程池框架，�
 ### 2. 实时监控系统
 通过WebSocket实现了线程池状态的实时推送，客户端可以实时获取线程池的工作状态、任务队列长度等信息。同时提供了REST API用于查询和调整线程池参数。
 
-### 3. 可视化监控中心
-提供了Web界面的监控中心，可直观查看线程池状态、配置参数，并支持在线修改配置。访问`http://localhost:8080/configuration.html`即可进入监控中心。
+### 3. 可插拔的组件设计
+- **任务队列**：支持多种队列实现，可根据业务需求动态切换，支持自定义
+- **拒绝策略**：提供多种拒绝策略（如CallerRuns、DiscardOldest等），支持自定义
+- **调度规则**：支持多种出入队调度规则，如轮询、随机、哈希、填谷等，支持自定义
 
-### 4. 可插拔的组件设计
-- **任务队列**：支持多种队列实现，可根据业务需求动态切换
-- **拒绝策略**：提供多种拒绝策略（如CallerRuns、DiscardOldest等），并支持自定义策略
+### 4. 线程生命周期管理
+精细控制线程的创建和销毁，支持线程的动态调整和自动回收。
 
-### 5. 线程生命周期管理
-精细控制线程的创建和销毁，支持核心线程的动态调整和非核心线程的自动回收。
+### 5. 良好的架构设计
+1 遵循了开闭原则：所以无论是使用者还是开发者进行扩展都会很轻松，心旷神怡。
+2 资源管理中心：注册表设计模式，项目中有三个资源管理中心分别管理分区（就是队列）、拒绝策略、调度规则，方便开发者扩展资源
+3 合理利用springboot机制：在springboot环境下能够实现自动装配和通过注解来注册资源
+4 利用组合模式实现了分区（队列）的自由分区与否
 
 ### 6. 分区化队列模型（Partition）
 分区化是框架的核心特性之一，它将队列抽象为一种分区表现形式。任何队列只要实现了`Partition`接口，就可以自由选择成为分区队列或者单个队列。
@@ -40,17 +46,12 @@ DynaPart-TP 是一个高性能、可动态调整的轻量级线程池框架，�
 - **细粒度控制**：可根据业务需求动态调整分区数量和容量
 - **高性能设计**：通过多分区并行处理提高吞吐量，减少锁竞争
 
-### 7. 命令行交互功能
-提供命令行接口，支持在线查询线程池状态、修改配置参数等操作，如`yf info pool`、`yf change worker`等。
-
-### 8. Redis集成支持
-框架支持与Redis集成，可用于分布式环境下的线程池状态共享和任务调度。
 
 ## 🚀 性能对比
 
-通过测试对比，DynaPart-TP线程池与JDK线程池相比具有明
+通过测试对比，可看到在锁竞争激烈的情况下DynaPart-TP线程池与JDK线程池相比具有明显性能优势
 
-### 性能优势
+### 性能优势（测试仅限锁竞争激烈的情况）
 1. **更高吞吐量**：在相同配置下，DynaPart-TP处理任务的速度远高于JDK线程池
 2. **更好的资源利用**：通过分区化设计，减少线程等待时间，提高CPU利用率
 3. **更稳定的性能**：在高并发场景下，DynaPart-TP的性能波动更小
@@ -63,38 +64,34 @@ DynaPart-TP 是一个高性能、可动态调整的轻量级线程池框架，�
 在`application.yml`中添加以下配置：
 
 ```yaml
-server:
-  port: 8080
-
 #线程池配置
 yf:
   thread-pool:
     pool:
       enabled: true
-      coreNums: 5    #线程池核心线程数
-      maxNums: 10    #线程池最大线程数
+      coreNums: 10    #线程池核心线程数
+      maxNums: 50    #线程池最大线程数
       poolName: yf-thread-pool   #线程池名称
       threadName: yf-thread      #线程名称
       isDaemon: true      #是否是守护线程
       coreDestroy: false  #核心线程是否销毁
       aliveTime: 5000        #线程存活时间（单位：ms）
-      rejectStrategyName: callerRuns   #拒绝策略名称
+      rejectStrategyName: discard   #拒绝策略名称
     queue:     #(由于queue比较重要，所以与pool和monitor一个层级)
-      partitioning: true  #是否分区化(如果是false，只需要读取capacity和queueName)
+      partitioning: false  #是否分区化(如果是false，只需要读取capacity和queueName)
       partitionNum: 10      #分区数量
-      capacity: 500         #队列容量（不写代表null，为无界）
-      queueName: linked_plus     #队列名称
-      offerStrategy:       #入队策略
-      pollStrategy:        #出队策略
-      removeStrategy:      #移除策略
+      capacity: 10000         #队列容量（不写代表null，为无界）
+      queueName: linked     #队列名称
+      offerPolicy: ROUND_ROBIN       #入队策略
+      pollPolicy: THREAD_BINDING      #出队策略
+      removePolicy: ROUND_ROBIN     #移除策略
     monitor:
       enabled: true       #是否开启监控
-      fixedDelay: 5000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
-      qReplaceable: false  #是否可更换队列     默认是开启的（不写这个key默认开启，写了key后只有value为true才是开启，以下同理）
-      rsReplaceable: false #是否可更换拒绝策略
+      fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
     service-registry:      #是否开启服务注册
-        enabled: true
-
+      enabled: false
+      heartBeat: 10000   #心跳间隔时间(单位：ms)
+      expireTime: 12000  #注册数据失效时间(单位：ms)
 ```
 
 #### 1.2使用线程池
@@ -134,13 +131,8 @@ Future<?> future = threadPool.submit(() -> {
 - 调整线程参数：`PUT /monitor/worker`
 - 切换队列：`PUT /monitor/queue`
 - 切换拒绝策略：`PUT /monitor/rejectStrategy`
+- ......
 
-#### WebSocket实时监控
-连接`/monitor/threads`端点，实时接收线程池状态更新。
-
-
-
-这种方式会优先使用配置文件中定义的`server.port`，如果没有定义则默认使用8080端口。
 
 ### 2. 非Spring Boot环境使用
 
@@ -195,148 +187,104 @@ Future<?> future = threadPool.submit(() -> {
 - yf change rejectstrategy callerRuns(拒绝策略名称举例)   //改变拒绝策略
 
 
-## 🔧 开发者扩展说明
+## 🔧 开发者自定义扩展资源说明
 
-### 自定义任务队列
-要实现自定义任务队列，只需继承`Partition`抽象类并实现其抽象方法：
+### 只举调度策略自定义的例子，并且举的例子是入队规则的，队列和拒绝策略自定义的方法差不多
+调度策略涉及了入队、出队和移除策略，所以共有三个Map来管理，key：资源名称，value：调度策略类
+以下分别说明springboot环境和非springboot环境的使用方式，当然，springboot环境肯定是兼容非springboot环境的使用方法的
 
+springboot环境：
 ```java
-// Spring Boot环境下使用该注解并指定队列名称
-@PartitionBean("custom")
-public class CustomQueue<T> extends Partition<T> {
-    // 需要保证线程安全
+/**
+ * @author yyf
+ * @date 2025/9/21 0:57
+ * @description
+ */
+@SPResource("mysp")//无论是出队还是入队还是移除都是使用这个注解，但是继承的类是不同的，注解value值是资源名称。
+public class mysp extends OfferPolicy {
 
-    public CustomQueue() {
+    @Override
+    public int selectPartition(Partition[] partitions, Object object) {
+        return 0;
+    }
+
+//    （只有入队和出队有轮询相关接口，移除没有，只有PartiFlow实现分区化才能够自由选择是否轮询，PartiStill无轮询相关功能）
+//    这里的轮询指的是在调度策略执行后是否轮询下一个分区尝试出队或者入队，不要跟出入队调度规则中的轮询规则搞浑了
+    @Override
+    public boolean getRoundRobin() {//在入队失败后是否选择轮询接下来的分区
+        return false;
     }
 
     @Override
-    public Boolean offer(T task) {
+    public void setRoundRobin(boolean roundRobin) {//设置是否轮询
 
-    }
-
-    // 可选：实现warning方法，在添加任务后执行警告逻辑
-    public void warning() {
-
-    }
-
-    @Override
-    public T getEle(Integer waitTime) throws InterruptedException {
-
-    }
-
-    @Override
-    public Boolean removeEle() {
-
-    }
-
-    @Override
-    public int getEleNums() {
-    }
-
-    @Override
-    public void lockGlobally() {
-    }
-
-    @Override
-    public void unlockGlobally() {
-    }
-
-    @Override
-    public Integer getCapacity() {
-    }
-
-    @Override
-    public void setCapacity(Integer capacity) {
     }
 }
 ```
 
-然后，在`OfQueue`常量类中注册你的自定义队列（本项目开发者需要，使用者需要只需要将map.put(:"队列名称",队列类型)就行）：
-
+非springboot环境，在实现相关的类后还需要注册到注册中心，需要调用静态方法register
 ```java
-public class OfQueue {
-    public final static String CUSTOM = "custom";
-    // 其他队列类型...
-    
+/**
+ * @author yyf
+ * @date 2025/9/20 21:29
+ * @description : 调度规则资源管理(SchedulePolicyResourceManager)
+ */
+public class SPResourceManager {
+    private static final Map<String,Class<? extends OfferPolicy>> OFFER_POLICY_MAP = new HashMap<>();
+    private static final Map<String,Class<? extends PollPolicy>> POLL_POLICY_MAP = new HashMap<>();
+    private static final Map<String,Class<? extends RemovePolicy>> REMOVE_POLICY_MAP = new HashMap<>();
     static {
-        // 已有的队列注册
-        TASK_QUEUE_MAP.put(LINKED_MINI, LinkedBlockingQMini.class);
-        TASK_QUEUE_MAP.put(LINKED_PLUS, LinkedBlockingQPlus.class);
-        TASK_QUEUE_MAP.put(PRIORITY, PriorityBlockingQueue.class);
-        
-        // 注册自定义队列
-        TASK_QUEUE_MAP.put(CUSTOM, CustomQueue.class);
-    }
-}
-```
+        //offer
+        register("round_robin", RoundRobinOffer.class);
+        register("random", RandomOffer.class);
+        register("hash", HashOffer.class);
+        register("valley_filling", ValleyFillingOffer.class);
 
-### 自定义拒绝策略
-要实现自定义拒绝策略，只需继承`RejectStrategy`抽象类：
+        //poll
+        register("round_robin", RoundRobinPoll.class);
+        register("peek_shaving", PeekShavingPoll.class);
+        register("thread_binding", ThreadBindingPoll.class);
+        register("random", RandomPoll.class);
 
-```java
-// Spring Boot环境下使用该注解并指定策略名称
-@RejectStrategyBean("custom")
-public class CustomRejectStrategy extends RejectStrategy {
-    @Override
-    public void reject(Runnable task) {
+        //remove
+        register("round_robin", RoundRobinRemove.class);
+        register("peek_shaving", PeekShavingRemove.class);
+        register("random", PeekShavingRemove.class);
 
     }
-}
-```
 
-然后，在`OfRejectStrategy`常量类中注册你的自定义拒绝策略（注册逻辑与上述队列一致）：
+    public static void register(String name, Class policyClass) {
+        if(policyClass.getSuperclass()==OfferPolicy.class) {
+            OFFER_POLICY_MAP.put(name, policyClass);
+        }
+        if(policyClass.getSuperclass()==PollPolicy.class) {
+            POLL_POLICY_MAP.put(name, policyClass);
+        }
+        if (policyClass.getSuperclass() == RemovePolicy.class) {
+            REMOVE_POLICY_MAP.put(name, policyClass);
+        }
+    }
 
-```java
-public class OfRejectStrategy {
-    public final static String CUSTOM = "custom";
-    // 其他拒绝策略...
-    
-    static {
-        // 已有的策略注册
-        REJECT_STRATEGY_MAP.put(CALLER_RUNS, CallerRunsStrategy.class);
-        REJECT_STRATEGY_MAP.put(DISCARD_OLDEST, DiscardOldestStrategy.class);
-        REJECT_STRATEGY_MAP.put(DISCARD, DiscardStrategy.class);
-        
-        // 注册自定义策略
-        REJECT_STRATEGY_MAP.put(CUSTOM, CustomRejectStrategy.class);
+    public static Class<? extends OfferPolicy> getOfferResource(String name){
+        return OFFER_POLICY_MAP.get(name);
+    }
+    public static Class<? extends PollPolicy> getPollResource(String name){
+        return POLL_POLICY_MAP.get(name);
+    }
+    public static Class<? extends RemovePolicy> getRemoveResource(String name){
+        return REMOVE_POLICY_MAP.get(name);
+    }
+    public static Map<String,Class<? extends OfferPolicy>> getOfferResources(){
+        return OFFER_POLICY_MAP;
+    }
+    public static Map<String,Class<? extends PollPolicy>> getPollResources(){
+        return POLL_POLICY_MAP;
+    }
+    public static Map<String,Class<? extends RemovePolicy>> getRemoveResources(){
+        return REMOVE_POLICY_MAP;
     }
 }
+
 ```
-
-## 📚 技术文档
-
-### 核心技术实现
-
-#### 1. 线程池核心实现
-- **动态参数调整**：通过`ThreadPool`类中的方法实现核心线程数、最大线程数等参数的动态调整
-- **线程生命周期管理**：通过`Worker`类中的循环任务和超时机制实现线程的创建和自动回收
-- **任务调度**：使用`Partition`接口定义的队列实现任务的存储和调度
-
-#### 2. 并发控制机制
-- 使用`ReentrantLock`和`ReadWriteLock`保证线程安全
-- 使用`Condition`实现线程间的通信和等待唤醒机制
-- 采用精细的锁粒度，避免全局锁带来的性能瓶颈,例如线程池任务提交利用cas以及组件内部锁、队列使用头尾锁以及头锁尾cas等等
-
-#### 3. 组件设计模式
-- **策略模式**：用于实现不同的拒绝策略和任务队列
-- **工厂模式**：通过`ThreadFactory`创建线程
-- **模板方法**：在Partition中定义添加任务后报警的模板方法，具体的逻辑子类实现
-- **观察者模式**：通过WebSocket实现线程池状态的实时推送
-
-#### 4. Spring Boot集成
-- 使用`@ConfigurationProperties`和`@AutoConfiguration`实现自动配置
-- 通过`@ConditionalOnProperty`和`@Conditional`实现条件装配
-- 提供`ThreadPoolProperties`类让用户可以通过配置文件自定义线程池参数
-
-#### 5. 监控系统
-- **REST API**：提供HTTP接口用于查询和调整线程池参数
-- **WebSocket**：通过`ThreadPoolWebSocketHandler`实现线程池状态的实时推送
-- **前端监控界面**：使用HTML、Tailwind CSS和JavaScript实现可视化监控界面（豆包生成的哦）
-
-#### 6. 分区化概念
-- 将队列都抽象为`Partition`，利用抽象基类以及装饰器模式，可以轻松将队列分区化，通过`PartiFlow`类实现多队列并行处理
-- 支持多种分区策略：轮询、随机、Hash、填谷等入队策略；轮询、随机、削峰等出队策略
-- 极大降低锁粒度，提升系统并发性能和稳定性
-
 
 

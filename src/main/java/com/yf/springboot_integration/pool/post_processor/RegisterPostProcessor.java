@@ -1,6 +1,6 @@
 package com.yf.springboot_integration.pool.post_processor;
 
-import com.yf.core.constant.Logo;
+import com.yf.common.constant.Logo;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;

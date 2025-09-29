@@ -22,9 +22,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.yf.core.constant.Logo.START_LOGO;
-import static com.yf.core.constant.OfWorker.CORE;
-import static com.yf.core.constant.OfWorker.EXTRA;
+import static com.yf.common.constant.Logo.START_LOGO;
+import static com.yf.common.constant.OfWorker.CORE;
+import static com.yf.common.constant.OfWorker.EXTRA;
 
 
 /**
@@ -41,8 +41,8 @@ public class ThreadPool {
     private ThreadFactory threadFactory;
     private Partition<Runnable> partition;
     private RejectStrategy rejectStrategy;
-    private Integer coreNums;//核心线程数
-    private Integer maxNums;//最大线程数
+    private volatile Integer coreNums;//核心线程数
+    private volatile Integer maxNums;//最大线程数
     private Set<Worker> coreList = ConcurrentHashMap.newKeySet();
     private Set<Worker> extraList = ConcurrentHashMap.newKeySet();
     private final AtomicInteger coreWorkerCount = new AtomicInteger(0); // 核心线程存活数

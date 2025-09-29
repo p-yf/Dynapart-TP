@@ -47,7 +47,7 @@
             <artifactId>spring-boot-starter-websocket</artifactId>
         </dependency>
 
-<!--        ==============集群的特殊依赖===============         -->
+<!--        ==============分布式服务注册的特殊依赖===============         -->
         <!-- Redis Starter核心依赖（自动配置RedisTemplate、连接池等） -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

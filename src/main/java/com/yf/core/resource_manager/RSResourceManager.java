@@ -18,9 +18,9 @@ public class RSResourceManager {
     public final static String DISCARD = "discard";//直接丢弃
     public static final Map<String, Class<? extends RejectStrategy>> REJECT_STRATEGY_MAP = new HashMap<>();
     static {
-        REJECT_STRATEGY_MAP.put(CALLER_RUNS, CallerRunsStrategy.class);
-        REJECT_STRATEGY_MAP.put(DISCARD_OLDEST, DiscardOldestStrategy.class);
-        REJECT_STRATEGY_MAP.put(DISCARD, DiscardStrategy.class);
+        register(CALLER_RUNS, CallerRunsStrategy.class);
+        register(DISCARD_OLDEST, DiscardOldestStrategy.class);
+        register(DISCARD, DiscardStrategy.class);
     }
 
     public static void  register(String rejectStrategyName, Class<? extends RejectStrategy> rejectStrategyClass) {

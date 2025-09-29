@@ -45,7 +45,7 @@ public class PartiStill<T> extends Partition<T> {
         Class<?> qClass = PartiResourceManager.getResources().get(QName);
         partitions = new Partition[partitionNum];
         this.capacity = capacity;
-        if (capacity != null) {//不为null，轮询分配
+        if (capacity != null) {//不为null，轮询分配容量
             final int baseCapacity = capacity / partitionNum;
             final int remainder = capacity % partitionNum;
             for (int i = 0; i < partitionNum; i++) {

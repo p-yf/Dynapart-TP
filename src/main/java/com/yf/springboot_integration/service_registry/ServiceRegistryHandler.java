@@ -1,6 +1,6 @@
 package com.yf.springboot_integration.service_registry;
 
-import com.yf.core.constant.Logo;
+import com.yf.common.constant.Logo;
 import com.yf.core.threadpool.ThreadPool;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
