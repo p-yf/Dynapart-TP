@@ -15,7 +15,7 @@ public class DiscardOldestStrategy extends RejectStrategy {
     public void reject(ThreadPool threadPool,Runnable task) {
         Runnable runnable = threadPool.getPartition().removeEle();
         if(runnable instanceof FutureTask){
-            ((FutureTask<?>) runnable).cancel(true);
+            ((FutureTask<?>) runnable).cancel(false);
         }
     }
 
