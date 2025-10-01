@@ -165,10 +165,10 @@ public class LinkedBlockingQS<T> extends Partition<T> {
         this.capacity = capacity;
     }
 
-    public Boolean removeEle() {
+    public T removeEle() {
         // 无锁快速失败：空队列直接返回
         if (size.get() == 0) {
-            return false;
+            return null;
         }
 
         int c = -1;
@@ -179,7 +179,7 @@ public class LinkedBlockingQS<T> extends Partition<T> {
             first = h.getNext();
             // 如果没有元素，返回失败
             if (first == null) {
-                return false;
+                return null;
             }
         } while (!head.compareAndSet(h, first));
 
@@ -192,7 +192,7 @@ public class LinkedBlockingQS<T> extends Partition<T> {
             signalWaitForNotEmpty();
         }
 
-        return true;
+        return first.getValue();
     }
 
     public int getEleNums() {

@@ -147,7 +147,7 @@ public class PartiFlow<T> extends Partition<T>{
         }
     }
     @Override
-    public Boolean removeEle() {
+    public T removeEle() {
         return partitions[removePolicy.selectPartition(partitions)].removeEle();
     }
 

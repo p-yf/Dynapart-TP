@@ -19,8 +19,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static com.yf.common.constant.Logo.START_LOGO;
 import static com.yf.common.constant.OfWorker.CORE;
@@ -37,7 +35,6 @@ public class ThreadPool {
     static {
         System.out.println(START_LOGO);
     }
-    private Lock lock = new ReentrantLock();
     private ThreadFactory threadFactory;
     private Partition<Runnable> partition;
     private RejectStrategy rejectStrategy;
@@ -72,6 +69,9 @@ public class ThreadPool {
             }
         }
         if (partition.offer(task)) {
+            if(coreNums==0){
+                addWorker(task,false);
+            }
             return;
         }
         if (addWorker(task,false)) {
@@ -81,22 +81,11 @@ public class ThreadPool {
     }
 
 
-    public Future submit(Callable<Object> callable) {
-        FutureTask task = new FutureTask(callable);
-        if (coreWorkerCount.get() < coreNums) {
-            if (addWorker(task,true)) {
-                return  task;
-            }
-        }
-        if (partition.offer(task)) {
-            return  task;
-        }
-        if (addWorker(task,false)) {
-            return  task;
-        }
-        rejectStrategy.reject(this,task);
-        task.cancel(true);
-        return task;
+    public <T> Future<T> submit(Callable<T> callable) {
+        if (callable == null) throw new NullPointerException();
+        FutureTask<T> ftask = new FutureTask<>(callable);
+        execute(ftask);
+        return ftask;
     }
 
 

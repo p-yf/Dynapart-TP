@@ -130,29 +130,29 @@ public class LinkedBlockingQ<T> extends Partition<T> {
      */
 
 
-    public Boolean removeEle() {
+    public T removeEle() {
+        T ele = null;
         // 无锁快速失败：空队列直接返回
         if (size.get() == 0) {
-            return false;
+            return ele;
         }
-
         int c = -1;
         headLock.lock();
         try {
             if (size.get() > 0) {
-                dequeue(); // 复用poll中的节点删除逻辑
+                ele = dequeue();// 复用poll中的节点删除逻辑
                 c = size.getAndDecrement();
                 // 队列仍有元素：唤醒下一个消费者
                 if (c > 1) {
                     notEmpty.signal();
                 }
             } else {
-                return false;
+                return null;
             }
         } finally {
             headLock.unlock();
         }
-        return true;
+        return ele;
     }
 
     public int getEleNums() {

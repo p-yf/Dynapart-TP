@@ -7,18 +7,13 @@ import lombok.Setter;
 import java.util.Comparator;
 import java.util.PriorityQueue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.concurrent.locks.*;
 
 @Setter
 @Getter
 public class PriorityBlockingQ<T> extends Partition<T> {
-    private final ReadWriteLock rwLock = new ReentrantReadWriteLock(false);
-    private final Lock rLock = rwLock.readLock();
-    private final Lock wLock = rwLock.writeLock();
-    private final Condition notEmpty = wLock.newCondition(); // 仅用于出队等待
+    private final Lock lock = new ReentrantLock( false);
+    private final Condition notEmpty = lock.newCondition(); // 仅用于出队等待
     private volatile Integer capacity;
     private final PriorityQueue<T> q;
 
@@ -42,7 +37,7 @@ public class PriorityBlockingQ<T> extends Partition<T> {
         if (capacity != null && getEleNums() >= capacity) {
             return false;
         }
-        wLock.lock();
+        lock.lock();
         try {
             // 二次检查容量（锁内确保准确性）
             if (capacity != null && q.size() >= capacity) {
@@ -52,7 +47,7 @@ public class PriorityBlockingQ<T> extends Partition<T> {
             notEmpty.signal(); // 唤醒等待出队的线程
             return added;
         } finally {
-            wLock.unlock();
+            lock.unlock();
         }
     }
 
@@ -61,7 +56,7 @@ public class PriorityBlockingQ<T> extends Partition<T> {
      */
     @Override
     public T poll(Integer waitTime) throws InterruptedException {
-        wLock.lock();
+        lock.lock();
         try {
             while (q.isEmpty()) {
                 if (waitTime != null) {
@@ -76,56 +71,21 @@ public class PriorityBlockingQ<T> extends Partition<T> {
             }
             return q.poll(); // 获取并移除优先级最高的任务（队列头部）
         } finally {
-            wLock.unlock();
+            lock.unlock();
         }
     }
 
-    /**
-     * 修复：移除优先级最低的任务（原逻辑错误地移除了头部元素）
-     */
     @Override
-    public Boolean removeEle() {
-        wLock.lock();
-        try {
-            if (q.isEmpty()) {
-                return false; // 队列为空时直接返回失败
+    public T removeEle() {
+        lock.lock();
+        try{
+            if(q.isEmpty()){
+                return null;
+            }else{
+                return q.remove();
             }
-
-            // 1. 遍历找到优先级最低的任务
-            T lowestPriorityTask = null;
-            for (T task : q) {
-                if (lowestPriorityTask == null) {
-                    lowestPriorityTask = task;
-                    continue;
-                }
-                // 2. 通过比较器判断优先级（核心修复点）
-                Comparator<? super T> comparator = q.comparator();
-                if (comparator != null) {
-                    // 若task比当前最低优先级任务更低，则更新
-                    if (comparator.compare(task, lowestPriorityTask) > 0) {
-                        lowestPriorityTask = task;
-                    }
-                } else {
-                    // 若无比较器，假设T实现了Comparable（如PriorityTask）
-                    @SuppressWarnings("unchecked")
-                    Comparable<? super T> comparableTask = (Comparable<? super T>) task;
-                    if (comparableTask.compareTo(lowestPriorityTask) > 0) {
-                        lowestPriorityTask = task;
-                    }
-                }
-            }
-
-            // 3. 移除找到的最低优先级任务
-            if (lowestPriorityTask != null) {
-                q.remove(lowestPriorityTask);
-                return true;
-            }
-            return false;
-        } catch (Exception e) {
-            // 处理可能的异常（如元素不存在，理论上不会发生）
-            return false;
         } finally {
-            wLock.unlock();
+            lock.unlock();
         }
     }
 
@@ -139,12 +99,12 @@ public class PriorityBlockingQ<T> extends Partition<T> {
 
     @Override
     public void lockGlobally() {
-        wLock.lock();
+        lock.lock();
     }
 
     @Override
     public void unlockGlobally() {
-        wLock.unlock();
+        lock.unlock();
     }
 
 }

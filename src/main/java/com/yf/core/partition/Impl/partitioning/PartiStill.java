@@ -100,7 +100,7 @@ public class PartiStill<T> extends Partition<T> {
         return partitions[pollPolicy.selectPartition( partitions)].poll(waitTime);
     }
     @Override
-    public Boolean removeEle() {
+    public T removeEle() {
         return partitions[removePolicy.selectPartition(partitions)].removeEle();
     }
 

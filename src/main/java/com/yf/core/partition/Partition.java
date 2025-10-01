@@ -32,7 +32,7 @@ public abstract class Partition<T> {
     /**
      * 移除任务(用于丢弃策略)
      */
-    public abstract Boolean removeEle();
+    public abstract T removeEle();
 
 
     /**
