@@ -88,8 +88,10 @@ public class Worker extends Thread {
         try {
             if (onTimeTask != null) {
                 try {
+                    lock.lock();
                     onTimeTask.run();
                 } catch (Throwable t) {
+                    lock.unlock();
                     log.error("onTimeTask执行异常", t);
                 } finally {
                     onTimeTask = null; // 无论是否异常，都清空初始任务
