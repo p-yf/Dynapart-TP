@@ -76,7 +76,7 @@ public class ServiceRegistryHandler {
                 redisScript,
                 zsetKeys
         );
-        System.out.println(Logo.log_logo+"beating....");
+        System.out.println(Logo.LOG_LOGO +"beating....");
     }
 
     public void register(){//注册服务

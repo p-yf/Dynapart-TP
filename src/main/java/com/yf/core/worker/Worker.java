@@ -1,11 +1,14 @@
 package com.yf.core.worker;
 
+import com.yf.common.constant.Logo;
 import com.yf.core.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 
 /**
@@ -16,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Getter
 @Setter
 public class Worker extends Thread {
-    private static  AtomicInteger countId = new AtomicInteger(0);
+    private Lock lock = new ReentrantLock();
     volatile private Boolean flag = true;
     volatile private Boolean isCore;
     private ThreadPool threadPool;
@@ -49,24 +52,28 @@ public class Worker extends Thread {
                         break;
                     }
                 }
-                if (runnable != null) {
+                try {
+                    lock.lock();//获取锁才能执行任务，防止任务中有可以被打断的等待逻辑在等待中被打断
                     runnable.run();
+                } catch (Exception e) {
+                    lock.unlock();
+                    log.error(Logo.LOG_LOGO+"Worker线程执行任务中发生异常", e);
                 }
             }
             catch (InterruptedException e) {
                 break;
             }
             catch (Exception e) {
-                e.printStackTrace();
+                log.error(Logo.LOG_LOGO+"Worker线程执行任务之外发生异常", e);
             }
         }
     };
 
     public Worker(ThreadPool threadPool, Boolean isCore, String threadName, Boolean isDaemon, Boolean coreDestroy, Integer aliveTime, Runnable onTimeTask) {
         if(isCore) {
-            this.setName(threadName+countId.getAndIncrement()+":core");
+            this.setName(threadName+":core");
         }else{
-            this.setName(threadName+countId.getAndIncrement()+":extra");
+            this.setName(threadName+":extra");
         }
         this.setDaemon(isDaemon);
         this.threadPool = threadPool;
@@ -92,5 +99,12 @@ public class Worker extends Thread {
         } catch (Throwable t) {
             log.error("Worker线程异常终止", t);
         }
+    }
+
+    public void lock(){
+        lock.lock();
+    }
+    public void unlock(){
+        lock.unlock();
     }
 }

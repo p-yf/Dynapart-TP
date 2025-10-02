@@ -37,20 +37,20 @@ public class RegisterPostProcessor implements BeanDefinitionRegistryPostProcesso
                 if (partiResource != null) {//分区资源
                     // 3. 注册到自定义中心
                     PartiResourceManager.register(partiResource.value(), clazz.asSubclass(Partition.class));
-                    log.info(Logo.log_logo+"开发者自定义队列："+ partiResource.value()+"注册成功！");
+                    log.info(Logo.LOG_LOGO +"开发者自定义队列："+ partiResource.value()+"注册成功！");
                     // 4. 从Spring容器中移除该Bean定义
                     registry.removeBeanDefinition(beanName);
                 }
                 else if (RSResource != null) {//拒绝策略资源
                     // 3. 注册到自定义中心
                     RSResourceManager.register(RSResource.value(), clazz.asSubclass(RejectStrategy.class));
-                    log.info(Logo.log_logo+"开发者自定义拒绝策略："+ RSResource.value()+"注册成功！");
+                    log.info(Logo.LOG_LOGO +"开发者自定义拒绝策略："+ RSResource.value()+"注册成功！");
                     // 4. 从Spring容器中移除该Bean定义
                     registry.removeBeanDefinition(beanName);
                 } else if (SPResource !=null) {//调度规则资源
                     // 3. 注册到自定义中心
                     SPResourceManager.register(SPResource.value(), clazz);
-                    log.info(Logo.log_logo+"开发者自定义调度规则："+ SPResource.value()+"注册成功！");
+                    log.info(Logo.LOG_LOGO +"开发者自定义调度规则："+ SPResource.value()+"注册成功！");
                     registry.removeBeanDefinition(beanName);
                 }
             } catch (ClassNotFoundException e) {

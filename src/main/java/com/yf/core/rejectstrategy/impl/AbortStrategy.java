@@ -16,6 +16,6 @@ import java.util.concurrent.RejectedExecutionException;
 public class AbortStrategy extends RejectStrategy {
     @Override
     public void reject(ThreadPool threadPool, Runnable task) {
-        throw new RejectedExecutionException(Logo.log_logo+"任务被拒绝：" + task);
+        throw new RejectedExecutionException(Logo.LOG_LOGO +"任务被拒绝：" + task);
     }
 }

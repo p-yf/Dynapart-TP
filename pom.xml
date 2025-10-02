@@ -8,7 +8,7 @@
     <artifactId>DynaPart-TP</artifactId>
     <version>1.0-SNAPSHOT</version>
 
-<!--    用于springboot环境   其中集群也需要springboot环境-->
+    <!--    用于springboot环境   其中集群也需要springboot环境-->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -16,8 +16,8 @@
         <relativePath/> <!-- 从仓库获取，而非本地 -->
     </parent>
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
@@ -25,7 +25,7 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>1.18.20</version>
+            <version>1.18.40</version>
             <optional>true</optional>
         </dependency>
 

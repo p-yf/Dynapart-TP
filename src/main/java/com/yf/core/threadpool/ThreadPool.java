@@ -1,5 +1,6 @@
 package com.yf.core.threadpool;
 
+import com.yf.common.constant.Logo;
 import com.yf.common.entity.PoolInfo;
 import com.yf.common.entity.QueueInfo;
 import com.yf.core.partition.Impl.partitioning.PartiFlow;
@@ -19,8 +20,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.yf.common.constant.Logo.START_LOGO;
 import static com.yf.common.constant.OfWorker.CORE;
 import static com.yf.common.constant.OfWorker.EXTRA;
 
@@ -33,7 +32,7 @@ import static com.yf.common.constant.OfWorker.EXTRA;
 @Setter
 public class ThreadPool {
     static {
-        System.out.println(START_LOGO);
+        System.out.println(Logo.START_LOGO);
     }
     private ThreadFactory threadFactory;
     private Partition<Runnable> partition;
@@ -353,7 +352,9 @@ public class ThreadPool {
             int i = 0;
             for (Worker worker : getCoreList()) {
                 worker.setFlag(false);
+                worker.lock();//防止任务执行过程中被中断
                 worker.interrupt();
+                worker.unlock();
                 i++;
                 if (i == coreNums) {
                     break;
@@ -364,7 +365,9 @@ public class ThreadPool {
             int j = 0;
             for (Worker worker : getExtraList()) {
                 worker.setFlag(false);
+                worker.lock();
                 worker.interrupt();
+                worker.unlock();
                 j++;
                 if (j == extraNums) {
                     break;

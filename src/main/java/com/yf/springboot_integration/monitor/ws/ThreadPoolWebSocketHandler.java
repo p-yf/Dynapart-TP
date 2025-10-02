@@ -55,7 +55,7 @@ public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (IOException e) {
-            log.info(Logo.log_logo+"推送线程池信息失败: " + e.getMessage());
+            log.info(Logo.LOG_LOGO +"推送线程池信息失败: " + e.getMessage());
         }
     }
 
@@ -75,7 +75,7 @@ public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (IOException e) {
-            log.info(Logo.log_logo+"推送任务数量失败: " + e.getMessage());
+            log.info(Logo.LOG_LOGO +"推送任务数量失败: " + e.getMessage());
         }
     }
 
@@ -95,7 +95,7 @@ public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
                 }
             }
         } catch (IOException e) {
-            log.info(Logo.log_logo+"推送分区任务数量失败: " + e.getMessage());
+            log.info(Logo.LOG_LOGO +"推送分区任务数量失败: " + e.getMessage());
         }
     }
 }
