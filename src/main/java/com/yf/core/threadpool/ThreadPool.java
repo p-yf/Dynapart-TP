@@ -9,7 +9,7 @@ import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partition.Partition;
-import com.yf.core.threadfactory.ThreadFactory;
+import com.yf.core.threadfactory.WorkerFactory;
 import com.yf.core.worker.Worker;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,7 +34,7 @@ public class ThreadPool {
     static {
         System.out.println(Logo.START_LOGO);
     }
-    private ThreadFactory threadFactory;
+    private WorkerFactory threadFactory;
     private Partition<Runnable> partition;
     private RejectStrategy rejectStrategy;
     private volatile Integer coreNums;//核心线程数
@@ -48,7 +48,7 @@ public class ThreadPool {
 
     public ThreadPool(
             Integer coreNums, Integer maxNums, String name,
-            ThreadFactory threadFactory, Partition<Runnable> partition,
+            WorkerFactory threadFactory, Partition<Runnable> partition,
             RejectStrategy rejectStrategy
     ) {
         this.threadFactory = threadFactory;
@@ -121,7 +121,7 @@ public class ThreadPool {
             } else {
                 extraList.add(worker);
             }
-            worker.start();
+            worker.startWorking();
             return true;
         } catch (Throwable e) {//异常回滚
             if (isCore) {
@@ -153,7 +153,7 @@ public class ThreadPool {
         Map<Thread.State, Integer> coreMap = new HashMap<>();
         Map<Thread.State, Integer> extraMap = new HashMap<>();
         for (Worker worker : coreList) {
-            Thread.State state = worker.getState();
+            Thread.State state = worker.getThreadState();
             if (coreMap.containsKey(state)) {
                 coreMap.put(state, coreMap.get(state) + 1);
             } else {
@@ -161,7 +161,7 @@ public class ThreadPool {
             }
         }
         for (Worker worker : extraList) {
-            Thread.State state = worker.getState();
+            Thread.State state = worker.getThreadState();
             if (extraMap.containsKey(state)) {
                 extraMap.put(state, extraMap.get(state) + 1);
             } else {
@@ -183,8 +183,8 @@ public class ThreadPool {
         info.setPoolName(name);
         info.setAliveTime(threadFactory.getAliveTime());
         info.setThreadName(threadFactory.getThreadName());
-        info.setCoreDestroy(threadFactory.getCoreDestroy());
-        info.setIsDaemon(threadFactory.getIsDaemon());
+        info.setCoreDestroy(threadFactory.isCoreDestroy());
+        info.setIsDaemon(threadFactory.isUseDaemonThread());
         info.setMaxNums(maxNums);
         info.setCoreNums(coreNums);
         //获取当前队列名字
@@ -334,8 +334,8 @@ public class ThreadPool {
         if (coreDestroy != null) {
             this.threadFactory.setCoreDestroy(coreDestroy);
         }
-        if (isDaemon != null && isDaemon != this.threadFactory.getIsDaemon()) {
-            this.threadFactory.setIsDaemon(isDaemon);
+        if (isDaemon != null && isDaemon != this.threadFactory.isUseDaemonThread()) {
+            this.threadFactory.setUseDaemonThread(isDaemon);
             for (Worker worker : getCoreList()) {
                 worker.setDaemon(isDaemon);
             }
@@ -353,7 +353,7 @@ public class ThreadPool {
             for (Worker worker : getCoreList()) {
                 worker.setFlag(false);
                 worker.lock();//防止任务执行过程中被中断
-                worker.interrupt();
+                worker.interruptWorking();
                 worker.unlock();
                 i++;
                 if (i == coreNums) {
@@ -366,7 +366,7 @@ public class ThreadPool {
             for (Worker worker : getExtraList()) {
                 worker.setFlag(false);
                 worker.lock();
-                worker.interrupt();
+                worker.interruptWorking();
                 worker.unlock();
                 j++;
                 if (j == extraNums) {

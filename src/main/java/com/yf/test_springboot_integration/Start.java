@@ -14,7 +14,7 @@ public class Start {
         ConfigurableApplicationContext run = SpringApplication.run(Start.class, args);
 //        //命令行启动的流程  springboot环境不建议，建议用可视化界面。
 //        PoolCommandHandler poolCommandHandler = new PoolCommandHandler(run.getBean(com.yf.pool.threadpool.ThreadPool.class));
-//        poolCommandHandler.start();
+//        poolCommandHandler.startWorking();
 
     }
 }

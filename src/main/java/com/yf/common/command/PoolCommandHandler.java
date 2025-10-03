@@ -371,13 +371,13 @@ public class PoolCommandHandler {
         Integer maxNums = parseIntegerParam(params, "maxNums");
         Boolean coreDestroy = parseBooleanParam(params, "coreDestroy");
         Integer aliveTime = parseIntegerParam(params, "aliveTime");
-        Boolean isDaemon = parseBooleanParam(params, "isDaemon");
+        Boolean isDaemon = parseBooleanParam(params, "isUseDaemonThread");
 
         // 检查是否有至少一个参数被设置
         if (coreNums == null && maxNums == null && coreDestroy == null
                 && aliveTime == null && isDaemon == null) {
             System.out.println("❌ 没有指定任何有效的worker参数");
-            System.out.println("   可用参数: -coreNums, -maxNums, -coreDestroy, -aliveTime, -isDaemon");
+            System.out.println("   可用参数: -coreNums, -maxNums, -coreDestroy, -aliveTime, -isUseDaemonThread");
             return;
         }
 
@@ -401,7 +401,7 @@ public class PoolCommandHandler {
             String value = parts[i + 1];
 
             // 验证参数名是否有效
-            if (!Arrays.asList("coreNums", "maxNums", "coreDestroy", "aliveTime", "isDaemon").contains(key)) {
+            if (!Arrays.asList("coreNums", "maxNums", "coreDestroy", "aliveTime", "isUseDaemonThread").contains(key)) {
                 System.out.println("⚠️ 未知参数 " + parts[i] + "，已忽略");
                 continue;
             }
@@ -525,7 +525,7 @@ public class PoolCommandHandler {
         help.append("       -maxNums [数字]     - 最大线程数\n");
         help.append("       -coreDestroy [true/false] - 是否允许核心线程销毁\n");
         help.append("       -aliveTime [数字]   - 线程存活时间\n");
-        help.append("       -isDaemon [true/false] - 是否为守护线程\n");
+        help.append("       -isUseDaemonThread [true/false] - 是否为守护线程\n");
         help.append("   示例: yf change worker -coreNums 2 -maxNums 5\n\n");
 
         help.append("   yf change queue [队列名称]  - 改变队列\n");

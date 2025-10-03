@@ -7,6 +7,7 @@ import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.
 import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 import com.yf.core.partition.Partition;
 import com.yf.core.resource_manager.PartiResourceManager;
+import com.yf.core.threadfactory.WorkerFactory;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.rejectstrategy.impl.CallerRunsStrategy;
 import org.junit.Test;
@@ -41,9 +42,9 @@ public class PartitionQueuePerformanceTest {
         for(int i = 0;i<20;i++) {
             try {
                 /**
-                 * 平均每轮：1708.5
-                 * 最大：1830
-                 * 最小：1537
+                 * 平均每轮：1519.9
+                 * 最大：1645
+                 * 最小：1336
                  * 失败次数：0
                  */
                 long testTime = testJdkThreadPoolWithLinkedBlockingQueue();
@@ -112,7 +113,7 @@ public class PartitionQueuePerformanceTest {
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
         Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
         // 执行性能测试
-        return performTest( partiFlow, "LinkedBlockingQ");
+        return performTest( partiStill, "LinkedBlockingQ");
     }
 
     public long testLinkedBlockingQProPerformance() throws InterruptedException {
@@ -243,7 +244,7 @@ public class PartitionQueuePerformanceTest {
      */
     private long performTest(Partition<Runnable> partition, String queueName) throws InterruptedException {
         // 创建线程工厂（修复存活时间单位错误：60秒=60*1000毫秒）
-        com.yf.core.threadfactory.ThreadFactory threadFactory = new com.yf.core.threadfactory.ThreadFactory(
+        WorkerFactory threadFactory = new WorkerFactory(
                 queueName + "-worker",
                 false,  // 非守护线程
                 false,  // 核心线程不销毁

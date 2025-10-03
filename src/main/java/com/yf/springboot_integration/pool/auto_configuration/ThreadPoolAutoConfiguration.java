@@ -9,7 +9,7 @@ import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partition.Impl.partitioning.PartiFlow;
 import com.yf.core.partition.Partition;
-import com.yf.core.threadfactory.ThreadFactory;
+import com.yf.core.threadfactory.WorkerFactory;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.springboot_integration.pool.post_processor.RegisterPostProcessor;
 import com.yf.springboot_integration.pool.properties.PoolProperties;
@@ -61,7 +61,7 @@ public class ThreadPoolAutoConfiguration {
         ThreadPool threadPool = new ThreadPool(threadPoolProperties.getCoreNums(),
                 threadPoolProperties.getMaxNums(),
                 threadPoolProperties.getPoolName(),
-                new ThreadFactory(threadPoolProperties.getThreadName(),
+                new WorkerFactory(threadPoolProperties.getThreadName(),
                         threadPoolProperties.getIsDaemon(),
                         threadPoolProperties.getCoreDestroy(),
                         threadPoolProperties.getAliveTime()),

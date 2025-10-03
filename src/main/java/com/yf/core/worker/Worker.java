@@ -6,7 +6,6 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -18,12 +17,13 @@ import java.util.concurrent.locks.ReentrantLock;
 @Slf4j
 @Getter
 @Setter
-public class Worker extends Thread {
+public class Worker implements Runnable {
+    private Thread thread;
     private Lock lock = new ReentrantLock();
-    volatile private Boolean flag = true;
-    volatile private Boolean isCore;
+    volatile private boolean flag = true;
+    volatile private boolean isCore;
     private ThreadPool threadPool;
-    volatile private Boolean coreDestroy;//如果非核心线程就设置为null
+    volatile private boolean coreDestroy;//如果非核心线程就设置为null
     volatile private Integer aliveTime;//核心线程如果允许销毁则为这个数的两倍
     private Runnable onTimeTask;//是指直接提交运行的任务
     private Runnable loopTask = ()->//这里是循环从队列拿到任务
@@ -37,7 +37,7 @@ public class Worker extends Thread {
                         if(runnable == null){
                             threadPool.getCoreList().remove(this);
                             threadPool.getCoreWorkerCount().getAndDecrement();
-                            log.info("核心线程"+getName()+"销毁");
+                            log.info("核心线程"+thread.getName()+"销毁");
                             break;
                         }
                     }else{//核心线程并且不允许销毁
@@ -48,7 +48,7 @@ public class Worker extends Thread {
                     if(runnable == null){
                         threadPool.getExtraList().remove(this);
                         threadPool.getExtraWorkerCount().getAndDecrement();
-                        log.info("非核心线程"+getName()+"销毁");
+                        log.info("非核心线程"+thread.getName()+"销毁");
                         break;
                     }
                 }
@@ -69,13 +69,7 @@ public class Worker extends Thread {
         }
     };
 
-    public Worker(ThreadPool threadPool, Boolean isCore, String threadName, Boolean isDaemon, Boolean coreDestroy, Integer aliveTime, Runnable onTimeTask) {
-        if(isCore) {
-            this.setName(threadName+":core");
-        }else{
-            this.setName(threadName+":extra");
-        }
-        this.setDaemon(isDaemon);
+    public Worker(ThreadPool threadPool, Boolean isCore,Boolean coreDestroy, Integer aliveTime, Runnable onTimeTask) {
         this.threadPool = threadPool;
         this.isCore = isCore;
         this.coreDestroy = coreDestroy;
@@ -83,6 +77,21 @@ public class Worker extends Thread {
         this.onTimeTask = onTimeTask;
     }
 
+    public void startWorking(){
+        thread.start();
+    }
+
+    public Thread.State getThreadState(){
+        return thread.getState();
+    }
+
+    public void setDaemon(boolean isDaemon){
+        thread.setDaemon(isDaemon);
+    }
+
+    public void interruptWorking(){
+        thread.interrupt();
+    }
     @Override
     public void run() {
         try {
