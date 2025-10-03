@@ -56,8 +56,9 @@ public class Worker implements Runnable {
                     lock.lock();//获取锁才能执行任务，防止任务中有可以被打断的等待逻辑在等待中被打断
                     runnable.run();
                 } catch (Exception e) {
-                    lock.unlock();
                     log.error(Logo.LOG_LOGO+"Worker线程执行任务中发生异常", e);
+                }finally {
+                    lock.unlock();
                 }
             }
             catch (InterruptedException e) {
@@ -100,9 +101,9 @@ public class Worker implements Runnable {
                     lock.lock();
                     onTimeTask.run();
                 } catch (Throwable t) {
-                    lock.unlock();
                     log.error("onTimeTask执行异常", t);
                 } finally {
+                    lock.unlock();
                     onTimeTask = null; // 无论是否异常，都清空初始任务
                 }
             }
