@@ -113,7 +113,7 @@ public class PartitionQueuePerformanceTest {
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
         Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
         // 执行性能测试
-        return performTest( partiStill, "LinkedBlockingQ");
+        return performTest( pro, "LinkedBlockingQ");
     }
 
     public long testLinkedBlockingQProPerformance() throws InterruptedException {
@@ -131,7 +131,7 @@ public class PartitionQueuePerformanceTest {
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
         Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
         // 执行性能测试
-        return performTest( partiFlow, "LinkedBlockingQS");
+        return performTest( pro, "LinkedBlockingQS");
     }
 
 

@@ -56,23 +56,23 @@ public class LinkedBlockingQS<T> extends Partition<T> {
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
-        if (capacity != null && size.get() >= capacity) {
+        // 有界队列且已满时直接返回false
+        if (capacity != null && size.get() == capacity) {
             return false;
         }
         final int c;
         Node<T> newNode = new Node<>(element);
         tailLock.lock();
         try {
-            if (capacity == null || size.get() < capacity) {
-                enqueue(newNode);
-                c = size.getAndIncrement();
-            } else {
+            // 再次检查容量，防止在获取锁前队列已被填满
+            if (size.get() == capacity)
                 return false;
-            }
+            enqueue(newNode);
+            c = size.getAndIncrement();
         } finally {
             tailLock.unlock();
         }
-        // 如果添加的是第一个元素，唤醒等待的消费者
+        // 如果队列之前为空，唤醒等待的消费者
         if (c == 0) {
             signalWaitForNotEmpty();
         }
@@ -84,34 +84,24 @@ public class LinkedBlockingQS<T> extends Partition<T> {
     public T poll(Integer waitTime) throws InterruptedException {
         long nanos = waitTime != null ? TimeUnit.MILLISECONDS.toNanos(waitTime) : 0;
         Node<T> h, first;
-        int spinCount = 0;  // 限制自旋次数
 
         // 先尝试有限次CAS出队，减少锁竞争
-        while (spinCount < 3) {  // 自旋3次后切换策略
-            h = head.get();
-            first = h.next;
-            if (first != null) {
-                // CAS替换头节点
-                if (head.compareAndSet(h, first)) {
-                    T result = first.value;
-                    first.value = null;
-                    h.next = h;
-                    int c = size.getAndDecrement();
-                    // 还有元素时唤醒其他消费者
-                    if (c > 1) {
-                        signalWaitForNotEmpty();
-                    }
-                    return result;
+        h = head.get();
+        first = h.next;
+        if (first != null) {
+            // CAS替换头节点
+            if (head.compareAndSet(h, first)) {
+                T result = first.value;
+                first.value = null;
+                h.next = h;
+                int c = size.getAndDecrement();
+                // 还有元素时唤醒其他消费者
+                if (c > 1) {
+                    signalWaitForNotEmpty();
                 }
-                spinCount++;
-                if (spinCount >= 3) {
-                    Thread.yield();  // 自旋多次失败后让步，减少CPU占用
-                }
-            } else {
-                break;  // 队列为空，退出自旋
+                return result;
             }
         }
-
         // 队列空或CAS失败次数过多，进入锁等待逻辑
         headLock.lock();
         try {

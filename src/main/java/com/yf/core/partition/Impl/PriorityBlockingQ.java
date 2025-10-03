@@ -31,7 +31,7 @@ public class PriorityBlockingQ<T> extends Partition<T> {
      */
     public Boolean offer(T task) {
         if (task == null) {
-            throw new NullPointerException("任务不能为null");
+            throw new NullPointerException("元素不能为null");
         }
         // 第一次检查容量（带锁的精确检查在内部）
         if (capacity != null && getEleNums() >= capacity) {
