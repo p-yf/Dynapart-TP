@@ -7,6 +7,7 @@ yf:
   thread-pool:
     pool:
       enabled: true
+      useVirtualThread: false #是否使用虚拟线程
       coreNums: 10    #线程池核心线程数
       maxNums: 50    #线程池最大线程数
       poolName: yf-thread-pool   #线程池名称

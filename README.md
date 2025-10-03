@@ -69,6 +69,7 @@ yf:
   thread-pool:
     pool:
       enabled: true
+      useVirtualThread: false #是否使用虚拟线程
       coreNums: 10    #线程池核心线程数
       maxNums: 50    #线程池最大线程数
       poolName: yf-thread-pool   #线程池名称
@@ -137,21 +138,25 @@ Future<?> future = threadPool.submit(() -> {
 ### 2. 非Spring Boot环境使用
 
 ```java
-// 创建线程工厂
-ThreadFactory threadFactory = new ThreadFactory("worker", false, false, 6000);
-                                            // 线程名称，是否守护线程，核心线程是否销毁，空闲时间（单位：ms）
+import com.yf.core.workerfactory.WorkerFactory;
+
+// 创建worker工厂
+WorkerFactory workerFactory = new WorkerFactory("worker", false, false, 6000,false);
+// 线程名称，是否守护线程，核心线程是否销毁，空闲时间（单位：ms）
 
 
-singleQueue.setCapacity(100); // 设置队列容量，如果不设置则为无界队列
+singleQueue.
+
+setCapacity(100); // 设置队列容量，如果不设置则为无界队列
 
 // 或创建分区化队列
 PartiFlow<Runnable> partitionedQueue = new PartiFlow<>(
-    10, // 分区数量
-    1000, // 总容量
-    “linked_plus”, // 队列名称
-    OfferStrategy.ROUND_ROBIN, // 入队策略
-    PollStrategy.ROUND_ROBIN, // 出队策略
-    RemoveStrategy.ROUND_ROBIN // 移除策略
+        10, // 分区数量
+        1000, // 总容量
+        "linked_plus", // 队列名称
+        OfferStrategy.ROUND_ROBIN, // 入队策略
+        PollStrategy.ROUND_ROBIN, // 出队策略
+        RemoveStrategy.ROUND_ROBIN // 移除策略
 );
 
 // 创建拒绝策略
@@ -159,17 +164,17 @@ RejectStrategy rejectStrategy = new CallerRunsStrategy();
 
 // 创建线程池                            
 ThreadPool threadPool = new ThreadPool(
-    5, 20, // 核心线程数，最大线程数
-    "DynaPartPool", // 线程池名称
-    threadFactory, // 线程工厂
-    singleQueue, // 任务队列（或使用partitionedQueue）
-    rejectStrategy // 拒绝策略
+        5, 20, // 核心线程数，最大线程数
+        "DynaPartPool", // 线程池名称
+        workerFactory, // worker工厂
+        singleQueue, // 任务队列（或使用partitionedQueue）
+        rejectStrategy // 拒绝策略
 );
 
 // 使用线程池
-threadPool.execute(() -> {
-    // 任务逻辑
-});
+threadPool.execute(() ->{
+        // 任务逻辑
+        });
 
 Future<?> future = threadPool.submit(() -> {
     // 任务逻辑

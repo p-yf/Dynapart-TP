@@ -1,14 +1,17 @@
-package com.yf.core.threadfactory;
+package com.yf.core.workerfactory;
 
+import com.yf.common.constant.Logo;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.worker.Worker;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
 
 
 /**
  * @author yyf
  * @description
  */
+@Slf4j
 @Data
 public class WorkerFactory {
     private ThreadPool threadPool;
@@ -24,12 +27,18 @@ public class WorkerFactory {
         this.coreDestroy = coreDestroy;
         this.aliveTime = aliveTime;
     }
+    public WorkerFactory(String threadName, Boolean isDaemon, Boolean coreDestroy, Integer aliveTime,boolean useVirtualThread) {
+        this.threadName = threadName;
+        this.useDaemonThread = isDaemon;
+        this.coreDestroy = coreDestroy;
+        this.aliveTime = aliveTime;
+        this.useVirtualThread = useVirtualThread;
+    }
     public Worker createWorker(Boolean isCore, Runnable task){
         Worker worker = new Worker(threadPool,isCore,coreDestroy,aliveTime,task);
 
         if(useVirtualThread){//创建虚拟线程
-            Thread thread = Thread.ofVirtual().name("Virtual:"+threadName).unstarted(worker);
-            thread.setDaemon(useDaemonThread);
+            Thread thread = Thread.ofVirtual().name("Virtual:"+threadName).unstarted( worker);
             worker.setThread(thread);
         } else{//创建平台线程
             Thread thread = new Thread(worker,"Platform:"+threadName);

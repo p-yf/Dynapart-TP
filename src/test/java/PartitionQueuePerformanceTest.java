@@ -7,7 +7,7 @@ import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.
 import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 import com.yf.core.partition.Partition;
 import com.yf.core.resource_manager.PartiResourceManager;
-import com.yf.core.threadfactory.WorkerFactory;
+import com.yf.core.workerfactory.WorkerFactory;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.rejectstrategy.impl.CallerRunsStrategy;
 import org.junit.Test;
@@ -47,7 +47,7 @@ public class PartitionQueuePerformanceTest {
                  * 最小：1336
                  * 失败次数：0
                  */
-                long testTime = testJdkThreadPoolWithLinkedBlockingQueue();
+//                long testTime = testJdkThreadPoolWithLinkedBlockingQueue();
                 /**
                  * PartiFlow
                  * 平均每轮：1164.2
@@ -61,7 +61,7 @@ public class PartitionQueuePerformanceTest {
                  * 最小：960
                  * 失败次数：0
                  */
-//                long testTime = testLinkedBlockingQPerformance();
+                long testTime = testLinkedBlockingQPerformance();
 
                 /**
                  * 平均每轮：1265.4
@@ -243,15 +243,15 @@ public class PartitionQueuePerformanceTest {
      * @param queueName 队列名称，用于输出结果
      */
     private long performTest(Partition<Runnable> partition, String queueName) throws InterruptedException {
-        // 创建线程工厂（修复存活时间单位错误：60秒=60*1000毫秒）
+
         WorkerFactory threadFactory = new WorkerFactory(
                 queueName + "-worker",
                 false,  // 非守护线程
                 false,  // 核心线程不销毁
-                60 * 1000      // 空闲存活时间(毫秒)
+                60 * 1000 ,     // 空闲存活时间(毫秒)
+//                true
+                false
         );
-
-
         // 创建线程池
         ThreadPool threadPool = new ThreadPool(
                 CORE_THREADS,

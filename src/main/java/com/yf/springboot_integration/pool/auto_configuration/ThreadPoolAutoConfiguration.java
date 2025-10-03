@@ -3,13 +3,10 @@ package com.yf.springboot_integration.pool.auto_configuration;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partition.Impl.partitioning.PartiFlow;
 import com.yf.core.partition.Partition;
-import com.yf.core.threadfactory.WorkerFactory;
+import com.yf.core.workerfactory.WorkerFactory;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.springboot_integration.pool.post_processor.RegisterPostProcessor;
 import com.yf.springboot_integration.pool.properties.PoolProperties;
@@ -49,9 +46,9 @@ public class ThreadPoolAutoConfiguration {
             partition.setCapacity(queueProperties.getCapacity());
         } else {//分区化
             partition = new PartiFlow(queueProperties.getPartitionNum(), queueProperties.getCapacity(), queueProperties.getQueueName(),
-                    (OfferPolicy) SPResourceManager.getOfferResource(queueProperties.getOfferPolicy()).getConstructor().newInstance(),
-                    (PollPolicy) SPResourceManager.getPollResource(queueProperties.getPollPolicy()).getConstructor().newInstance(),
-                    (RemovePolicy) SPResourceManager.getRemoveResource(queueProperties.getRemovePolicy()).getConstructor().newInstance());
+                    SPResourceManager.getOfferResource(queueProperties.getOfferPolicy()).getConstructor().newInstance(),
+                    SPResourceManager.getPollResource(queueProperties.getPollPolicy()).getConstructor().newInstance(),
+                    SPResourceManager.getRemoveResource(queueProperties.getRemovePolicy()).getConstructor().newInstance());
 
         }
 
@@ -62,9 +59,11 @@ public class ThreadPoolAutoConfiguration {
                 threadPoolProperties.getMaxNums(),
                 threadPoolProperties.getPoolName(),
                 new WorkerFactory(threadPoolProperties.getThreadName(),
-                        threadPoolProperties.getIsDaemon(),
-                        threadPoolProperties.getCoreDestroy(),
-                        threadPoolProperties.getAliveTime()),
+                        threadPoolProperties.isDaemon(),
+                        threadPoolProperties.isCoreDestroy(),
+                        threadPoolProperties.getAliveTime(),
+                        threadPoolProperties.isUseVirtualThread()
+                        ),
                 partition, rejectStrategy);
         return threadPool;
     }

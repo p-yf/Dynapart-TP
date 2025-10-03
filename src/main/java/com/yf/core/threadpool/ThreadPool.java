@@ -9,7 +9,7 @@ import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partition.Partition;
-import com.yf.core.threadfactory.WorkerFactory;
+import com.yf.core.workerfactory.WorkerFactory;
 import com.yf.core.worker.Worker;
 import lombok.Getter;
 import lombok.Setter;
@@ -34,7 +34,7 @@ public class ThreadPool {
     static {
         System.out.println(Logo.START_LOGO);
     }
-    private WorkerFactory threadFactory;
+    private WorkerFactory workerFactory;
     private Partition<Runnable> partition;
     private RejectStrategy rejectStrategy;
     private volatile Integer coreNums;//核心线程数
@@ -51,7 +51,7 @@ public class ThreadPool {
             WorkerFactory threadFactory, Partition<Runnable> partition,
             RejectStrategy rejectStrategy
     ) {
-        this.threadFactory = threadFactory;
+        this.workerFactory = threadFactory;
         threadFactory.setThreadName(name + ":" + threadFactory.getThreadName());
         threadFactory.setThreadPool(this);
         this.partition = partition;
@@ -115,7 +115,7 @@ public class ThreadPool {
         }
         Worker worker = null;
         try {
-            worker = threadFactory.createWorker(isCore, task);
+            worker = workerFactory.createWorker(isCore, task);
             if (isCore) {
                 coreList.add(worker);
             } else {
@@ -181,10 +181,10 @@ public class ThreadPool {
     public PoolInfo getThreadPoolInfo() {
         PoolInfo info = new PoolInfo();
         info.setPoolName(name);
-        info.setAliveTime(threadFactory.getAliveTime());
-        info.setThreadName(threadFactory.getThreadName());
-        info.setCoreDestroy(threadFactory.isCoreDestroy());
-        info.setIsDaemon(threadFactory.isUseDaemonThread());
+        info.setAliveTime(workerFactory.getAliveTime());
+        info.setThreadName(workerFactory.getThreadName());
+        info.setCoreDestroy(workerFactory.isCoreDestroy());
+        info.setDaemon(workerFactory.isUseDaemonThread());
         info.setMaxNums(maxNums);
         info.setCoreNums(coreNums);
         //获取当前队列名字
@@ -329,13 +329,13 @@ public class ThreadPool {
             }
         }
         if (aliveTime != null) {
-            this.threadFactory.setAliveTime(aliveTime);
+            this.workerFactory.setAliveTime(aliveTime);
         }
         if (coreDestroy != null) {
-            this.threadFactory.setCoreDestroy(coreDestroy);
+            this.workerFactory.setCoreDestroy(coreDestroy);
         }
-        if (isDaemon != null && isDaemon != this.threadFactory.isUseDaemonThread()) {
-            this.threadFactory.setUseDaemonThread(isDaemon);
+        if (isDaemon != null && isDaemon != this.workerFactory.isUseDaemonThread()) {
+            this.workerFactory.setUseDaemonThread(isDaemon);
             for (Worker worker : getCoreList()) {
                 worker.setDaemon(isDaemon);
             }
