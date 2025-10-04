@@ -4,10 +4,7 @@ package com.yf.core.resource_manager;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.HashOffer;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.RandomOffer;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.RoundRobinOffer;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.ValleyFillingOffer;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.*;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.PeekShavingPoll;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.RandomPoll;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
@@ -31,7 +28,8 @@ public class SPResourceManager {
         //offer
         register("round_robin", RoundRobinOffer.class);
         register("random", RandomOffer.class);
-        register("hash", HashOffer.class);
+        register("plain_hash", PlainHashOffer.class);
+        register("balanced_hash", BalancedHashOffer.class);
         register("valley_filling", ValleyFillingOffer.class);
 
         //poll

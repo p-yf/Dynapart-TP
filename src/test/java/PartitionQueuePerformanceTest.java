@@ -2,7 +2,8 @@ import com.yf.core.partition.Impl.LinkedBlockingQ;
 import com.yf.core.partition.Impl.LinkedBlockingQS;
 import com.yf.core.partition.Impl.partitioning.PartiFlow;
 import com.yf.core.partition.Impl.partitioning.PartiStill;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.HashOffer;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.BalancedHashOffer;
+import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.PlainHashOffer;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
 import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 import com.yf.core.partition.Partition;
@@ -98,7 +99,7 @@ public class PartitionQueuePerformanceTest {
                 PARTITION_NUM,
                 CAPACITY,
                 PartiResourceManager.LINKED,
-                new HashOffer(),
+                new PlainHashOffer(),
                 new ThreadBindingPoll(),
                 new RoundRobinRemove()
         );
@@ -106,14 +107,15 @@ public class PartitionQueuePerformanceTest {
                 PARTITION_NUM,
                 CAPACITY,
                 PartiResourceManager.LINKED,
-                new HashOffer(),
+//                new PlainHashOffer(),
+                new BalancedHashOffer(),
                 new ThreadBindingPoll(),
                 new RoundRobinRemove()
         );
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
         Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
         // 执行性能测试
-        return performTest( pro, "LinkedBlockingQ");
+        return performTest( partiStill, "LinkedBlockingQ");
     }
 
     public long testLinkedBlockingQProPerformance() throws InterruptedException {
@@ -124,7 +126,7 @@ public class PartitionQueuePerformanceTest {
                 PARTITION_NUM,
                 CAPACITY,
                 PartiResourceManager.LINKED_S,
-                new HashOffer(),
+                new PlainHashOffer(),
                 new ThreadBindingPoll(),
                 new RoundRobinRemove()
         );
