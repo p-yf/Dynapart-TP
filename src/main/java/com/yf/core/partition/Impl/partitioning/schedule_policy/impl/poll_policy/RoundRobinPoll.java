@@ -4,6 +4,7 @@ import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
 import com.yf.core.partition.Partition;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author yyf
@@ -13,11 +14,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class RoundRobinPoll extends PollPolicy {
     private volatile boolean roundRobin = true;
 
-    final AtomicInteger round = new AtomicInteger(0);
+    final AtomicLong round = new AtomicLong(0);
 
     @Override
     public int selectPartition(Partition[] partitions) {
-        return Math.abs(round.getAndIncrement()%partitions.length);
+        return (int) round.getAndIncrement()%partitions.length;
     }
 
     @Override

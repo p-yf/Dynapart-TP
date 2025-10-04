@@ -4,6 +4,7 @@ import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
 import com.yf.core.partition.Partition;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author yyf
@@ -13,13 +14,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class ThreadBindingPoll extends PollPolicy {
     private volatile boolean roundRobin = false;
 
-    final AtomicInteger round = new AtomicInteger(0);
+    final AtomicLong round = new AtomicLong(0);
     final ThreadLocal<Integer> threadLocal = new ThreadLocal<>();
 
     @Override
     public int selectPartition(Partition[] partitions) {
         if(threadLocal.get()==null){
-            threadLocal.set(Math.abs(round.getAndIncrement()%partitions.length));
+            threadLocal.set((int)round.getAndIncrement()%partitions.length);
         }
         return threadLocal.get();
     }

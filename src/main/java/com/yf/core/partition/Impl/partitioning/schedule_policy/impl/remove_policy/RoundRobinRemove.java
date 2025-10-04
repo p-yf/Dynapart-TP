@@ -4,6 +4,7 @@ import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
 import com.yf.core.partition.Partition;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * @author yyf
@@ -11,10 +12,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @description
  */
 public class RoundRobinRemove extends RemovePolicy {
-    final AtomicInteger round = new AtomicInteger(0);
+    final AtomicLong round = new AtomicLong(0);
     @Override
     public int selectPartition(Partition[] partitions) {
-        return Math.abs(round.getAndIncrement()%partitions.length);
+        return (int) round.getAndIncrement()%partitions.length;
     }
 
 }
