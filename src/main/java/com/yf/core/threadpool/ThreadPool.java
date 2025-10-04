@@ -35,8 +35,8 @@ public class ThreadPool {
         System.out.println(Logo.START_LOGO);
     }
     private WorkerFactory workerFactory;
-    private Partition<Runnable> partition;
-    private RejectStrategy rejectStrategy;
+    private volatile Partition<Runnable> partition;
+    private volatile RejectStrategy rejectStrategy;
     private volatile Integer coreNums;//核心线程数
     private volatile Integer maxNums;//最大线程数
     private Set<Worker> coreList = ConcurrentHashMap.newKeySet();
@@ -69,7 +69,7 @@ public class ThreadPool {
         }
         if (partition.offer(task)) {
             if(coreNums==0){
-                addWorker(task,false);
+                addWorker(null,false);
             }
             return;
         }
