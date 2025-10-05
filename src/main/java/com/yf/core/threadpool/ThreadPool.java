@@ -33,7 +33,7 @@ import static com.yf.common.constant.OfWorker.EXTRA;
 @Setter
 public class ThreadPool {
     static {
-        System.out.println(Logo.START_LOGO);
+        System.out.println(Logo.startLogo());
     }
     private WorkerFactory workerFactory;
     private volatile Partition<Runnable> partition;

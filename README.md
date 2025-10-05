@@ -1,6 +1,9 @@
 # DynaPart-TP
 
-<img src="src/main/resources/static/logo/logo.png" alt="Logo" width="200" height="200">  <!-- 项目Logo -->
+<img src="src/main/resources/static/logo/logo1.png" alt="Logo" width="200" height="200">  <!-- 项目Logo -->
+<img src="src/main/resources/static/logo/logo2.png" alt="Logo" width="600" height="190">  <!-- 项目Logo -->
+
+let's become better and better —— DynaPart-TP @yyf
 
 ## 🚀 项目介绍
 
@@ -39,17 +42,17 @@ DynaPart-TP 是一个高性能、可动态调整的轻量级线程池框架，�
 4 利用组合模式实现了分区（队列）的自由分区与否
 
 ### 6. 分区化队列模型（Partition）
-分区化是框架的核心特性之一，它将队列抽象为一种分区表现形式。任何队列只要实现了`Partition`接口，就可以自由选择成为分区队列或者单个队列。
-
-- **灵活的分区策略**：支持轮询、随机、哈希、填谷等多种任务入队策略
-- **高效的任务出队**：提供轮询、随机、削峰、线程绑定等出队策略
+  分区化是框架的核心特性之一，它将队列抽象为一种分区表现形式。任何队列只要实现了`Partition`抽象类，就可以自由选择成为分区队列或者单个队列。
+作者实现了两种分区化模型：PartiStill和PartiFlow，若想自己实现分区化模型，只需实现`Partitioning`接口即可
+- **灵活的分区策略**：支持轮询、随机、哈希、填谷、优先级等多种任务入队调度规则
+- **高效的任务出队**：提供轮询、随机、削峰、线程绑定、优先级等出队和移除调度规则
 - **细粒度控制**：可根据业务需求动态调整分区数量和容量
 - **高性能设计**：通过多分区并行处理提高吞吐量，减少锁竞争
 
 
 ## 🚀 性能对比
 
-通过测试对比，可看到在锁竞争激烈的情况下DynaPart-TP线程池与JDK线程池相比具有明显性能优势
+通过测试对比，可看到在锁竞争激烈的情况下DynaPart-TP线程池与JDK线程池相比具有明显性能优势，吞吐量和稳定性都高50%以上
 
 ### 性能优势（测试仅限锁竞争激烈的情况）
 1. **更高吞吐量**：在相同配置下，DynaPart-TP处理任务的速度远高于JDK线程池
@@ -118,7 +121,7 @@ Future<?> future = threadPool.submit(() -> {
     // 任务逻辑
     return result;
 });
-//如果是使用优先级队列，那么应传入PriorityTask对象能手动指定优先级（数字越大优先级越高），示例：
+//如果是使用优先级队列或者分区队列的优先级调度规则，那么应传入PriorityTask对象能手动指定优先级（数字越大优先级越小，0最大），示例：
 //Callable c = () -> {};        //任务，返回值 ，优先级
 //PriorityTask pt = new PriorityTask(c,10);
 //threadPool.executeThreadFirst(pt);
