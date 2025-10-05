@@ -1,5 +1,6 @@
 package com.yf.core.partitioning.impl;
 
+import com.yf.common.exception.SwitchedException;
 import com.yf.core.partition.Impl.LinkedBlockingQ;
 import com.yf.core.partitioning.Partitioning;
 import com.yf.core.partitioning.schedule_policy.OfferPolicy;
@@ -89,10 +90,10 @@ public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
     }
 
 
-    public Boolean offer(T element) {
+    public boolean offer(T element) {
         try {
             return partitions[offerPolicy.selectPartition(partitions, element)].offer(element);
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (SwitchedException e) {
             return false;
         }
     }
@@ -101,7 +102,7 @@ public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
     public T poll(Integer waitTime) throws InterruptedException {
         try {
             return partitions[pollPolicy.selectPartition(partitions)].poll(waitTime);
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (SwitchedException e) {
             return null;
         }
     }
@@ -109,7 +110,7 @@ public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
     public T removeEle() {
         try {
             return partitions[removePolicy.selectPartition(partitions)].removeEle();
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (SwitchedException e) {
             return null;
         }
     }
@@ -135,6 +136,9 @@ public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
             partition.unlockGlobally();
         }
     }
+
+    @Override
+    public void markAsSwitched() {}
 
 
 }

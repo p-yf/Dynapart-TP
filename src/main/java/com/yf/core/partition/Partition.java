@@ -21,7 +21,7 @@ public abstract class Partition<T> {
      *
      * @param t@return
      */
-    public abstract Boolean offer(T t);
+    public abstract boolean offer(T t);
 
     /**
      * 获取
@@ -51,4 +51,11 @@ public abstract class Partition<T> {
     public abstract Integer getCapacity();
 
     public abstract void setCapacity(Integer capacity);
+
+    /**
+     *这是用来保证队列在切换后的队列感知问题
+     * 标记为被切换
+     */
+    public abstract void markAsSwitched();
+
 }

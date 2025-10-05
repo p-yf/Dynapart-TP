@@ -112,6 +112,7 @@ public class PartitionQueuePerformanceTest {
                 new ThreadBindingPoll(),
                 new RoundRobinRemove()
         );
+
         Partition<Runnable> plus = new LinkedBlockingQ<>(CAPACITY);//yes
         Partition<Runnable> pro = new LinkedBlockingQS<>(CAPACITY);
         // 执行性能测试

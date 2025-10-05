@@ -10,8 +10,8 @@ import com.yf.core.partition.Partition;
 @PartiResource("myqn")
 public class myqn extends Partition {
     @Override
-    public Boolean offer(Object t) {
-        return null;
+    public boolean offer(Object t) {
+        return false;
     }
 
     @Override
@@ -48,6 +48,10 @@ public class myqn extends Partition {
     @Override
     public void setCapacity(Integer capacity) {
 
+    }
+
+    @Override
+    public void markAsSwitched() {
     }
 
 }

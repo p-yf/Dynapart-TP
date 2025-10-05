@@ -1,5 +1,6 @@
 package com.yf.core.partition.Impl;
 
+import com.yf.common.exception.SwitchedException;
 import com.yf.core.partition.Partition;
 import lombok.Getter;
 import lombok.Setter;
@@ -16,6 +17,7 @@ public class PriorityBlockingQ<T> extends Partition<T> {
     private final Condition notEmpty = lock.newCondition(); // 仅用于出队等待
     private volatile Integer capacity;
     private final PriorityQueue<T> q;
+    private boolean switched = false;
 
     public PriorityBlockingQ(Integer capacity) {
         this.q = new PriorityQueue<>(capacity);
@@ -29,7 +31,7 @@ public class PriorityBlockingQ<T> extends Partition<T> {
     /**
      * 添加任务，将普通任务封装为优先级任务
      */
-    public Boolean offer(T task) {
+    public boolean offer(T task) {
         if (task == null) {
             throw new NullPointerException("元素不能为null");
         }
@@ -39,6 +41,9 @@ public class PriorityBlockingQ<T> extends Partition<T> {
         }
         lock.lock();
         try {
+            if(switched){
+                throw new SwitchedException();
+            }
             // 二次检查容量（锁内确保准确性）
             if (capacity != null && q.size() >= capacity) {
                 return false;
@@ -58,6 +63,9 @@ public class PriorityBlockingQ<T> extends Partition<T> {
     public T poll(Integer waitTime) throws InterruptedException {
         lock.lock();
         try {
+            if(switched){
+                throw new SwitchedException();
+            }
             while (q.isEmpty()) {
                 if (waitTime != null) {
                     // 限时等待
@@ -79,6 +87,9 @@ public class PriorityBlockingQ<T> extends Partition<T> {
     public T removeEle() {
         lock.lock();
         try{
+            if(switched){
+                throw new SwitchedException();
+            }
             if(q.isEmpty()){
                 return null;
             }else{
@@ -105,6 +116,11 @@ public class PriorityBlockingQ<T> extends Partition<T> {
     @Override
     public void unlockGlobally() {
         lock.unlock();
+    }
+
+    @Override
+    public void markAsSwitched() {
+        switched = true;
     }
 
 }

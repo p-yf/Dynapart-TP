@@ -25,7 +25,7 @@ public class SPResourceManager {
     private static final Map<String,Class<? extends PollPolicy>> POLL_POLICY_MAP = new HashMap<>();
     private static final Map<String,Class<? extends RemovePolicy>> REMOVE_POLICY_MAP = new HashMap<>();
     static {
-        //offer
+        //Offer
         register("round_robin", RoundRobinOffer.class);
         register("random", RandomOffer.class);
         register("plain_hash", PlainHashOffer.class);

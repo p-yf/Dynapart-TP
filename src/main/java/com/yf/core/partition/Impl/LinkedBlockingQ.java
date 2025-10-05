@@ -1,5 +1,6 @@
 package com.yf.core.partition.Impl;
 
+import com.yf.common.exception.SwitchedException;
 import com.yf.core.partition.Partition;
 import lombok.Data;
 import lombok.Getter;
@@ -39,6 +40,7 @@ public class LinkedBlockingQ<T> extends Partition<T> {
     private Node<T> tail = head;
     private final AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
+    private volatile boolean switched = false;//是否被切换的标记
 
     public LinkedBlockingQ(Integer capacity) {
         this.capacity = capacity;
@@ -49,7 +51,7 @@ public class LinkedBlockingQ<T> extends Partition<T> {
     /**
      * 当队列有界且已满时返回false
      */
-    public Boolean offer(T element) {
+    public boolean offer(T element) {
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
@@ -61,6 +63,9 @@ public class LinkedBlockingQ<T> extends Partition<T> {
         Node<T> newNode = new Node<>(element);
         tailLock.lock();
         try {
+            if(switched){
+                throw new SwitchedException();
+            }
             // 再次检查容量，防止在获取锁前队列已被填满
             if (size.get() == capacity)
                 return false;
@@ -82,6 +87,9 @@ public class LinkedBlockingQ<T> extends Partition<T> {
         final int c;
         headLock.lock();
         try {
+            if(switched){
+                throw new SwitchedException();
+            }
             // 队列为空时等待
             long nanos = 0;
             while (size.get() == 0) {
@@ -125,6 +133,11 @@ public class LinkedBlockingQ<T> extends Partition<T> {
         headLock.unlock();
     }
 
+    @Override
+    public void markAsSwitched() {
+        switched = true;
+    }
+
     /**
      * 从队列获取元素，支持超时
      */
@@ -139,6 +152,9 @@ public class LinkedBlockingQ<T> extends Partition<T> {
         int c = -1;
         headLock.lock();
         try {
+            if(switched){
+                throw new SwitchedException();
+            }
             if (size.get() > 0) {
                 ele = dequeue();// 复用poll中的节点删除逻辑
                 c = size.getAndDecrement();

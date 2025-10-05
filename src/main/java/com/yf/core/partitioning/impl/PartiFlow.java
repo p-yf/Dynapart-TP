@@ -1,5 +1,6 @@
 package com.yf.core.partitioning.impl;
 
+import com.yf.common.exception.SwitchedException;
 import com.yf.core.partitioning.Partitioning;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.partition.Impl.LinkedBlockingQ;
@@ -98,7 +99,7 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
     }
 
 
-    public Boolean offer(T element) {
+    public boolean offer(T element) {
         try {
             if (!offerPolicy.getRoundRobin()) {//不轮询
                 return partitions[offerPolicy.selectPartition(partitions, element)].offer(element);
@@ -112,7 +113,7 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
                 index = (index + 1) % partitions.length;
             }
             return suc;
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (SwitchedException e) {
             return false;
         }
     }
@@ -148,7 +149,7 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
                 }
                 return element;
             }
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (SwitchedException e) {
             return null;
         }
     }
@@ -156,7 +157,7 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
     public T removeEle() {
         try {
             return partitions[removePolicy.selectPartition(partitions)].removeEle();
-        } catch (ArrayIndexOutOfBoundsException e) {
+        } catch (SwitchedException e) {
             return null;
         }
     }
@@ -182,6 +183,9 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
             partition.unlockGlobally();
         }
     }
+
+    @Override
+    public void markAsSwitched() {}
 
 
 }

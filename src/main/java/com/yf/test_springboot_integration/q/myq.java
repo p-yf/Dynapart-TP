@@ -11,8 +11,8 @@ import com.yf.springboot_integration.pool.annotation.PartiResource;
 public class myq extends Partition {
 
     @Override
-    public Boolean offer(Object t) {
-        return null;
+    public boolean offer(Object t) {
+        return false;
     }
 
     @Override
@@ -48,6 +48,11 @@ public class myq extends Partition {
 
     @Override
     public void setCapacity(Integer capacity) {
+
+    }
+
+    @Override
+    public void markAsSwitched() {
 
     }
 

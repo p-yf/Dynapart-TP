@@ -1,5 +1,6 @@
 package com.yf.core.partition.Impl;
 
+import com.yf.common.exception.SwitchedException;
 import com.yf.core.partition.Partition;
 import lombok.Data;
 import lombok.Getter;
@@ -38,6 +39,7 @@ public class LinkedBlockingQS<T> extends Partition<T> {
     private volatile Node<T> tail = head.get();
     private final AtomicInteger size = new AtomicInteger(0);
     private Integer capacity;
+    private volatile boolean switched = false;
 
     public LinkedBlockingQS(Integer capacity) {
         this.capacity = capacity;
@@ -52,7 +54,7 @@ public class LinkedBlockingQS<T> extends Partition<T> {
      * 教训：能直接返回明确的结果就直接返回，否则即使逻辑正确，也有可能由于各种奇葩的原因导致错误
      * 例如下方我原本是将c设置为-1，在最后return c != -1,其实逻辑没问题，但是就是会出现问题。
      */
-    public Boolean offer(T element) {
+    public boolean offer(T element) {
         if (element == null) {
             throw new NullPointerException("元素不能为null");
         }
@@ -64,6 +66,9 @@ public class LinkedBlockingQS<T> extends Partition<T> {
         Node<T> newNode = new Node<>(element);
         tailLock.lock();
         try {
+            if(switched){
+                throw new SwitchedException();
+            }
             // 再次检查容量，防止在获取锁前队列已被填满
             if (size.get() == capacity)
                 return false;
@@ -82,6 +87,9 @@ public class LinkedBlockingQS<T> extends Partition<T> {
 
     @Override
     public T poll(Integer waitTime) throws InterruptedException {
+        if(switched){
+            throw new SwitchedException();
+        }
         long nanos = waitTime != null ? TimeUnit.MILLISECONDS.toNanos(waitTime) : 0;
         Node<T> h, first;
 
@@ -105,6 +113,9 @@ public class LinkedBlockingQS<T> extends Partition<T> {
         // 队列空或CAS失败次数过多，进入锁等待逻辑
         headLock.lock();
         try {
+            if(switched){
+                throw new SwitchedException();
+            }
             while (true) {
                 h = head.get();
                 first = h.next;
@@ -155,6 +166,11 @@ public class LinkedBlockingQS<T> extends Partition<T> {
         this.capacity = capacity;
     }
 
+    @Override
+    public void markAsSwitched() {
+        switched = true;
+    }
+
     public T removeEle() {
         // 无锁快速失败：空队列直接返回
         if (size.get() == 0) {
@@ -165,6 +181,9 @@ public class LinkedBlockingQS<T> extends Partition<T> {
         // 使用CAS操作出队
         Node<T> h, first;
         do {
+            if(switched){
+                throw new SwitchedException();
+            }
             h = head.get();
             first = h.getNext();
             // 如果没有元素，返回失败
