@@ -1,18 +1,18 @@
-package com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy;
+package com.yf.core.partitioning.schedule_policy.impl.offer_policy;
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partition.Partition;
 
 /**
  * @author yyf
- * @date 2025/9/21 0:06
+ * @date 2025/9/20 23:49
  * @description
  */
-public class RandomPoll extends PollPolicy {
+public class RandomOffer extends OfferPolicy {
     private volatile boolean roundRobin = true;
 
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions, Object object) {
         return (int) (Math.random() * partitions.length);
     }
 

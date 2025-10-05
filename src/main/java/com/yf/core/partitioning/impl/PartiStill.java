@@ -1,12 +1,13 @@
-package com.yf.core.partition.Impl.partitioning;
+package com.yf.core.partitioning.impl;
 
 import com.yf.core.partition.Impl.LinkedBlockingQ;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.RoundRobinOffer;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
+import com.yf.core.partitioning.Partitioning;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.PollPolicy;
+import com.yf.core.partitioning.schedule_policy.RemovePolicy;
+import com.yf.core.partitioning.schedule_policy.impl.offer_policy.RoundRobinOffer;
+import com.yf.core.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
+import com.yf.core.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 import com.yf.core.partition.Partition;
 import com.yf.core.resource_manager.PartiResourceManager;
 import lombok.Getter;
@@ -25,7 +26,7 @@ import java.lang.reflect.InvocationTargetException;
  */
 @Getter
 @Setter
-public class PartiStill<T> extends Partition<T> {
+public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
     private Partition<T>[] partitions;
     private OfferPolicy offerPolicy = new RoundRobinOffer();
     private PollPolicy pollPolicy = new RoundRobinPoll();
@@ -40,7 +41,7 @@ public class PartiStill<T> extends Partition<T> {
         this.removePolicy = removePolicy;
     }
 
-    public PartiStill(Integer partitionNum, Integer capacity,String QName) {
+    public PartiStill(Integer partitionNum, Integer capacity, String QName) {
         //先获取队列类型
         Class<?> qClass = PartiResourceManager.getResources().get(QName);
         partitions = new Partition[partitionNum];
@@ -89,19 +90,28 @@ public class PartiStill<T> extends Partition<T> {
 
 
     public Boolean offer(T element) {
-        if (element == null) {
-            throw new NullPointerException("元素不能为null");
+        try {
+            return partitions[offerPolicy.selectPartition(partitions, element)].offer(element);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
         }
-        return partitions[offerPolicy.selectPartition(partitions, element)].offer(element);
     }
 
     @Override
     public T poll(Integer waitTime) throws InterruptedException {
-        return partitions[pollPolicy.selectPartition( partitions)].poll(waitTime);
+        try {
+            return partitions[pollPolicy.selectPartition(partitions)].poll(waitTime);
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return null;
+        }
     }
     @Override
     public T removeEle() {
-        return partitions[removePolicy.selectPartition(partitions)].removeEle();
+        try {
+            return partitions[removePolicy.selectPartition(partitions)].removeEle();
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return null;
+        }
     }
 
 

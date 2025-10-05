@@ -1,6 +1,6 @@
 package com.yf.test_springboot_integration.sp;
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partition.Partition;
 import com.yf.springboot_integration.pool.annotation.SPResource;
 

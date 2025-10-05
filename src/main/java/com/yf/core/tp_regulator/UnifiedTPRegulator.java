@@ -1,149 +1,54 @@
-package com.yf.core.threadpool;
+package com.yf.core.tp_regulator;
 
-import com.yf.common.constant.Logo;
 import com.yf.common.entity.PoolInfo;
 import com.yf.common.entity.QueueInfo;
-import com.yf.core.partitioning.impl.PartiFlow;
+import com.yf.core.partition.Partition;
 import com.yf.core.partitioning.Partitioning;
+import com.yf.core.partitioning.impl.PartiFlow;
+import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
-import com.yf.core.rejectstrategy.RejectStrategy;
-import com.yf.core.partition.Partition;
-import com.yf.core.workerfactory.WorkerFactory;
+import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.worker.Worker;
-import lombok.Getter;
-import lombok.Setter;
 
-import java.util.*;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static com.yf.common.constant.OfWorker.CORE;
 import static com.yf.common.constant.OfWorker.EXTRA;
 
-
 /**
  * @author yyf
- * @description
+ * @date 2025/10/5 12:50
+ * @description ：线程池动态调节类，解耦线程池核心逻辑和调节逻辑，未来将实现用单个调节对象统一管控所有的线程池
  */
-@Getter
-@Setter
-public class ThreadPool {
-    static {
-        System.out.println(Logo.START_LOGO);
-    }
-    private WorkerFactory workerFactory;
-    private volatile Partition<Runnable> partition;
-    private volatile RejectStrategy rejectStrategy;
-    private volatile Integer coreNums;//核心线程数
-    private volatile Integer maxNums;//最大线程数
-    private Set<Worker> coreList = ConcurrentHashMap.newKeySet();
-    private Set<Worker> extraList = ConcurrentHashMap.newKeySet();
-    private final AtomicInteger coreWorkerCount = new AtomicInteger(0); // 核心线程存活数
-    private final AtomicInteger extraWorkerCount = new AtomicInteger(0); // 额外线程存活数
+public class UnifiedTPRegulator {
+    private ThreadPool threadPool;
+    private Map<String,ThreadPool> threadPoolMap = new HashMap<>();
 
-    private String name;//线程池名称
-
-    public ThreadPool(
-            Integer coreNums, Integer maxNums, String name,
-            WorkerFactory threadFactory, Partition<Runnable> partition,
-            RejectStrategy rejectStrategy
-    ) {
-        this.workerFactory = threadFactory;
-        threadFactory.setThreadName(name + ":" + threadFactory.getThreadName());
-        threadFactory.setThreadPool(this);
-        this.partition = partition;
-        this.rejectStrategy = rejectStrategy;
-        this.coreNums = coreNums;
-        this.maxNums = maxNums;
-        this.name = name;
+    /**
+     * 注册线程池
+     * @param name：线程池名字
+     * @param threadPool: 线程池
+     */
+    public void register(String name, ThreadPool threadPool) {
+        threadPoolMap.put(name, threadPool);
     }
 
-    public void execute(Runnable task) {
-        if (coreWorkerCount.get() < coreNums) {
-            if (addWorker(task,true)) {
-                return;
-            }
-        }
-        if (partition.offer(task)) {
-            if(coreNums==0){
-                addWorker(null,false);
-            }
-            return;
-        }
-        if (addWorker(task,false)) {
-            return;
-        }
-        rejectStrategy.reject(this,task);
+    /**
+     * 获取线程池
+     * @param name:线程池名字
+     * @return 线程池
+     */
+    public ThreadPool getResource(String name){
+        return threadPoolMap.get(name);
     }
 
 
-    public <T> Future<T> submit(Callable<T> callable) {
-        if (callable == null) throw new NullPointerException();
-        FutureTask<T> ftask = new FutureTask<>(callable);
-        execute(ftask);
-        return ftask;
-    }
-
-
-    private boolean addWorker(Runnable task, boolean isCore) {
-        // 循环CAS重试：直到成功或确定无法创建线程
-        while (true) {
-            if (isCore) {
-                int current = coreWorkerCount.get();
-                if (current >= coreNums) {
-                    return false; // 核心线程达到上限，退出
-                }
-                // CAS尝试更新
-                if (coreWorkerCount.compareAndSet(current, current + 1)) {
-                    break; // CAS成功,即将退出循环创建Worker
-                }// CAS失败，继续循环重试
-            } else {
-                // 额外线程逻辑
-                int current = extraWorkerCount.get();
-                int extraMax = maxNums - coreNums;
-                if (current >= extraMax) {
-                    return false; // 额外线程达到上限，退出
-                }
-                if (extraWorkerCount.compareAndSet(current, current + 1)) {
-                    break; // CAS成功，退出循环
-                }// CAS失败，继续循环重试
-            }
-            Thread.yield();
-        }
-        Worker worker = null;
-        try {
-            worker = workerFactory.createWorker(isCore, task);
-            if (isCore) {
-                coreList.add(worker);
-            } else {
-                extraList.add(worker);
-            }
-            worker.startWorking();
-            return true;
-        } catch (Throwable e) {//异常回滚
-            if (isCore) {
-                coreWorkerCount.getAndDecrement();
-            } else {
-                extraWorkerCount.getAndDecrement();
-            }
-            if (worker != null) {
-                if (isCore) {
-                    coreList.remove(worker);
-                } else {
-                    extraList.remove(worker);
-                }
-            }
-            return false;
-        }
-    }
-
-//    =======================================================
-//    以下是对于线程池相关参数的读写操作，用来提供监控信息和修改参数，不涉及到线程池运行过程的自动调控，所以读取信息全部无锁
-
+//    =============================线程池信息和调控====================================
     /**
      * 获取线程池中线程的信息
      *
@@ -153,7 +58,7 @@ public class ThreadPool {
         Map<String, Map<Thread.State, Integer>> result = new HashMap<>();
         Map<Thread.State, Integer> coreMap = new HashMap<>();
         Map<Thread.State, Integer> extraMap = new HashMap<>();
-        for (Worker worker : coreList) {
+        for (Worker worker : threadPool.getCoreList()) {
             Thread.State state = worker.getThreadState();
             if (coreMap.containsKey(state)) {
                 coreMap.put(state, coreMap.get(state) + 1);
@@ -161,7 +66,7 @@ public class ThreadPool {
                 coreMap.put(state, 1);
             }
         }
-        for (Worker worker : extraList) {
+        for (Worker worker : threadPool.getExtraList()) {
             Thread.State state = worker.getThreadState();
             if (extraMap.containsKey(state)) {
                 extraMap.put(state, extraMap.get(state) + 1);
@@ -181,22 +86,22 @@ public class ThreadPool {
      */
     public PoolInfo getThreadPoolInfo() {
         PoolInfo info = new PoolInfo();
-        info.setPoolName(name);
-        info.setAliveTime(workerFactory.getAliveTime());
-        info.setThreadName(workerFactory.getThreadName());
-        info.setCoreDestroy(workerFactory.isCoreDestroy());
-        info.setDaemon(workerFactory.isUseDaemonThread());
-        info.setMaxNums(maxNums);
-        info.setCoreNums(coreNums);
+        info.setPoolName(threadPool.getName());
+        info.setAliveTime(threadPool.getWorkerFactory().getAliveTime());
+        info.setThreadName(threadPool.getWorkerFactory().getThreadName());
+        info.setCoreDestroy(threadPool.getWorkerFactory().isCoreDestroy());
+        info.setDaemon(threadPool.getWorkerFactory().isUseDaemonThread());
+        info.setMaxNums(threadPool.getMaxNums());
+        info.setCoreNums(threadPool.getCoreNums());
         //获取当前队列名字
         for(Map.Entry entry : PartiResourceManager.getResources().entrySet()){
-            if (entry.getValue() == partition.getClass()) {
+            if (entry.getValue() == threadPool.getPartition().getClass()) {
                 info.setQueueName(entry.getKey().toString());
                 break;
             }
         }
         for(Map.Entry entry : RSResourceManager.REJECT_STRATEGY_MAP.entrySet()){
-            if (entry.getValue() == rejectStrategy.getClass()) {
+            if (entry.getValue() == threadPool.getRejectStrategy().getClass()) {
                 info.setRejectStrategyName(entry.getKey().toString());
                 break;
             }
@@ -209,7 +114,7 @@ public class ThreadPool {
      * @return
      */
     public int getTaskNums() {
-        return partition.getEleNums();
+        return threadPool.getPartition().getEleNums();
     }
 
     /**
@@ -218,10 +123,10 @@ public class ThreadPool {
      */
     public Map<Integer,Integer> getPartitionTaskNums(){
         Map<Integer,Integer> map = new HashMap<>();
-        if(!(partition instanceof PartiFlow)){//不是分区队列
-            map.put(0,partition.getEleNums());
+        if(!(threadPool.getPartition() instanceof PartiFlow)){//不是分区队列
+            map.put(0,threadPool.getPartition().getEleNums());
         }else {//是分区队列
-            Partition<Runnable>[] partitions = ((PartiFlow<Runnable>) partition).getPartitions();
+            Partition<Runnable>[] partitions = ((PartiFlow<Runnable>) threadPool.getPartition()).getPartitions();
             for(int i = 0;i<partitions.length;i++){
                 map.put(i,partitions[i].getEleNums());
             }
@@ -235,33 +140,33 @@ public class ThreadPool {
      */
     public QueueInfo getQueueInfo(){
         QueueInfo queueInfo = new QueueInfo();
-        queueInfo.setCapacity(partition.getCapacity());
-        if(partition instanceof Partitioning<?>){
+        queueInfo.setCapacity(threadPool.getPartition().getCapacity());
+        if(threadPool.getPartition() instanceof Partitioning<?>){
             for(Map.Entry entry : PartiResourceManager.getResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) partition).getPartitions()[0].getClass()) {
+                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getPartitions()[0].getClass()) {
                     queueInfo.setQueueName(entry.getKey().toString());
                     break;
                 }
             }
-            queueInfo.setPartitionNum(((Partitioning<Runnable>) partition).getPartitions().length);
+            queueInfo.setPartitionNum(((Partitioning<Runnable>) threadPool.getPartition()).getPartitions().length);
             queueInfo.setPartitioning(true);
             //找到offer的名字
             for(Map.Entry entry : SPResourceManager.getOfferResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) partition).getOfferPolicy().getClass()) {
+                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getOfferPolicy().getClass()) {
                     queueInfo.setOfferPolicy(entry.getKey().toString());
                     break;
                 }
             }
             //找到poll的名字
             for(Map.Entry entry : SPResourceManager.getPollResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) partition).getPollPolicy().getClass()) {
+                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getPollPolicy().getClass()) {
                     queueInfo.setPollPolicy(entry.getKey().toString());
                     break;
                 }
             }
             //找到remove的名字
             for(Map.Entry entry : SPResourceManager.getRemoveResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) partition).getRemovePolicy().getClass()) {
+                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getRemovePolicy().getClass()) {
                     queueInfo.setRemovePolicy(entry.getKey().toString());
                     break;
                 }
@@ -269,7 +174,7 @@ public class ThreadPool {
         }
         //获取队列的名字
         for(Map.Entry entry : PartiResourceManager.getResources().entrySet()){
-            if (entry.getValue() == partition.getClass()) {
+            if (entry.getValue() == threadPool.getPartition().getClass()) {
                 queueInfo.setQueueName(entry.getKey().toString());
                 break;
             }
@@ -299,8 +204,8 @@ public class ThreadPool {
         if (maxNums!=null&&coreNums!=null&&maxNums < coreNums) {
             return false;
         }
-        int oldCoreNums = this.coreNums;
-        int oldMaxNums = this.maxNums;
+        int oldCoreNums = threadPool.getCoreNums();
+        int oldMaxNums = threadPool.getMaxNums();
         if(coreNums!=null){
             if(maxNums==null){
                 if(coreNums > oldMaxNums){
@@ -313,10 +218,10 @@ public class ThreadPool {
             }
         }
         if(maxNums!=null) {
-            this.maxNums = maxNums;//无论如何非核心线程都能直接改变
+            threadPool.setMaxNums(maxNums);//无论如何非核心线程都能直接改变
         }
         if(coreNums!=null) {
-            this.coreNums = coreNums;
+            threadPool.setCoreNums(coreNums);
         }
         if(coreNums==null){
             if(maxNums!=null) {
@@ -330,17 +235,17 @@ public class ThreadPool {
             }
         }
         if (aliveTime != null) {
-            this.workerFactory.setAliveTime(aliveTime);
+            threadPool.getWorkerFactory().setAliveTime(aliveTime);
         }
         if (coreDestroy != null) {
-            this.workerFactory.setCoreDestroy(coreDestroy);
+            threadPool.getWorkerFactory().setCoreDestroy(coreDestroy);
         }
-        if (isDaemon != null && isDaemon != this.workerFactory.isUseDaemonThread()) {
-            this.workerFactory.setUseDaemonThread(isDaemon);
-            for (Worker worker : getCoreList()) {
+        if (isDaemon != null && isDaemon != threadPool.getWorkerFactory().isUseDaemonThread()) {
+            threadPool.getWorkerFactory().setUseDaemonThread(isDaemon);
+            for (Worker worker : threadPool.getCoreList()) {
                 worker.setDaemon(isDaemon);
             }
-            for (Worker worker : getExtraList()) {
+            for (Worker worker : threadPool.getExtraList()) {
                 worker.setDaemon(isDaemon);
             }
         }
@@ -351,7 +256,7 @@ public class ThreadPool {
     public void destroyWorkers(int coreNums, int extraNums) {//销毁的数量
         if (coreNums > 0) {
             int i = 0;
-            for (Worker worker : getCoreList()) {
+            for (Worker worker : threadPool.getCoreList()) {
                 worker.setFlag(false);
                 worker.lock();//防止任务执行过程中被中断
                 worker.interruptWorking();
@@ -364,7 +269,7 @@ public class ThreadPool {
         }
         if (extraNums > 0) {
             int j = 0;
-            for (Worker worker : getExtraList()) {
+            for (Worker worker : threadPool.getExtraList()) {
                 worker.setFlag(false);
                 worker.lock();
                 worker.interruptWorking();
@@ -384,7 +289,7 @@ public class ThreadPool {
         if(q == null|| qName == null){
             return false;
         }
-        Partition<Runnable> oldQ = partition;
+        Partition<Runnable> oldQ = threadPool.getPartition();
         try {
             oldQ.lockGlobally();
             if(!(oldQ instanceof Partitioning)) {
@@ -402,7 +307,7 @@ public class ThreadPool {
                     }
                 }
             }
-            this.partition = q;
+            threadPool.setPartition(q);
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
@@ -414,15 +319,12 @@ public class ThreadPool {
     /**
      * 改变拒绝策略,默认与拒绝策略无共享变量需要争抢，所以线程安全，不需要加锁
      */
-    public Boolean changeRejectStrategy(RejectStrategy rejectStrategy,String rejectStrategyName){
+    public Boolean changeRejectStrategy(RejectStrategy rejectStrategy, String rejectStrategyName){
         if(rejectStrategy == null|| rejectStrategyName == null){
             return false;
         }
-        this.rejectStrategy = rejectStrategy;
+        threadPool.setRejectStrategy(rejectStrategy);
         return true;
     }
-
-
-
 
 }

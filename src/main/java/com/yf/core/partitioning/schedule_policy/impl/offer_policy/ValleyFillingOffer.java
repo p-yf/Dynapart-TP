@@ -1,6 +1,6 @@
-package com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy;
+package com.yf.core.partitioning.schedule_policy.impl.offer_policy;
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partition.Partition;
 
 /**

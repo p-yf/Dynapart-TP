@@ -1,11 +1,11 @@
 import com.yf.core.partition.Impl.LinkedBlockingQ;
 import com.yf.core.partition.Impl.LinkedBlockingQS;
-import com.yf.core.partition.Impl.partitioning.PartiFlow;
-import com.yf.core.partition.Impl.partitioning.PartiStill;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.BalancedHashOffer;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.PlainHashOffer;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
+import com.yf.core.partitioning.impl.PartiFlow;
+import com.yf.core.partitioning.impl.PartiStill;
+import com.yf.core.partitioning.schedule_policy.impl.offer_policy.BalancedHashOffer;
+import com.yf.core.partitioning.schedule_policy.impl.offer_policy.PlainHashOffer;
+import com.yf.core.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.core.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 import com.yf.core.partition.Partition;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.workerfactory.WorkerFactory;

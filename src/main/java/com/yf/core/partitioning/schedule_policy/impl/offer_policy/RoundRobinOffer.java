@@ -1,9 +1,8 @@
-package com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy;
+package com.yf.core.partitioning.schedule_policy.impl.offer_policy;
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partition.Partition;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -18,7 +17,14 @@ public class RoundRobinOffer extends OfferPolicy {
 
     @Override
     public int selectPartition(Partition[] partitions, Object object) {
-        return (int)round.getAndIncrement()%partitions.length;
+        int ps = partitions.length;
+        int r = (int)round.getAndIncrement()%partitions.length;
+        if ((ps & (ps - 1)) == 0) {
+            // 分区数量为2的幂时，用&运算
+            return r & (ps - 1);
+        } else {
+            return r % ps;
+        }
     }
 
     @Override

@@ -1,9 +1,8 @@
-package com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy;
+package com.yf.core.partitioning.schedule_policy.impl.poll_policy;
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
+import com.yf.core.partitioning.schedule_policy.PollPolicy;
 import com.yf.core.partition.Partition;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**

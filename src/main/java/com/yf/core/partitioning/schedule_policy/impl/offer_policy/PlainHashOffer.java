@@ -1,6 +1,6 @@
-package com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy;
+package com.yf.core.partitioning.schedule_policy.impl.offer_policy;
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partition.Partition;
 
 /**
@@ -23,10 +23,6 @@ public class PlainHashOffer extends OfferPolicy {
             return (h & 0x7FFFFFFF) % ps;
         }
     }
-//    @Override
-//    public int selectPartition(Partition[] partitions, Object element) {
-//        return (partitions.hashCode() & 0x7FFFFFFF) % partitions.length;
-//    }
 
     @Override
     public boolean getRoundRobin() {

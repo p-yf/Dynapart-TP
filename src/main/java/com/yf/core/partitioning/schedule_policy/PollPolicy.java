@@ -1,4 +1,4 @@
-package com.yf.core.partition.Impl.partitioning.schedule_policy;
+package com.yf.core.partitioning.schedule_policy;
 
 import com.yf.core.partition.Partition;
 

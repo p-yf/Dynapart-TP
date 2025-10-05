@@ -4,7 +4,7 @@ import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
 import com.yf.core.rejectstrategy.RejectStrategy;
-import com.yf.core.partition.Impl.partitioning.PartiFlow;
+import com.yf.core.partitioning.impl.PartiFlow;
 import com.yf.core.partition.Partition;
 import com.yf.core.workerfactory.WorkerFactory;
 import com.yf.core.threadpool.ThreadPool;

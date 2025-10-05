@@ -1,6 +1,6 @@
-package com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy;
+package com.yf.core.partitioning.schedule_policy.impl.offer_policy;
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partition.Partition;
 
 /**
@@ -10,7 +10,6 @@ import com.yf.core.partition.Partition;
  */
 public class BalancedHashOffer extends OfferPolicy {
     private volatile boolean roundRobin = false;
-
     @Override
     public int selectPartition(Partition[] partitions, Object element) {
         int ps = partitions.length;

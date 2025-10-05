@@ -1,13 +1,14 @@
-package com.yf.core.partition.Impl.partitioning;
+package com.yf.core.partitioning.impl;
 
+import com.yf.core.partitioning.Partitioning;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.partition.Impl.LinkedBlockingQ;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.RoundRobinOffer;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.PollPolicy;
+import com.yf.core.partitioning.schedule_policy.RemovePolicy;
+import com.yf.core.partitioning.schedule_policy.impl.offer_policy.RoundRobinOffer;
+import com.yf.core.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
+import com.yf.core.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 import com.yf.core.partition.Partition;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,7 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Setter
 @Getter
-public class PartiFlow<T> extends Partition<T>{
+public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
     private Partition<T>[] partitions;
     private OfferPolicy offerPolicy = new RoundRobinOffer();
     private PollPolicy pollPolicy = new RoundRobinPoll();
@@ -98,57 +99,66 @@ public class PartiFlow<T> extends Partition<T>{
 
 
     public Boolean offer(T element) {
-        if (element == null) {
-            throw new NullPointerException("元素不能为null");
-        }
-        if(!offerPolicy.getRoundRobin()){//不轮询
-            return partitions[offerPolicy.selectPartition(partitions, element)].offer(element);
-        }
+        try {
+            if (!offerPolicy.getRoundRobin()) {//不轮询
+                return partitions[offerPolicy.selectPartition(partitions, element)].offer(element);
+            }
 
-        //轮询
-        int index = offerPolicy.selectPartition(partitions, element);
-        Boolean suc = false;
-        for(int i = 0;i<partitions.length&&!suc;i++) {
-            suc = partitions[index].offer(element);
-            index = (index+1)%partitions.length;
-        }
+            //轮询
+            int index = offerPolicy.selectPartition(partitions, element);
+            Boolean suc = false;
+            for (int i = 0; i < partitions.length && !suc; i++) {
+                suc = partitions[index].offer(element);
+                index = (index + 1) % partitions.length;
+            }
             return suc;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return false;
+        }
     }
 
     @Override
     public T poll(Integer waitTime) throws InterruptedException {
-        if(!pollPolicy.getRoundRobin()){//不轮询
-            return partitions[pollPolicy.selectPartition(partitions)].poll(waitTime);
-        }
+        try {
+            if (!pollPolicy.getRoundRobin()) {//不轮询
+                return partitions[pollPolicy.selectPartition(partitions)].poll(waitTime);
+            }
 
-        //轮询
-        T element = null;
-        int partitionIndex = pollPolicy.selectPartition(partitions);
-        if(waitTime==null){//说明无限等待
-            int emptyCount = 0;
-            while(element==null) {
-                element = partitions[partitionIndex].poll(DEFAULT_WAIT_TIME);
-                if (element == null) {
-                    emptyCount++;
-                    //所有分区为空count清零
-                    if (emptyCount >= partitions.length) {
-                        emptyCount = 0;
+            //轮询
+            T element = null;
+            int partitionIndex = pollPolicy.selectPartition(partitions);
+            if (waitTime == null) {//说明无限等待
+                int emptyCount = 0;
+                while (element == null) {
+                    element = partitions[partitionIndex].poll(DEFAULT_WAIT_TIME);
+                    if (element == null) {
+                        emptyCount++;
+                        //所有分区为空count清零
+                        if (emptyCount >= partitions.length) {
+                            emptyCount = 0;
+                        }
                     }
+                    partitionIndex = (partitionIndex + 1) % partitions.length;
                 }
-                partitionIndex = (partitionIndex+1)%partitions.length;
+                return element;
+            } else {//说明有等待时间
+                for (int i = 0; i < partitions.length && element == null; i++) {
+                    element = partitions[partitionIndex].poll(waitTime / partitions.length);
+                    partitionIndex = (partitionIndex + 1) % partitions.length;
+                }
+                return element;
             }
-            return element;
-        }else{//说明有等待时间
-            for(int i = 0;i<partitions.length&&element==null;i++) {
-                element = partitions[partitionIndex].poll(waitTime/partitions.length);
-                partitionIndex = (partitionIndex+1)%partitions.length;
-            }
-            return element;
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return null;
         }
     }
     @Override
     public T removeEle() {
-        return partitions[removePolicy.selectPartition(partitions)].removeEle();
+        try {
+            return partitions[removePolicy.selectPartition(partitions)].removeEle();
+        } catch (ArrayIndexOutOfBoundsException e) {
+            return null;
+        }
     }
 
 

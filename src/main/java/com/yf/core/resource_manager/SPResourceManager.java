@@ -1,16 +1,16 @@
 package com.yf.core.resource_manager;
 
 
-import com.yf.core.partition.Impl.partitioning.schedule_policy.OfferPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.PollPolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.RemovePolicy;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.offer_policy.*;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.PeekShavingPoll;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.RandomPoll;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.PeekShavingRemove;
-import com.yf.core.partition.Impl.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.PollPolicy;
+import com.yf.core.partitioning.schedule_policy.RemovePolicy;
+import com.yf.core.partitioning.schedule_policy.impl.offer_policy.*;
+import com.yf.core.partitioning.schedule_policy.impl.poll_policy.PeekShavingPoll;
+import com.yf.core.partitioning.schedule_policy.impl.poll_policy.RandomPoll;
+import com.yf.core.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
+import com.yf.core.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
+import com.yf.core.partitioning.schedule_policy.impl.remove_policy.PeekShavingRemove;
+import com.yf.core.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 
 import java.util.HashMap;
 import java.util.Map;
