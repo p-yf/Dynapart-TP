@@ -7,7 +7,7 @@ import java.util.concurrent.FutureTask;
 
 @Setter
 @Getter
-public class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>> {
+public class PriorityTask<V> extends FutureTask<V> implements Comparable<PriorityTask<V>>, Priority {
     private int priority = 0;
 
     public PriorityTask(Callable<V> callable, int priority) {
