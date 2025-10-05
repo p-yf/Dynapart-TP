@@ -3,7 +3,7 @@
 <img src="src/main/resources/static/logo/logo1.png" alt="Logo" width="200" height="200">  <!-- 项目Logo -->
 <img src="src/main/resources/static/logo/logo2.png" alt="Logo" width="600" height="190">  <!-- 项目Logo -->
 
-let's become better and better —— DynaPart-TP @yyf
+（the thread-pool with partitioning-queue is running some tasks, they are "let's become better and better"）
 
 ## 🚀 项目介绍
 
