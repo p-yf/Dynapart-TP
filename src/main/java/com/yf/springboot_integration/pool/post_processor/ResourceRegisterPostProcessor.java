@@ -20,7 +20,10 @@ import org.springframework.beans.factory.support.BeanDefinitionRegistryPostProce
 
 import java.util.ArrayList;
 import java.util.List;
-
+/**
+ * @author yyf
+ * @description: 用来处理被作者定义的注解所标注的开发者扩展资源
+ */
 @Slf4j
 public class ResourceRegisterPostProcessor implements BeanDefinitionRegistryPostProcessor {
 

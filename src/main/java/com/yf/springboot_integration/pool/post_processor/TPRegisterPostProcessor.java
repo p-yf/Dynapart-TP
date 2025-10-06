@@ -9,7 +9,10 @@ import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 
 import java.util.Map;
-
+/**
+ * @author yyf
+ * @description: 用来注册所有的线程池（会去除掉bean容器中的little chief小线程池，开发者定义的不会去除）
+ */
 @Slf4j
 public class TPRegisterPostProcessor implements SmartInitializingSingleton {
 
