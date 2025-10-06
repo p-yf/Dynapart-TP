@@ -21,8 +21,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.atomic.AtomicInteger;
-import static com.yf.common.constant.OfWorker.CORE;
-import static com.yf.common.constant.OfWorker.EXTRA;
+import static com.yf.common.constant.OfPool.CORE;
+import static com.yf.common.constant.OfPool.EXTRA;
 
 
 /**

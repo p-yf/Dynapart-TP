@@ -18,8 +18,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.yf.common.constant.OfWorker.CORE;
-import static com.yf.common.constant.OfWorker.EXTRA;
+import static com.yf.common.constant.OfPool.CORE;
+import static com.yf.common.constant.OfPool.EXTRA;
 
 /**
  * @author yyf
@@ -46,6 +46,10 @@ public class UnifiedTPRegulator {
      */
     public static ThreadPool getResource(String name){
         return threadPoolMap.get(name);
+    }
+
+    public static Map<String,ThreadPool> getResources(){
+        return threadPoolMap;
     }
 
 
@@ -301,9 +305,10 @@ public class UnifiedTPRegulator {
         }
         Partition<Runnable> oldQ = threadPool.getPartition();
         try {
-            oldQ.lockGlobally();
-            oldQ.markAsSwitched();
-            threadPool.setPartition(q);
+            oldQ.lockGlobally();//切换队列先加锁以同步入队线程，使得入队线程永远在新队列入队（只能保证作者的队列如此）
+            oldQ.markAsSwitched();//标记队列已切换
+            threadPool.setPartition(q);//改变队列
+            //以上操作可能无法重置调度规则的重置例如：ThreadBinding，或者有些队列无法及时感知，这算是一个补救策略
             GCTaskManager.clean(threadPool,oldQ);
         } catch (Exception e) {
             e.printStackTrace();
@@ -314,19 +319,35 @@ public class UnifiedTPRegulator {
         try {
             if (!(oldQ instanceof Partitioning)) {
                 //非分区队列
-                while (oldQ.getEleNums() > 0) {
-                    Runnable task = oldQ.poll(1);
-                    q.offer(task);
-                }
-            } else {
-                //分区队列
-                Partition<Runnable>[] partitions = ((Partitioning<Runnable>) oldQ).getPartitions();
-                for (Partition<Runnable> partition : partitions) {
-                    while (partition.getEleNums() > 0) {
-                        Runnable task = partition.poll(1);
+                GCTaskManager.execute(()->{
+                    while (oldQ.getEleNums() > 0) {
+                        Runnable task = null;
+                        try {
+                            task = oldQ.poll(1);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
                         q.offer(task);
                     }
-                }
+                });
+
+            } else {
+                //分区队列
+                GCTaskManager.execute(()->{
+                    Partition<Runnable>[] partitions = ((Partitioning<Runnable>) oldQ).getPartitions();
+                    for (Partition<Runnable> partition : partitions) {
+                        while (partition.getEleNums() > 0) {
+                            Runnable task = null;
+                            try {
+                                task = partition.poll(1);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                            q.offer(task);
+                        }
+                    }
+                });
+
             }
         } catch (Exception e) {
             return false;

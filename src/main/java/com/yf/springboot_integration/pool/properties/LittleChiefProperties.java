@@ -9,16 +9,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @description
  */
 @Data
-@ConditionalOnProperty(prefix = "yf.thread-pool.pool",name = "enabled",havingValue = "true")
-@ConfigurationProperties(prefix = "yf.thread-pool.pool")
-public class PoolProperties {
+@ConditionalOnProperty(prefix = "yf.thread-pool.little-chief",name = "enabled",havingValue = "true")
+@ConfigurationProperties(prefix = "yf.thread-pool.little-chief")
+public class LittleChiefProperties {
     private boolean useVirtualThread;//是否使用虚拟线程
     private Integer coreNums;//核心线程数
     private Integer maxNums;//最大线程数
-    private String poolName;//线程池名称
     private String threadName;//线程名称
-    private boolean isDaemon;//是否守护线程
-    private boolean coreDestroy;//核心线程是否可销毁
+    private boolean useDaemon;//是否守护线程
     private Integer aliveTime;//线程空闲时间
     private String rejectStrategyName;//拒绝策略名称
 }

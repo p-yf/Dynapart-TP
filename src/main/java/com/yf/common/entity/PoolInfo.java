@@ -7,9 +7,6 @@ import lombok.Data;
  * @author yyf
  * @description
  */
-/**
- * 格式与ThreadProperties基本一致，另外创建这个的原因是为了与springboot相关的解耦，插拔式选择是否需要springboot集成
- */
 @Data
 public class PoolInfo {
     private boolean useVirtualThread;//是否使用虚拟线程

@@ -22,7 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
-public class RegisterPostProcessor implements BeanDefinitionRegistryPostProcessor {
+public class ResourceRegisterPostProcessor implements BeanDefinitionRegistryPostProcessor {
 
     @Override
     public void postProcessBeanDefinitionRegistry(BeanDefinitionRegistry registry) throws BeansException {
@@ -77,10 +77,11 @@ public class RegisterPostProcessor implements BeanDefinitionRegistryPostProcesso
                 GCTResource gctResource = clazz.getAnnotation(GCTResource.class);
 
                 //得到绑定资源的名称
-                String resourceName = gctResource.value();
+                String resourceName = gctResource.bindingResource();
                 //从自定义中心中获取对应的资源类
                 Class<? extends Partition> resource = PartiResourceManager.getResource(resourceName);
                 registerGCExecutorManager(resource,clazz,resourceName);
+                registry.removeBeanDefinition(gctBeanName);
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);
             }
@@ -93,7 +94,7 @@ public class RegisterPostProcessor implements BeanDefinitionRegistryPostProcesso
             return;
         }
         GCTaskManager.register(resource,taskClazz);
-        log.info(Logo.LOG_LOGO +"开发者自定义GC任务注册成功，绑定资源名称："+name);
+        log.info(Logo.LOG_LOGO +"开发者自定义任务注册成功，绑定资源："+name);
     }
 
     @Override

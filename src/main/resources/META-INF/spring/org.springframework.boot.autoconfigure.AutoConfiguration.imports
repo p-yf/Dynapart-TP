@@ -1,4 +1,5 @@
-com.yf.springboot_integration.pool.auto_configuration.ThreadPoolAutoConfiguration
+com.yf.springboot_integration.pool.auto_configuration.LittleChiefAutoConfiguration
 com.yf.springboot_integration.monitor.auto_configuration.WebAutoConfiguration
 com.yf.springboot_integration.monitor.auto_configuration.WsAutoConfiguration
 com.yf.springboot_integration.service_registry.auto_configuration.ServiceRegistryAutoConfiguration
+com.yf.springboot_integration.pool.auto_configuration.PostProcessorAutoConfiguration

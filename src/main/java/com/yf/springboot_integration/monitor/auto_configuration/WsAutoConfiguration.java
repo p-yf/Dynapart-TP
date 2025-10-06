@@ -2,8 +2,7 @@ package com.yf.springboot_integration.monitor.auto_configuration;
 
 import com.yf.springboot_integration.monitor.ws.SchedulePushInfoService;
 import com.yf.springboot_integration.monitor.ws.ThreadPoolWebSocketHandler;
-import com.yf.springboot_integration.pool.auto_configuration.ThreadPoolAutoConfiguration;
-import com.yf.core.threadpool.ThreadPool;
+import com.yf.springboot_integration.pool.auto_configuration.LittleChiefAutoConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -23,7 +22,7 @@ import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry
 @EnableScheduling
 @EnableWebSocket
 @AutoConfiguration
-@AutoConfigureAfter(ThreadPoolAutoConfiguration.class)
+@AutoConfigureAfter(LittleChiefAutoConfiguration.class)
 @ConditionalOnProperty(prefix = "yf.thread-pool.monitor", name = "enabled", havingValue = "true")
 public class WsAutoConfiguration implements WebSocketConfigurer {
     @Override
@@ -33,7 +32,7 @@ public class WsAutoConfiguration implements WebSocketConfigurer {
     }
 
     @Bean
-    public SchedulePushInfoService schedulePushInfoService(ThreadPool threadPool){
-        return new SchedulePushInfoService(threadPool);
+    public SchedulePushInfoService schedulePushInfoService(){
+        return new SchedulePushInfoService();
     }
 }

@@ -5,18 +5,16 @@ server:
 #线程池配置
 yf:
   thread-pool:
-    pool:
+    little-chief:            #GCTaskManager中的线程池（用来做异步任务或者一些补救措施等等）
       enabled: true
       useVirtualThread: false #是否使用虚拟线程
       coreNums: 10    #线程池核心线程数
       maxNums: 50    #线程池最大线程数
-      poolName: yf-thread-pool   #线程池名称
       threadName: yf-thread      #线程名称
-      isDaemon: true      #是否是守护线程
-      coreDestroy: false  #核心线程是否销毁
+      useDaemon: true      #是否是守护线程
       aliveTime: 5000        #线程存活时间（单位：ms）
       rejectStrategyName: discard   #拒绝策略名称
-    queue:     #(由于queue比较重要，所以与pool和monitor一个层级)
+    queue:
       partitioning: false  #是否分区化(如果是false，只需要读取capacity和queueName)
       partitionNum: 10      #分区数量
       capacity: 10000         #队列容量（不写代表null，为无界）

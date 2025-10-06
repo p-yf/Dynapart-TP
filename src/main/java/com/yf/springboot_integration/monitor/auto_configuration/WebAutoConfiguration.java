@@ -2,8 +2,7 @@ package com.yf.springboot_integration.monitor.auto_configuration;
 
 import com.yf.springboot_integration.monitor.controller.MonitorController;
 import com.yf.springboot_integration.monitor.properties.MonitorProperties;
-import com.yf.springboot_integration.pool.auto_configuration.ThreadPoolAutoConfiguration;
-import com.yf.core.threadpool.ThreadPool;
+import com.yf.springboot_integration.pool.auto_configuration.LittleChiefAutoConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
@@ -22,12 +21,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Slf4j
 @AutoConfiguration
 @EnableConfigurationProperties(MonitorProperties.class)
-@AutoConfigureAfter(ThreadPoolAutoConfiguration.class)
+@AutoConfigureAfter(LittleChiefAutoConfiguration.class)
 @ConditionalOnProperty(prefix = "yf.thread-pool.monitor", name = "enabled", havingValue = "true")
 public class WebAutoConfiguration implements WebMvcConfigurer{
     @Bean
-    public MonitorController monitorController(ThreadPool threadPool, ApplicationContext context){
-        return new MonitorController(threadPool,context);
+    public MonitorController monitorController(ApplicationContext context){
+        return new MonitorController(context);
     }
     //开启静态资源映射
     @Override

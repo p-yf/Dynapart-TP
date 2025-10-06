@@ -20,7 +20,11 @@ import java.util.Map;
 /**
  * @author yyf
  * @date 2025/10/6 14:57
- * @description 用来垃圾清理的线程池
+ * @description 用来垃圾清理的以及异步操作的小线程池
+ *
+ * 虽然在利用了全局锁+标记+抛出异常三个步骤能解决大部分问题，但是依旧可能存在一部分无法优雅解决的问题，例如：
+ * 1 ThreadBinding策略的ThreadLocal对应的value无法被正确回收，会造成内存泄漏问题。（也有其他解决方案，只是这种更加的具有扩展性）
+ * 2 倘若有入队队列用无锁操作，那么就会出现旧队列元素残留问题，用这种方式能够最大限度的解决（不能说100%）
  */
 @Slf4j
 public class GCTaskManager {
@@ -41,14 +45,20 @@ public class GCTaskManager {
 
     public static void clean(ThreadPool tp, Partition<?> partition) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
 
-        if(partition instanceof Partitioning<?>){
-            GCTask offerTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getOfferPolicy().getClass()).getConstructor(ThreadPool.class).newInstance(tp);
+        if(partition instanceof Partitioning<?>){//调度规则相关的清理策略
+            //获取清理任务
+            GCTask offerTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getOfferPolicy().getClass())
+                    .getConstructor(ThreadPool.class).newInstance().build(tp);
+            GCTask pollTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getPollPolicy().getClass())
+                    .getConstructor(ThreadPool.class).newInstance(tp).build(tp);
+            GCTask removeTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getRemovePolicy().getClass())
+                    .getConstructor(ThreadPool.class).newInstance(tp).build(tp);
+
+            //执行
             execute(offerTask);
-            GCTask pollTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getPollPolicy().getClass()).getConstructor(ThreadPool.class).newInstance(tp);
             execute(pollTask);
-            GCTask removeTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getRemovePolicy().getClass()).getConstructor(ThreadPool.class).newInstance(tp);
             execute(removeTask);
-        }else{
+        }else{//分区相关的清理策略
             GCTask task = PARTI_TASK_MAP.get(partition.getClass()).getConstructor(ThreadPool.class).newInstance(tp);
             execute(task);
         }
@@ -69,11 +79,18 @@ public class GCTaskManager {
                             new LinkedBlockingQ<Runnable>(50),
                             new CallerRunsStrategy()
                     );
-                    log.info(Logo.LOG_LOGO+"GC线程池已成功启动");
+                    log.info(Logo.LOG_LOGO+"GC小管家little chief注册成功");
                 }
             }
         }
 
         littleChief.execute(task);
+    }
+
+    public static synchronized void setLittleChief(ThreadPool tp) {
+        if(littleChief!=null) return;
+
+        littleChief = tp;
+        log.info(Logo.LOG_LOGO+"GC小管家little chief注册成功");
     }
 }

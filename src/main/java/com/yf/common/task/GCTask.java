@@ -13,7 +13,5 @@ import lombok.Setter;
 @Setter
 public abstract class GCTask implements Runnable{
     ThreadPool threadPool;
-    public GCTask(ThreadPool tp){
-        threadPool = tp;
-    }
+    public abstract GCTask build(ThreadPool tp);
 }
