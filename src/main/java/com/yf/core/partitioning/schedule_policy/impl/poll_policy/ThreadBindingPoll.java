@@ -8,16 +8,16 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * @author yyf
  * @date 2025/9/21 0:08
- * @description
+ * @description 线程绑定策略，使得每个线程能够固定消费各自的分区，所以默认关闭轮询
  */
 public class ThreadBindingPoll extends PollPolicy {
     private volatile boolean roundRobin = false;
 
     final AtomicLong round = new AtomicLong(0);
-    final ThreadLocal<Integer> threadLocal = new ThreadLocal<>();
+    private final ThreadLocal<Integer> threadLocal = new ThreadLocal<>();
 
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions,Object o) {
         if(threadLocal.get()==null){
             threadLocal.set((int)round.getAndIncrement()%partitions.length);
         }
@@ -32,5 +32,9 @@ public class ThreadBindingPoll extends PollPolicy {
     @Override
     public void setRoundRobin(boolean roundRobin) {
         this.roundRobin = roundRobin;
+    }
+
+    public ThreadLocal<Integer> getThreadLocal() {
+        return threadLocal;
     }
 }

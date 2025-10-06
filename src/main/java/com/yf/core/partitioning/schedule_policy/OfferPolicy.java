@@ -7,7 +7,7 @@ import com.yf.core.partition.Partition;
  * @date 2025/9/20 21:04
  * @description
  */
-public abstract class OfferPolicy {
+public abstract class OfferPolicy implements SchedulePolicy{
     /**
      * 选择分区
      * @param partitions：分区数组

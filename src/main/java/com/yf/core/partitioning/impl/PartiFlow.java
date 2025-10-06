@@ -22,9 +22,9 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @date 2025/8/8 17:20
  * @description
  * 分区队列：多队列、细粒度、扁平化、高性能
- * 可选任务入队策略：轮询、随机、hash、填谷
- * 可选任务出队策略：轮询、随机、削峰、线程绑定
- * 可选移除任务策略：轮询、随机、削峰
+ * 可选任务入队策略：轮询、随机、hash、填谷、优先级
+ * 可选任务出队策略：轮询、随机、削峰、线程绑定、优先级
+ * 可选移除任务策略：轮询、随机、削峰、优先级
  *
  * 《分区流-动态分区队列》
  * 这是一款综合的分区队列：支持出入队调度策略执行后轮询，因而类名结尾为"Flow"，当然也可以自行设置调度策略是否支持轮询，
@@ -185,7 +185,11 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
     }
 
     @Override
-    public void markAsSwitched() {}
+    public void markAsSwitched() {
+        for(Partition partition : partitions) {
+            partition.markAsSwitched();
+        }
+    }
 
 
 }

@@ -7,7 +7,7 @@ import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 /**
  * @author yyf
  * @date 2025/10/5 13:50
- * @description
+ * @description  优先级调度规则：先使用优先级调度，如果非优先级实例或者优先级不和理则降级为轮询
  */
 public class PriorityOffer extends OfferPolicy {
     private boolean roundRobin = true;

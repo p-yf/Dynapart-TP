@@ -11,7 +11,7 @@ import com.yf.core.partition.Partition;
 public class RandomRemove extends RemovePolicy {
 
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions,Object o) {
         return (int) (Math.random() * partitions.length);
     }
 }

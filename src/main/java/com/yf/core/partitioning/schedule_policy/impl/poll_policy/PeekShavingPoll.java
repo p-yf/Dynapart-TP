@@ -12,7 +12,7 @@ public class PeekShavingPoll extends PollPolicy {
     private volatile boolean roundRobin = true;
 
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions,Object o) {
         int maxIndex = 0;
         for(int i = 0; i < partitions.length; i++){
             if(partitions[i].getEleNums() > partitions[maxIndex].getEleNums()){

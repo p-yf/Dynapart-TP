@@ -138,7 +138,9 @@ public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
     }
 
     @Override
-    public void markAsSwitched() {}
-
-
+    public void markAsSwitched() {
+        for(Partition partition : partitions) {
+            partition.markAsSwitched();
+        }
+    }
 }

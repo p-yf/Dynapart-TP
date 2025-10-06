@@ -32,8 +32,7 @@ public class BalancedHashOffer extends OfferPolicy {
         int h = element.hashCode();
         // 核心搅动：高16位与低16位异或，混合高低位信息
         h ^= h >>> 16;
-        // 确保哈希值为非负数（清除符号位）
-        return h & 0x7FFFFFFF;
+        return h;
     }
 
     @Override

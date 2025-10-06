@@ -6,6 +6,7 @@ import com.yf.core.partition.Partition;
 import com.yf.core.partitioning.Partitioning;
 import com.yf.core.partitioning.impl.PartiFlow;
 import com.yf.core.rejectstrategy.RejectStrategy;
+import com.yf.core.resource_manager.GCTaskManager;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
@@ -26,15 +27,15 @@ import static com.yf.common.constant.OfWorker.EXTRA;
  * @description ：线程池动态调节类，解耦线程池核心逻辑和调节逻辑，未来将实现用单个调节对象统一管控所有的线程池
  */
 public class UnifiedTPRegulator {
-    private ThreadPool threadPool;
-    private Map<String,ThreadPool> threadPoolMap = new HashMap<>();
+
+    private final static Map<String,ThreadPool> threadPoolMap = new HashMap<>();
 
     /**
      * 注册线程池
      * @param name：线程池名字
      * @param threadPool: 线程池
      */
-    public void register(String name, ThreadPool threadPool) {
+    public static void register(String name, ThreadPool threadPool) {
         threadPoolMap.put(name, threadPool);
     }
 
@@ -43,7 +44,7 @@ public class UnifiedTPRegulator {
      * @param name:线程池名字
      * @return 线程池
      */
-    public ThreadPool getResource(String name){
+    public static ThreadPool getResource(String name){
         return threadPoolMap.get(name);
     }
 
@@ -54,7 +55,8 @@ public class UnifiedTPRegulator {
      *
      * @return ：String代表线程类别，Thread.State代表线程状态，Integer代表对应类别的状态的数量
      */
-    public Map<String, Map<Thread.State, Integer>> getThreadsInfo() {
+    public static Map<String, Map<Thread.State, Integer>> getThreadsInfo(String tpName) {
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         Map<String, Map<Thread.State, Integer>> result = new HashMap<>();
         Map<Thread.State, Integer> coreMap = new HashMap<>();
         Map<Thread.State, Integer> extraMap = new HashMap<>();
@@ -84,7 +86,8 @@ public class UnifiedTPRegulator {
      *
      * @return
      */
-    public PoolInfo getThreadPoolInfo() {
+    public static PoolInfo getThreadPoolInfo(String tpName) {
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         PoolInfo info = new PoolInfo();
         info.setPoolName(threadPool.getName());
         info.setAliveTime(threadPool.getWorkerFactory().getAliveTime());
@@ -113,7 +116,8 @@ public class UnifiedTPRegulator {
      * 获取队列的任务数量
      * @return
      */
-    public int getTaskNums() {
+    public static int getTaskNums(String tpName) {
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         return threadPool.getPartition().getEleNums();
     }
 
@@ -121,7 +125,8 @@ public class UnifiedTPRegulator {
      * 获取每个分区的任务数量
      * @return
      */
-    public Map<Integer,Integer> getPartitionTaskNums(){
+    public static Map<Integer,Integer> getPartitionTaskNums(String tpName){
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         Map<Integer,Integer> map = new HashMap<>();
         if(!(threadPool.getPartition() instanceof PartiFlow)){//不是分区队列
             map.put(0,threadPool.getPartition().getEleNums());
@@ -138,35 +143,37 @@ public class UnifiedTPRegulator {
      * 获取队列信息
      * @return
      */
-    public QueueInfo getQueueInfo(){
+    public static QueueInfo getQueueInfo(String tpName){
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         QueueInfo queueInfo = new QueueInfo();
         queueInfo.setCapacity(threadPool.getPartition().getCapacity());
         if(threadPool.getPartition() instanceof Partitioning<?>){
+            Partitioning<Runnable> partition = (Partitioning<Runnable>) threadPool.getPartition();
             for(Map.Entry entry : PartiResourceManager.getResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getPartitions()[0].getClass()) {
+                if (entry.getValue() == partition.getPartitions()[0].getClass()) {
                     queueInfo.setQueueName(entry.getKey().toString());
                     break;
                 }
             }
-            queueInfo.setPartitionNum(((Partitioning<Runnable>) threadPool.getPartition()).getPartitions().length);
+            queueInfo.setPartitionNum(partition.getPartitions().length);
             queueInfo.setPartitioning(true);
             //找到offer的名字
             for(Map.Entry entry : SPResourceManager.getOfferResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getOfferPolicy().getClass()) {
+                if (entry.getValue() == partition.getOfferPolicy().getClass()) {
                     queueInfo.setOfferPolicy(entry.getKey().toString());
                     break;
                 }
             }
             //找到poll的名字
             for(Map.Entry entry : SPResourceManager.getPollResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getPollPolicy().getClass()) {
+                if (entry.getValue() == partition.getPollPolicy().getClass()) {
                     queueInfo.setPollPolicy(entry.getKey().toString());
                     break;
                 }
             }
             //找到remove的名字
             for(Map.Entry entry : SPResourceManager.getRemoveResources().entrySet()){
-                if (entry.getValue() == ((Partitioning<Runnable>) threadPool.getPartition()).getRemovePolicy().getClass()) {
+                if (entry.getValue() == partition.getRemovePolicy().getClass()) {
                     queueInfo.setRemovePolicy(entry.getKey().toString());
                     break;
                 }
@@ -186,21 +193,22 @@ public class UnifiedTPRegulator {
     /**
      * 获取所有的队列的名称
      */
-    public List<String> getAllQueueName(){
+    public static List<String> getAllQueueName(){
         return new ArrayList<>(PartiResourceManager.getResources().keySet());
     }
 
     /**
      * 获取所有的拒绝策略的名称
      */
-    public List<String> getAllRejectStrategyName(){
+    public static List<String> getAllRejectStrategyName(){
         return new ArrayList<>(RSResourceManager.getResources().keySet());
     }
 
     /**
      * 改变worker相关参数，直接赋值就好，会动态平衡的
      */
-    public Boolean changeWorkerParams(Integer coreNums, Integer maxNums, Boolean coreDestroy, Integer aliveTime, Boolean isDaemon) {
+    public static Boolean changeWorkerParams(String tpName,Integer coreNums, Integer maxNums, Boolean coreDestroy, Integer aliveTime, Boolean isDaemon) {
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         if (maxNums!=null&&coreNums!=null&&maxNums < coreNums) {
             return false;
         }
@@ -225,13 +233,13 @@ public class UnifiedTPRegulator {
         }
         if(coreNums==null){
             if(maxNums!=null) {
-                destroyWorkers(0, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
+                destroyWorkers(tpName, 0, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
             }
         }else{
             if(maxNums==null) {
-                destroyWorkers(oldCoreNums - coreNums, 0);
+                destroyWorkers(tpName, oldCoreNums - coreNums, 0);
             }else{
-                destroyWorkers(oldCoreNums - coreNums, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
+                destroyWorkers(tpName, oldCoreNums - coreNums, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
             }
         }
         if (aliveTime != null) {
@@ -252,8 +260,9 @@ public class UnifiedTPRegulator {
         return true;
     }
 
-    //销毁线程
-    public void destroyWorkers(int coreNums, int extraNums) {//销毁的数量
+    //销毁worker
+    public static void destroyWorkers(String tpName,int coreNums, int extraNums) {//销毁的数量
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         if (coreNums > 0) {
             int i = 0;
             for (Worker worker : threadPool.getCoreList()) {
@@ -285,33 +294,42 @@ public class UnifiedTPRegulator {
     /**
      * 改变队列
      */
-    public Boolean changeQueue(Partition<Runnable> q, String qName){
-        if(q == null|| qName == null){
+    public static Boolean changeQueue(String tpName,Partition<Runnable> q){
+        ThreadPool threadPool = threadPoolMap.get(tpName);
+        if(q == null){
             return false;
         }
         Partition<Runnable> oldQ = threadPool.getPartition();
         try {
             oldQ.lockGlobally();
-            if(!(oldQ instanceof Partitioning)) {
+            oldQ.markAsSwitched();
+            threadPool.setPartition(q);
+            GCTaskManager.clean(threadPool,oldQ);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        } finally {
+            oldQ.unlockGlobally();
+        }
+        try {
+            if (!(oldQ instanceof Partitioning)) {
                 //非分区队列
                 while (oldQ.getEleNums() > 0) {
                     Runnable task = oldQ.poll(1);
                     q.offer(task);
                 }
-            }else{
+            } else {
                 //分区队列
-                for(int i = 0;i < ((Partitioning<Runnable>) oldQ).getPartitions().length;i++){
-                    while(((Partitioning<Runnable>) oldQ).getPartitions()[i].getEleNums() > 0){
-                        Runnable task = ((Partitioning<Runnable>) oldQ).getPartitions()[i].poll(1);
+                Partition<Runnable>[] partitions = ((Partitioning<Runnable>) oldQ).getPartitions();
+                for (Partition<Runnable> partition : partitions) {
+                    while (partition.getEleNums() > 0) {
+                        Runnable task = partition.poll(1);
                         q.offer(task);
                     }
                 }
             }
-            threadPool.setPartition(q);
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            oldQ.unlockGlobally();
+            return false;
         }
         return true;
     }
@@ -319,7 +337,8 @@ public class UnifiedTPRegulator {
     /**
      * 改变拒绝策略,默认与拒绝策略无共享变量需要争抢，所以线程安全，不需要加锁
      */
-    public Boolean changeRejectStrategy(RejectStrategy rejectStrategy, String rejectStrategyName){
+    public static Boolean changeRejectStrategy(String tpName,RejectStrategy rejectStrategy, String rejectStrategyName){
+        ThreadPool threadPool = threadPoolMap.get(tpName);
         if(rejectStrategy == null|| rejectStrategyName == null){
             return false;
         }

@@ -11,8 +11,6 @@ import lombok.Setter;
 /**
  * 实现类需要保证线程安全
  */
-@Getter
-@Setter
 public abstract class Partition<T> {
 
 

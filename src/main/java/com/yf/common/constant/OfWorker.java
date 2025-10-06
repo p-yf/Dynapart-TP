@@ -8,5 +8,7 @@ package com.yf.common.constant;
 public class OfWorker {
     public final static String CORE = "core";//核心线程
     public final static String EXTRA = "extra";//非核心线程
+    public final static String VIRTUAL = "virtual";
+    public final static String PLATFORM = "platform";
 
 }

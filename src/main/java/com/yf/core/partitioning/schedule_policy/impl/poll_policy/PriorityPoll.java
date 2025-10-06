@@ -12,7 +12,7 @@ public class PriorityPoll extends PollPolicy {
     private boolean roundRobin = true;
     private volatile RoundRobinPoll roundRobinPoll;
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions,Object o) {
         for(int i =0;i<partitions.length;i++){
             if(partitions[i].getEleNums()>0){
                 return i;

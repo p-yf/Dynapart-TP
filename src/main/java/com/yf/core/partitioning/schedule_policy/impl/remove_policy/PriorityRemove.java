@@ -10,7 +10,7 @@ import com.yf.core.partitioning.schedule_policy.RemovePolicy;
  */
 public class PriorityRemove extends RemovePolicy {
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions,Object o) {
         for(int i = partitions.length-1; i >=0; i--){
             if(partitions[i].getEleNums()>0){
                 return i;

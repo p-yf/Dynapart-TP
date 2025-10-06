@@ -12,7 +12,7 @@ public class RandomPoll extends PollPolicy {
     private volatile boolean roundRobin = true;
 
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions,Object o) {
         return (int) (Math.random() * partitions.length);
     }
 

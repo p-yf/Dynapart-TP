@@ -93,6 +93,10 @@ public class Worker implements Runnable {
     public void interruptWorking(){
         thread.interrupt();
     }
+
+    public void cleanThreadLocal(ThreadLocal<?> threadLocal){
+        threadLocal.remove();
+    }
     @Override
     public void run() {
         try {

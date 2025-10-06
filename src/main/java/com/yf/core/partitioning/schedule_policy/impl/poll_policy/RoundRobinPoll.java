@@ -16,7 +16,7 @@ public class RoundRobinPoll extends PollPolicy {
     final AtomicLong round = new AtomicLong(0);
 
     @Override
-    public int selectPartition(Partition[] partitions) {
+    public int selectPartition(Partition[] partitions,Object o) {
         int ps = partitions.length;
         int r = (int)round.getAndIncrement()%partitions.length;
         if ((ps & (ps - 1)) == 0) {

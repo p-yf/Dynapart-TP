@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 /**
  * @author yyf
  * @date 2025/8/8 23:13
- * @description 优化后的分区队列，性能接近LinkedBlockingQueue
+ * @description 优化后的分区，性能接近LinkedBlockingQueue
  */
 @Getter
 @Setter
