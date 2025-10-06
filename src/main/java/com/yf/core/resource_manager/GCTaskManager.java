@@ -1,6 +1,7 @@
 package com.yf.core.resource_manager;
 
 import com.yf.common.constant.Logo;
+import com.yf.common.constant.OfPool;
 import com.yf.common.task.GCTask;
 import com.yf.common.task.impl.TBPollCleaningTask;
 import com.yf.core.partition.Impl.LinkedBlockingQ;
@@ -10,6 +11,7 @@ import com.yf.core.partitioning.schedule_policy.SchedulePolicy;
 import com.yf.core.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
 import com.yf.core.rejectstrategy.impl.CallerRunsStrategy;
 import com.yf.core.threadpool.ThreadPool;
+import com.yf.core.tp_regulator.UnifiedTPRegulator;
 import com.yf.core.workerfactory.WorkerFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,12 +36,12 @@ public class GCTaskManager {
     static {
         register(ThreadBindingPoll.class, TBPollCleaningTask.class);
     }
-    public static void register(Class clazz,Class<? extends GCTask> taskClass){
-        if(clazz.getSuperclass() == SchedulePolicy.class) {
-            SCHEDULE_TASK_MAP.put(clazz, taskClass);
+    public static void register(Class resourceClazz, Class<? extends GCTask> taskClass){
+        if(resourceClazz.getSuperclass() == SchedulePolicy.class) {
+            SCHEDULE_TASK_MAP.put(resourceClazz, taskClass);
         }
-        if(clazz.getSuperclass() == Partition.class){
-            PARTI_TASK_MAP.put(clazz, taskClass);
+        if(resourceClazz.getSuperclass() == Partition.class){
+            PARTI_TASK_MAP.put(resourceClazz, taskClass);
         }
     }
 
@@ -79,7 +81,8 @@ public class GCTaskManager {
                             new LinkedBlockingQ<Runnable>(50),
                             new CallerRunsStrategy()
                     );
-                    log.info(Logo.LOG_LOGO+"GC小管家little chief注册成功");
+                    UnifiedTPRegulator.register(OfPool.LITTLE_CHIEF,littleChief);
+                    log.info(Logo.LOG_LOGO+"GC小管家little chief默认配置注册成功");
                 }
             }
         }
@@ -91,6 +94,7 @@ public class GCTaskManager {
         if(littleChief!=null) return;
 
         littleChief = tp;
-        log.info(Logo.LOG_LOGO+"GC小管家little chief注册成功");
+        UnifiedTPRegulator.register(OfPool.LITTLE_CHIEF,littleChief);
+        log.info(Logo.LOG_LOGO+"GC小管家little chief自定义配置注册成功");
     }
 }
