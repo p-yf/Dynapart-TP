@@ -10,10 +10,12 @@ import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partition.Partition;
+import com.yf.core.tp_regulator.UnifiedTPRegulator;
 import com.yf.core.workerfactory.WorkerFactory;
 import com.yf.core.worker.Worker;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.concurrent.Callable;
@@ -29,6 +31,7 @@ import static com.yf.common.constant.OfPool.EXTRA;
  * @author yyf
  * @description
  */
+@Slf4j
 @Getter
 @Setter
 public class ThreadPool {
@@ -60,6 +63,8 @@ public class ThreadPool {
         this.coreNums = coreNums;
         this.maxNums = maxNums;
         this.name = name;
+        UnifiedTPRegulator.register(name,this);
+        log.info(Logo.LOG_LOGO+"线程池"+name+"注册成功");
     }
 
     public void execute(Runnable task) {

@@ -35,10 +35,6 @@ public class TPRegisterPostProcessor implements SmartInitializingSingleton {
                 if (beanFactory.containsBeanDefinition(tpName)) {
                     beanFactory.removeBeanDefinition(tpName);
                 }
-            }else{
-                //用户业务的线程池，可以被springboot管理
-                UnifiedTPRegulator.register(tpName, tp);
-                log.info(Logo.LOG_LOGO+"线程池："+tpName+" 注册成功");
             }
         }
     }

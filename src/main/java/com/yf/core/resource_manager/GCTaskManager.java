@@ -76,13 +76,11 @@ public class GCTaskManager {
                     littleChief = new ThreadPool(
                             5,
                             10,
-                            "GC-ThreadPool",
+                            OfPool.LITTLE_CHIEF,
                             new WorkerFactory("", false, true, 10),
                             new LinkedBlockingQ<Runnable>(50),
                             new CallerRunsStrategy()
                     );
-                    UnifiedTPRegulator.register(OfPool.LITTLE_CHIEF,littleChief);
-                    log.info(Logo.LOG_LOGO+"GC小管家little chief默认配置注册成功");
                 }
             }
         }
@@ -94,7 +92,5 @@ public class GCTaskManager {
         if(littleChief!=null) return;
 
         littleChief = tp;
-        UnifiedTPRegulator.register(OfPool.LITTLE_CHIEF,littleChief);
-        log.info(Logo.LOG_LOGO+"GC小管家little chief自定义配置注册成功");
     }
 }
