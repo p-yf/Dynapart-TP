@@ -1,5 +1,5 @@
 server:
-  port: 8083
+  port: 8081
   address: 127.0.0.1
 
 #线程池配置
@@ -15,13 +15,13 @@ yf:
       aliveTime: 5000        #线程存活时间（单位：ms）
       rejectStrategyName: discard   #拒绝策略名称
     queue:
-      partitioning: false  #是否分区化(如果是false，只需要读取capacity和queueName)
+      partitioning: true  #是否分区化(如果是false，只需要读取capacity和queueName)
       partitionNum: 10      #分区数量
       capacity: 10000         #队列容量（不写代表null，为无界）
       queueName: linked     #队列名称
-      offerPolicy: ROUND_ROBIN       #入队策略
-      pollPolicy: THREAD_BINDING      #出队策略
-      removePolicy: ROUND_ROBIN     #移除策略
+      offerPolicy: round_robin       #入队策略
+      pollPolicy: thread_binding      #出队策略
+      removePolicy: round_robin     #移除策略
     monitor:
       enabled: true       #是否开启监控
       fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间(单位：ms)

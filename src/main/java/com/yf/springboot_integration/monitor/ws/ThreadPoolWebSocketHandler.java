@@ -9,6 +9,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -38,64 +39,37 @@ public class ThreadPoolWebSocketHandler extends TextWebSocketHandler {
         System.out.println("WebSocket连接关闭，当前连接数: " + sessions.size());
     }
 
-    // 向所有连接的客户端推送线程池信息
-    public static void broadcastThreadPoolInfo(Map<String, Map<Thread.State, Integer>> threadPoolInfo) {
-        if (sessions.isEmpty()) {
-            return;
-        }
-        try {
-            // 将线程池信息转换为JSON字符串
-            String jsonMessage = objectMapper.writeValueAsString(threadPoolInfo);
-            TextMessage message = new TextMessage(jsonMessage);
-
-            // 向每个会话发送消息
-            for (WebSocketSession session : sessions) {
-                if (session.isOpen()) {
-                    session.sendMessage(message);
-                }
-            }
-        } catch (IOException e) {
-            log.info(Logo.LOG_LOGO +"推送线程池信息失败: " + e.getMessage());
-        }
+    // 新增：按线程池名称广播线程状态
+    public static void broadcastThreadPoolInfo(String tpName, Map<String, Map<Thread.State, Integer>> threadInfo) {
+        broadcastWithTpName(tpName, "threadInfo", threadInfo);
     }
 
-    public static void broadcastTaskNums(int nums) {
-        if (sessions.isEmpty()) {
-            return;
-        }
-        try {
-            // 将线程池信息转换为JSON字符串
-            String jsonMessage = objectMapper.writeValueAsString(nums);
-            TextMessage message = new TextMessage(jsonMessage);
-
-            // 向每个会话发送消息
-            for (WebSocketSession session : sessions) {
-                if (session.isOpen()) {
-                    session.sendMessage(message);
-                }
-            }
-        } catch (IOException e) {
-            log.info(Logo.LOG_LOGO +"推送任务数量失败: " + e.getMessage());
-        }
+    // 新增：按线程池名称广播任务数量
+    public static void broadcastTaskNums(String tpName, int nums) {
+        broadcastWithTpName(tpName, "taskNums", nums);
     }
 
-    public static void broadcastPartitionTaskNums(Map<Integer,Integer> partitionTaskNums) {
-        if (sessions.isEmpty()) {
-            return;
-        }
-        try {
-            // 将线程池信息转换为JSON字符串
-            String jsonMessage = objectMapper.writeValueAsString(partitionTaskNums);
-            TextMessage message = new TextMessage(jsonMessage);
+    // 新增：按线程池名称广播分区任务数量
+    public static void broadcastPartitionTaskNums(String tpName, Map<Integer, Integer> partitionNums) {
+        broadcastWithTpName(tpName, "partitionTaskNums", partitionNums);
+    }
 
-            // 向每个会话发送消息
+    // 通用广播方法（包装线程池名称）
+    private static void broadcastWithTpName(String tpName, String type, Object data) {
+        if (sessions.isEmpty()) return;
+        try {
+            Map<String, Object> message = new HashMap<>();
+            message.put("tpName", tpName);
+            message.put("type", type);
+            message.put("data", data);
+            String json = objectMapper.writeValueAsString(message);
             for (WebSocketSession session : sessions) {
                 if (session.isOpen()) {
-                    session.sendMessage(message);
+                    session.sendMessage(new TextMessage(json));
                 }
             }
         } catch (IOException e) {
-            log.info(Logo.LOG_LOGO +"推送分区任务数量失败: " + e.getMessage());
+            log.error("推送线程池[" + tpName + "]信息失败: " + e.getMessage());
         }
     }
 }

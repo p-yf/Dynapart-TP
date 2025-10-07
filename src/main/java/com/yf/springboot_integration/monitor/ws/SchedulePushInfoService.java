@@ -1,13 +1,9 @@
 package com.yf.springboot_integration.monitor.ws;
 
-import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.tp_regulator.UnifiedTPRegulator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-
-import java.util.Collection;
-import java.util.Map;
 
 
 /**
@@ -25,11 +21,11 @@ public class SchedulePushInfoService {
      */
     @Scheduled(fixedDelayString = "${yf.thread-pool.monitor.fixedDelay}")
     public void pushInfo() {
-        Collection<ThreadPool> values = UnifiedTPRegulator.getResources().values();
-        for(ThreadPool threadPool : values) {
-            ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(threadPool.getThreadsInfo());
-            ThreadPoolWebSocketHandler.broadcastTaskNums(threadPool.getTaskNums());
-            ThreadPoolWebSocketHandler.broadcastPartitionTaskNums(threadPool.getPartitionTaskNums());
-        }
+        // 遍历所有线程池，按名称广播
+        UnifiedTPRegulator.getResources().forEach((tpName, threadPool) -> {
+            ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(tpName, threadPool.getThreadsInfo());
+            ThreadPoolWebSocketHandler.broadcastTaskNums(tpName, threadPool.getTaskNums());
+            ThreadPoolWebSocketHandler.broadcastPartitionTaskNums(tpName, threadPool.getPartitionTaskNums());
+        });
     }
 }

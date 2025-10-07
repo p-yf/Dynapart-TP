@@ -17,6 +17,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.yf.common.constant.OfPool.CORE;
 import static com.yf.common.constant.OfPool.EXTRA;
@@ -54,6 +55,23 @@ public class UnifiedTPRegulator {
 
 
 //    =============================线程池信息和调控====================================
+
+    /**
+     * 新增：获取所有线程池的基本信息列表
+     */
+    public static List<PoolInfo> getAllThreadPoolInfo() {
+        return threadPoolMap.values().stream()
+                .map(threadPool -> getThreadPoolInfo(threadPool.getName())) // 复用现有getThreadPoolInfo逻辑
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 新增：获取所有线程池名称
+     */
+    public static List<String> getAllThreadPoolNames() {
+        return new ArrayList<>(threadPoolMap.keySet());
+    }
+
     /**
      * 获取线程池中线程的信息
      *

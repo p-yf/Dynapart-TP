@@ -32,13 +32,33 @@ import java.util.Map;
 public class MonitorController {
 
     private ApplicationContext context;
+
+
+    /**
+     * 新增：获取所有线程池基本信息列表
+     */
+    @GetMapping("/pools")
+    public List<PoolInfo> getAllPools() {
+        return UnifiedTPRegulator.getAllThreadPoolInfo();
+    }
+
+    /**
+     * 新增：获取所有线程池名称
+     */
+    @GetMapping("/poolNames")
+    public List<String> getAllPoolNames() {
+        return UnifiedTPRegulator.getAllThreadPoolNames();
+    }
+
+
     /**
      * 获取线程池的信息
      * return PoolInfo 线程池信息
      */
     @GetMapping("/pool")
-    public PoolInfo getThreadPoolInfo(String tpName) {
-        return UnifiedTPRegulator.getResource(tpName).getThreadPoolInfo();
+    public PoolInfo getThreadPoolInfo(@RequestParam(required = true) String tpName) {
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        return threadPool != null ? threadPool.getThreadPoolInfo() : null;
     }
 
     /**
@@ -46,8 +66,9 @@ public class MonitorController {
      * return int 队列中任务数量
      */
     @GetMapping("/tasks")
-    public int getQueueSize(String tpName) {
-        return UnifiedTPRegulator.getResource(tpName).getTaskNums();
+    public int getQueueSize(@RequestParam(required = true) String tpName) {
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        return threadPool != null ? threadPool.getTaskNums() : 0;
     }
 
     /**
@@ -55,32 +76,36 @@ public class MonitorController {
      * @return
      */
     @GetMapping("/partitionTaskNums")
-    public Map<Integer,Integer> getPartitionTaskNums(String tpName) {
-        return UnifiedTPRegulator.getResource(tpName).getPartitionTaskNums();
+    public Map<Integer,Integer> getPartitionTaskNums(@RequestParam(required = true) String tpName) {
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        return threadPool != null ? threadPool.getPartitionTaskNums() : null;
     }
 
     /**
      * 获取队列信息
      */
     @GetMapping("/queue")
-    public QueueInfo getQueueInfo(String tpName) {
-        return UnifiedTPRegulator.getResource(tpName).getQueueInfo();
+    public QueueInfo getQueueInfo(@RequestParam(required = true) String tpName) {
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        return threadPool != null ? threadPool.getQueueInfo() : null;
     }
 
     /**
      * 获取所有队列名称
      */
     @GetMapping("/queueName")
-    public List<String> getAllQueueName(String tpName) {
-        return UnifiedTPRegulator.getResource(tpName).getAllQueueName();
+    public List<String> getAllQueueName(@RequestParam(required = true) String tpName) {
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        return threadPool != null ? threadPool.getAllQueueName() : null;
     }
 
     /**
      * 获取所有拒绝策略名称
      */
     @GetMapping("/rejectStrategyName")
-    public List<String> getAllRejectStrategyName(String tpName) {
-        return UnifiedTPRegulator.getResource(tpName).getAllRejectStrategyName();
+    public List<String> getAllRejectStrategyName(@RequestParam(required = true) String tpName) {
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        return threadPool != null ? threadPool.getAllRejectStrategyName() : null;
     }
 
 
@@ -89,22 +114,30 @@ public class MonitorController {
      * return true/false 表示成功与否
      */
     @PutMapping("/worker")
-    public Boolean changeWorkerParams(String tpName,
-                                      Integer coreNums,
-                                      Integer maxNums,
-                                      Boolean coreDestroy,
-                                      Integer aliveTime,
-                                      Boolean isDaemon) {
-        return UnifiedTPRegulator.getResource(tpName).changeWorkerParams(coreNums, maxNums, coreDestroy, aliveTime, isDaemon);
+    public Boolean changeWorkerParams(
+            @RequestParam(required = true) String tpName,
+            Integer coreNums,
+            Integer maxNums,
+            Boolean coreDestroy,
+            Integer aliveTime,
+            Boolean isDaemon) {
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        return threadPool != null && threadPool.changeWorkerParams(coreNums, maxNums, coreDestroy, aliveTime, isDaemon);
     }
 
     /**
-     * 改变队列
+     * 改变队列（修复：将Post改为Put，与文档一致）
      * return true/false 示成功与否
      */
-    @PostMapping("/queue")
-    public Boolean changeQ(String tpName,@RequestBody QueueInfo queueInfo) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+    @PutMapping("/queue")
+    public Boolean changeQ(
+            @RequestParam(required = true) String tpName,
+            @RequestBody QueueInfo queueInfo) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         if (queueInfo.getQueueName() == null || queueInfo.getQueueName().isEmpty()) {
+            return false;
+        }
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        if (threadPool == null) {
             return false;
         }
         Partition q;
@@ -115,12 +148,12 @@ public class MonitorController {
                 q = PartiResourceManager.getResources().get(queueInfo.getQueueName()).getConstructor(Integer.class).newInstance(queueInfo.getCapacity());
             }else{//分区
                 q = new PartiFlow(queueInfo.getPartitionNum(), queueInfo.getCapacity(), queueInfo.getQueueName(),
-                        (OfferPolicy) SPResourceManager.getOfferResource(queueInfo.getOfferPolicy()).getConstructor().newInstance(),
-                        (PollPolicy) SPResourceManager.getPollResource(queueInfo.getPollPolicy()).getConstructor().newInstance(),
-                        (RemovePolicy) SPResourceManager.getRemoveResource(queueInfo.getRemovePolicy()).getConstructor().newInstance());
+                         SPResourceManager.getOfferResource(queueInfo.getOfferPolicy()).getConstructor().newInstance(),
+                         SPResourceManager.getPollResource(queueInfo.getPollPolicy()).getConstructor().newInstance(),
+                         SPResourceManager.getRemoveResource(queueInfo.getRemovePolicy()).getConstructor().newInstance());
             }
         }
-        return UnifiedTPRegulator.getResource(tpName).changeQueue(q, queueInfo.getQueueName());
+        return threadPool.changeQueue(q, queueInfo.getQueueName());
     }
 
     /**
@@ -128,8 +161,14 @@ public class MonitorController {
      * return true/false 表示成功与否
      */
     @PutMapping("/rejectStrategy")
-    public Boolean changeRS(String tpName,String rsName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+    public Boolean changeRS(
+            @RequestParam(required = true) String tpName,
+            @RequestParam(required = true) String rsName) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
         if (rsName == null || rsName.isEmpty()) {
+            return false;
+        }
+        ThreadPool threadPool = UnifiedTPRegulator.getResource(tpName);
+        if (threadPool == null) {
             return false;
         }
         RejectStrategy rs;
@@ -142,7 +181,7 @@ public class MonitorController {
                 rs = (RejectStrategy) RSResourceManager.REJECT_STRATEGY_MAP.get(rsName).getConstructor().newInstance();
             }
         }
-        return UnifiedTPRegulator.getResource(tpName).changeRejectStrategy(rs, rsName);
+        return threadPool.changeRejectStrategy(rs, rsName);
     }
 
 }
