@@ -9,6 +9,7 @@ import lombok.Data;
  */
 @Data
 public class PoolInfo {
+    private String type;
     private boolean useVirtualThread;//是否使用虚拟线程
     private Integer coreNums;//核心线程数
     private Integer maxNums;//最大线程数

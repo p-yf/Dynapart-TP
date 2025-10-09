@@ -8,10 +8,10 @@ import com.yf.core.partition.Partition;
  * @description
  */
 public abstract class PollPolicy implements SchedulePolicy{
-    public int selectPartition(Partition[] partitions){
-        return selectPartition(partitions,null);
+    public int selectPartition(Partition[] partitions,Object o){
+        return selectPartition(partitions);
     }
-    public abstract int selectPartition(Partition[] partitions,Object o);
+    public abstract int selectPartition(Partition[] partitions);
     public abstract boolean getRoundRobin();
     public abstract void setRoundRobin(boolean roundRobin);
 }

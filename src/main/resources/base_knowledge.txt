@@ -1,0 +1,92 @@
+动态线程池调控工具类知识文档
+一、工具类概述
+RegulateTools 是 Spring 管理的线程池调控核心工具类（标注 @Component），仅提供以下四类明确功能：线程池类型查询、线程数量调控、队列容量调控、训练模式下的调控经验写入 RAG 数据库。模型需基于用户周期性发送的负载信息（如内存使用率、线程池任务数等），调用本类方法执行调控；同时，RAG 数据库中以 JSON 格式存储的历史数据，是模型的调参经验，需用于优化后续调控逻辑，不可依赖本类未提供的功能。
+二、核心工具方法详情（含实际用法）
+1. 线程池类型查询：getPoolType
+实际功能
+仅用于查询目标线程池的任务类型，为后续调控提供类型依据，无其他额外能力。
+方法定义
+public String getPoolType(String poolName)
+参数说明
+参数名：poolName，类型：String，必传
+要求：必须与系统中已存在的线程池名称完全一致（名称错误会导致查询失败）
+示例："order-process-pool"
+返回值说明
+有效返回："cpu"（CPU 密集型任务）、"io"（IO 密集型任务）
+无效返回：非上述两种值（代表线程池无固定类型，需结合用户发送的负载信息判断）
+用法建议
+所有调控操作前必须先调用，确认线程池类型后再执行后续调控（无类型则无法精准选择策略）
+仅能查询类型，无法修改类型，也无法获取线程池其他状态（如活跃线程数需从用户提供的负载信息中获取）
+2. 线程数量调控：regulateWorker
+实际功能
+仅能调整线程池的核心线程数、最大线程数、非核心线程存活时间，返回调控成功 / 失败结果，无其他功能。
+方法定义
+public boolean regulateWorker(String poolName, Integer coreNums, Integer maxNums, Integer aliveTime)
+参数说明
+参数名	类型	要求（必须满足，否则调控失败）	示例
+poolName	String	必传，与 getPoolType 查询的名称一致	"pay-pool"
+coreNums	Integer	必传，≥1 且 ≤ maxNums	8
+maxNums	Integer	必传，≥ coreNums	16
+aliveTime	Integer	必传，≥0（单位：秒，0 = 空闲即销毁）	60
+返回值说明
+true：调控成功（参数合法 + 线程池状态正常 <未关闭、已初始化>）
+false：调控失败（常见原因：coreNums > maxNums、poolName 不存在、线程池已关闭）
+用法建议
+调控后必须校验返回值，失败时需先排查参数合法性（如 coreNums 是否≤maxNums），再确认线程池状态
+不可频繁调用（建议间隔≥30 秒），避免线程频繁创建 / 销毁导致性能损耗
+仅能调整上述 4 个参数，无法调整线程池其他属性（如任务拒绝策略、队列类型等）
+3. 队列容量调控：regulateQueue
+实际功能
+仅能调整线程池任务队列的最大容量，无其他能力（如无法查看队列当前任务数，需从用户提供的负载信息中获取）。
+方法定义
+public void regulateQueue(String poolName, Integer queueCapacity)
+参数说明
+poolName：String 类型，必传，与前序方法的线程池名称一致，示例："log-pool"
+queueCapacity：Integer 类型，必传，必须≥当前队列等待任务数（否则会直接丢弃超额任务），示例：200
+用法建议
+优先通过调用 regulateWorker 调整线程数缓解任务堆积，仅当线程数已达上限仍堆积时，再调用本方法
+队列容量最大不建议超过 1000（避免占用过多内存，具体需结合用户提供的系统内存负载判断）
+仅能调整容量，无法清空队列或查看队列详情，需依赖用户提供的负载信息
+4. 调控经验写入 RAG：writeToRag（只有训练模式下才能够使用！！）
+实际功能
+仅在训练模式（配置开关开启）下，将调控信息以 JSON 格式写入 RAG 数据库，无其他功能；非训练模式下无法调用。
+方法生效条件（必须同时满足）
+配置文件中需设置 yf.thread-pool.ai.training=true（否则方法不被注册为可用工具，模型无法调用）
+方法内部校验：type 仅能为 "cpu"/"io"、RegulateInformation 对象不为空（否则直接返回，不写入）
+方法定义
+@ConditionalOnProperty(prefix = "yf.thread-pool.ai", name = "training", havingValue = "true")public void writeToRag(String type, RegulateInformation information)
+RegulateInformation 对象核心字段（JSON 格式，仅含以下用户提供的字段）
+{"load": { // 必须包含：用户发送给模型的本次负载信息（如内存使用率、任务数等）"memoryUsage": "65.20", // 示例：系统内存使用率（%）"order-process-pool:taskNums": "30", // 示例：该线程池当前等待任务数"order-process-pool:queueCapacity": "100" // 示例：该线程池当前队列容量},"toolName": "regulateWorker", // 可选：本次使用的调控工具名（未用工具则为空，如仅查询类型时）"params": { // 可选：本次调整的参数（仅含工具实际支持的参数，未调控则为空）"coreNums": "10","maxNums": "20","aliveTime": "60"},"threadPoolName": "order-process-pool" // 必须包含：本次调控的线程池名称}
+用法建议
+仅在执行了实际调控操作（调用过 regulateWorker 或 regulateQueue）后调用，未调控时无需调用
+写入的 JSON 数据需真实反映本次操作（如未用工具则 toolName 为空，未调整参数则 params 为空），确保经验有效性
+三、CPU/IO 密集型线程池调控策略（基于工具实际功能）
+模型需根据 getPoolType 返回的类型，结合用户提供的负载信息（如 CPU 使用率、任务数、内存使用率），仅通过调用 regulateWorker 和 regulateQueue 执行调控，不可依赖工具类未提供的功能。
+1. CPU 密集型线程池（返回 "cpu"）
+核心特征（基于任务属性）
+任务以计算为主（如数据运算、复杂逻辑处理），CPU 使用率过高是主要问题；线程数过多会导致 CPU 上下文切换频繁，降低性能。
+调控策略（仅用工具支持的参数）
+负载场景（基于用户提供的负载信息）	调控操作（仅调用工具类方法）	参数设置建议
+1. CPU 使用率≥80% + 任务数持续增加	调用 regulateWorker，优先尝试提升 maxNums（上限：CPU 核心数 ×2，避免超量）；若 maxNums 已达上限，小幅降低 coreNums	coreNums：CPU 核心数 ±1；maxNums：≤CPU 核心数 ×2；aliveTime：30-60 秒
+2. CPU 使用率≤50% + 队列等待数≥coreNums×2	调用 regulateWorker，提升 coreNums 至当前活跃线程数（从用户负载信息获取）；若队列仍堆积，小幅提升 maxNums	coreNums：当前活跃线程数；maxNums：coreNums×1.2；aliveTime：30-60 秒
+3. 空闲线程数≥coreNums×0.5（负载低）	调用 regulateWorker，缩短 aliveTime，减少空闲线程占用 CPU 资源	aliveTime：10-30 秒；coreNums 可适当降低（不低于 2）
+4. 队列等待数≥queueCapacity×0.8 + CPU≤60%	先调用 regulateWorker 提升线程数；若线程数已达上限，调用 regulateQueue 提升队列容量	queueCapacity：当前容量 ×1.2（≤1000）
+2. IO 密集型线程池（返回 "io"）
+核心特征（基于任务属性）
+任务以等待为主（如数据库查询、HTTP 请求、文件读写），任务堆积是主要问题；线程数可适当增多，利用 IO 等待时间处理更多任务。
+调控策略（仅用工具支持的参数）
+负载场景（基于用户提供的负载信息）	调控操作（仅调用工具类方法）	参数设置建议
+1. 队列等待数 > 0 + IO 耗时≥500ms（用户提供）	调用 regulateWorker，大幅提升 coreNums 和 maxNums（利用 IO 等待时间）	coreNums：CPU 核心数 ×5-10；maxNums：coreNums×1.5；aliveTime：60-120 秒
+2. 活跃线程数≈maxNums + 队列持续堆积	调用 regulateWorker，提升 maxNums（上限：系统线程数承载范围内）；若仍堆积，调用 regulateQueue 提升容量	maxNums：当前 maxNums×1.5；queueCapacity：当前容量 ×1.2（≤1000）
+3. IO 耗时≤100ms（用户提供） + 空闲线程多	调用 regulateWorker，降低 maxNums 至当前活跃线程数 ×1.2，缩短 aliveTime	maxNums：当前活跃线程数 ×1.2；aliveTime：30-60 秒
+4. 队列等待数≥queueCapacity×0.9 + 线程数未达 maxNums	优先调用 regulateWorker 提升 maxNums，而非直接调整队列容量	maxNums：当前 maxNums×1.2；aliveTime：60 秒
+四、基于 RAG 历史调参经验的优化要求（仅用实际写入的 JSON 数据）
+模型需利用 RAG 中存储的、通过 writeToRag 写入的 JSON 经验数据，优化调控逻辑，不可依赖其他数据：
+经验匹配：遇到相似场景时（如同一线程池、相近的 CPU 使用率 / 任务数 / 队列容量），优先复用 JSON 中 params 字段的历史有效参数（如某 CPU 池在 CPU75% 时，coreNums=8 曾调控成功，本次可直接尝试）
+经验规避：若某历史 JSON 的 toolName 对应调控返回 false（失败），或后续负载未改善，需避免再次使用相同 params（如曾因 coreNums>maxNums 失败，本次需先校验参数）
+经验迭代：每次调控后，若调用 writeToRag 写入经验，需确保 JSON 字段真实（如未用工具则 toolName 为空，参数未调整则 params 为空），避免无效经验占用 RAG 资源
+五、关键注意事项（避免虚构功能）
+工具类仅支持上述 4 个方法，无其他功能（如无法获取 CPU 核心数、IO 耗时、活跃线程数等，需从用户提供的负载信息中获取）
+调控仅能修改 regulateWorker 和 regulateQueue 支持的参数，无法调整线程池拒绝策略、队列类型、任务优先级等未提供的属性
+writeToRag 仅在训练模式（配置开关开启）下可用，正式环境（开关关闭）无法调用，模型需提前判断配置状态
+所有方法的 poolName 必须准确，名称错误会导致查询 / 调控失败，模型需确保 poolName 与用户提供的线程池名称一致

@@ -38,6 +38,7 @@ public class ThreadPool {
     static {
         System.out.println(Logo.startLogo());
     }
+    private String type;
     private WorkerFactory workerFactory;//线程工厂
     private volatile Partition<Runnable> partition;//线程池的任务队列
     private volatile RejectStrategy rejectStrategy;//拒绝策略
@@ -66,6 +67,17 @@ public class ThreadPool {
         UnifiedTPRegulator.register(name,this);
         log.info(Logo.LOG_LOGO+"线程池"+name+"注册成功");
     }
+
+    public ThreadPool(
+            String type, Integer coreNums, Integer maxNums, String name,
+            WorkerFactory threadFactory, Partition<Runnable> partition,
+            RejectStrategy rejectStrategy
+    ) {
+        this(coreNums, maxNums, name, threadFactory, partition, rejectStrategy);
+        this.type = type;
+    }
+
+
 
     public void execute(Runnable task) {
         if(task==null) throw new NullPointerException();

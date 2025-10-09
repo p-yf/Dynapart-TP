@@ -191,5 +191,16 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
         }
     }
 
+    public void setCapacity(Integer capacity) {
+        if(partitions==null){
+            throw new RuntimeException("还未初始化各个分区！");
+        }
+        int rest = capacity % partitions.length;
+        capacity/=partitions.length;
+        for(int i=0;i<partitions.length;i++){
+            partitions[i].setCapacity(capacity+ (i<rest?1:0));
+        }
+    }
+
 
 }

@@ -1,6 +1,5 @@
 package com.yf.core.resource_manager;
 
-import com.yf.common.constant.Logo;
 import com.yf.common.constant.OfPool;
 import com.yf.common.task.GCTask;
 import com.yf.common.task.impl.TBPollCleaningTask;
@@ -11,7 +10,6 @@ import com.yf.core.partitioning.schedule_policy.SchedulePolicy;
 import com.yf.core.partitioning.schedule_policy.impl.poll_policy.ThreadBindingPoll;
 import com.yf.core.rejectstrategy.impl.CallerRunsStrategy;
 import com.yf.core.threadpool.ThreadPool;
-import com.yf.core.tp_regulator.UnifiedTPRegulator;
 import com.yf.core.workerfactory.WorkerFactory;
 import lombok.extern.slf4j.Slf4j;
 
@@ -61,7 +59,8 @@ public class GCTaskManager {
             execute(pollTask);
             execute(removeTask);
         }else{//分区相关的清理策略
-            GCTask task = PARTI_TASK_MAP.get(partition.getClass()).getConstructor(ThreadPool.class).newInstance(tp);
+            GCTask task = PARTI_TASK_MAP.get(partition.getClass())
+                    .getConstructor(ThreadPool.class).newInstance(tp);
             execute(task);
         }
     }
@@ -74,6 +73,7 @@ public class GCTaskManager {
             synchronized (GCTaskManager.class) {
                 if (littleChief == null) {
                     littleChief = new ThreadPool(
+                            OfPool.LITTLE_CHIEF,
                             5,
                             10,
                             OfPool.LITTLE_CHIEF,

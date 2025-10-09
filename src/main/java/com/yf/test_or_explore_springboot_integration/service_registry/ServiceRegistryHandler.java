@@ -1,15 +1,19 @@
-package com.yf.springboot_integration.service_registry;
+package com.yf.test_or_explore_springboot_integration.service_registry;
 
 import com.yf.common.constant.Logo;
 import com.yf.core.threadpool.ThreadPool;
+import com.yf.core.tp_regulator.UnifiedTPRegulator;
 import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
 import org.springframework.util.FileCopyUtils;
 
 import java.io.IOException;
@@ -25,31 +29,33 @@ import java.util.concurrent.TimeUnit;
  * @date 2025/8/20 0:20
  * @description
  */
+@Component
+@ConditionalOnProperty(prefix = "yf.thread-pool.service-registry", name = "enabled", havingValue = "true")
 public class ServiceRegistryHandler {
 
     //    每个节点信息包含字段：ip、port、memoryUsage（内存使用率）、taskNums（任务数量）、queueCapacity(队列大小)
+    @Autowired
     private StringRedisTemplate stringRedisTemplate;
+    @Autowired
     private ResourceLoader resourceLoader;
-    private ThreadPool threadPool;
+    @Autowired
     private ServerProperties serverProperties;
-
     private static String IP;
     private static String PORT;
     private static String KEY;
     //redis中的key
     private final static String REGISTRY_KEY_PREFIX = "task_flow:registry";//基础信息注册  hash 真正的key是前缀加节点的ip和进程号
     private final static String SORT_BY_MEMORY = "task_flow:sort:memoryUsage";//节点按内存使用率排序
-    private final static String SORT_BY_Queue = "task_flow:sort:queueUsage";//节点按队列使用率排序
-    private final static List<String> zsetKeys = Arrays.asList(SORT_BY_MEMORY, SORT_BY_Queue);
+    private final static String SORT_BY_QUEUE = "task_flow:sort:queueUsage";//节点按队列使用率排序
+    private final static List<String> zsetKeys = Arrays.asList(SORT_BY_MEMORY, SORT_BY_QUEUE);
     // Lua脚本
     DefaultRedisScript<Long> redisScript;
     @Value("${yf.thread-pool.service-registry.expireTime}")
     private static int EXPIRE;
 
-    public ServiceRegistryHandler(StringRedisTemplate srt, ResourceLoader rl, ThreadPool tp, ServerProperties sp) {
+    public ServiceRegistryHandler(StringRedisTemplate srt, ResourceLoader rl, ServerProperties sp) {
         this.stringRedisTemplate = srt;
         this.resourceLoader = rl;
-        this.threadPool = tp;
         this.serverProperties = sp;
         IP = serverProperties.getAddress().getHostAddress();
         PORT = serverProperties.getPort().toString();
@@ -62,7 +68,7 @@ public class ServiceRegistryHandler {
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {//进程退出时，删除redis中hash的key 以及zset的元素
             stringRedisTemplate.opsForHash().delete(KEY,"ip", "port", "memoryUsage", "taskNums", "queueCapacity");
             stringRedisTemplate.opsForZSet().remove(SORT_BY_MEMORY,KEY);
-            stringRedisTemplate.opsForZSet().remove(SORT_BY_Queue,KEY);
+            stringRedisTemplate.opsForZSet().remove(SORT_BY_QUEUE,KEY);
         }));
         // 加载并预编译Lua脚本
         loadAndPrecompileLuaScript();
@@ -80,21 +86,31 @@ public class ServiceRegistryHandler {
     }
 
     public void register(){//注册服务
-        Map<String,String> map = new HashMap<>();
+        for(ThreadPool threadPool: UnifiedTPRegulator.getResources().values()) {
+            Map<String, String> map = getEnvironment(threadPool);
+            double memoryUsage = Double.parseDouble(map.get("memoryUsage"));
+            int taskNums = threadPool.getTaskNums();
+            Integer capacity = threadPool.getPartition().getCapacity();
+            stringRedisTemplate.opsForHash().putAll(KEY, map);
+            stringRedisTemplate.expire(KEY, EXPIRE, TimeUnit.SECONDS);
+            stringRedisTemplate.opsForZSet().add(SORT_BY_MEMORY, KEY, memoryUsage);
+            stringRedisTemplate.opsForZSet().add(SORT_BY_QUEUE, KEY, capacity == null ? 0 : (double) taskNums / capacity);
+            stringRedisTemplate.expire(SORT_BY_MEMORY, EXPIRE, TimeUnit.SECONDS);
+            stringRedisTemplate.expire(SORT_BY_QUEUE, EXPIRE, TimeUnit.SECONDS);
+        }
+    }
+
+    public static Map<String,String> getEnvironment(ThreadPool threadPool){
+        Map<String, String> map = new HashMap<>();
         map.put("ip", IP);
         map.put("port", PORT);
-        double memoryUsage = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) * 100.0 / Runtime.getRuntime().maxMemory();
+        double memoryUsage = (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) * 100.0 / Runtime.getRuntime().maxMemory();;
         map.put("memoryUsage", String.valueOf(memoryUsage));
         int taskNums = threadPool.getPartition().getEleNums();
-        map.put("taskNums",String.valueOf(taskNums));
+        map.put("taskNums", String.valueOf(taskNums));
         Integer capacity = threadPool.getPartition().getCapacity();
         map.put("queueCapacity", String.valueOf(capacity));
-        stringRedisTemplate.opsForHash().putAll(KEY, map);
-        stringRedisTemplate.expire(KEY, EXPIRE, TimeUnit.SECONDS);
-        stringRedisTemplate.opsForZSet().add(SORT_BY_MEMORY, KEY, memoryUsage);
-        stringRedisTemplate.opsForZSet().add(SORT_BY_Queue, KEY, capacity==null?0: (double) taskNums /capacity);
-        stringRedisTemplate.expire(SORT_BY_MEMORY, EXPIRE, TimeUnit.SECONDS);
-        stringRedisTemplate.expire(SORT_BY_Queue, EXPIRE, TimeUnit.SECONDS);
+        return map;
     }
 
     //加载并预编译Lua脚本

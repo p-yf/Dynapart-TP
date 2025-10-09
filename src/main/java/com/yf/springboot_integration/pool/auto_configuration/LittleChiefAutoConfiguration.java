@@ -10,12 +10,9 @@ import com.yf.core.partitioning.impl.PartiFlow;
 import com.yf.core.partition.Partition;
 import com.yf.core.workerfactory.WorkerFactory;
 import com.yf.core.threadpool.ThreadPool;
-import com.yf.springboot_integration.pool.post_processor.ResourceRegisterPostProcessor;
-import com.yf.springboot_integration.pool.post_processor.TPRegisterPostProcessor;
 import com.yf.springboot_integration.pool.properties.LittleChiefProperties;
 import com.yf.springboot_integration.pool.properties.QueueProperties;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.support.DefaultListableBeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -62,7 +59,9 @@ public class LittleChiefAutoConfiguration {
         Constructor<?> rejectStrategyClassConstructor = rejectStrategyClass.getConstructor();
         rejectStrategy = (RejectStrategy) rejectStrategyClassConstructor.newInstance();
 
-        ThreadPool littleChief = new ThreadPool(threadPoolProperties.getCoreNums(),
+        ThreadPool littleChief = new ThreadPool(
+                OfPool.LITTLE_CHIEF,
+                threadPoolProperties.getCoreNums(),
                 threadPoolProperties.getMaxNums(),
                 OfPool.LITTLE_CHIEF,
                 new WorkerFactory(threadPoolProperties.getThreadName(),

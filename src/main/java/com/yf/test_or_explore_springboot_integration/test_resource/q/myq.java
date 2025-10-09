@@ -1,4 +1,4 @@
-package com.yf.test_springboot_integration.q;
+package com.yf.test_or_explore_springboot_integration.test_resource.q;
 
 import com.yf.core.partition.Partition;
 import com.yf.springboot_integration.pool.annotation.PartiResource;

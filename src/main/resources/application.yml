@@ -5,7 +5,7 @@ server:
 #线程池配置
 yf:
   thread-pool:
-    little-chief:            #GCTaskManager中的线程池（用来做异步任务或者一些补救措施等等）
+    little-chief: #GCTaskManager中的线程池（用来做异步任务或者一些补救措施等等）
       enabled: true
       useVirtualThread: false #是否使用虚拟线程
       coreNums: 10    #线程池核心线程数
@@ -23,18 +23,23 @@ yf:
       pollPolicy: thread_binding      #出队策略
       removePolicy: round_robin     #移除策略
     monitor:
-      enabled: true       #是否开启监控
+      enabled: false       #是否开启监控
       fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
-    service-registry:      #是否开启服务注册
-        enabled: false
-        heartBeat: 10000   #心跳间隔时间(单位：ms)
-        expireTime: 12000  #注册数据失效时间(单位：ms)
+    service-registry: #是否开启服务注册(这个服务与下面的ai一样都属于是项目的扩展，所以都没有使用自动配置)
+      enabled: false
+      heartBeat: 10000   #心跳间隔时间(单位：ms)
+      expireTime: 12000  #注册数据失效时间(单位：ms)
+    ai:
+      enabled: true
+      training: false
+      fixedDelay: 10000
 
 
 #redis配置
 spring:
   data:
     redis:
+      client-type: jedis
       # Redis服务器地址
       host: localhost
       # Redis服务器端口
@@ -46,16 +51,32 @@ spring:
       # 连接超时时间（毫秒）
       timeout: 10000ms
       # 连接池配置
-      lettuce:
+      jedis:
         pool:
           # 最大连接数，默认8
           max-active: 8
           # 最大阻塞等待时间，默认-1
           max-wait: -1ms
-         # 最大空闲连接，默认8
+          # 最大空闲连接，默认8
           max-idle: 8
           # 最小空闲连接，默认0
           min-idle: 0
+
+  ai:
+    vectorstore:
+      redis:
+        initialize-schema: true
+        index-name: custom-index
+        prefix: custom-prefix
+    ollama:
+      base-url: http://localhost:11434
+      chat:
+        model: qwen3:1.7b
+        options:
+          temperature: 0.7
+      embedding:
+        options:
+          model: nomic-embed-text:latest
 
 
 

@@ -343,11 +343,12 @@ public class PoolCommandHandler {
         }
 
         for (PoolInfo info : poolInfos) {
+            System.out.println("线程池类型:"+info.getType());
             System.out.println("线程池名称: " + info.getPoolName());
             System.out.println("核心线程数: " + info.getCoreNums());
             System.out.println("最大线程数: " + info.getMaxNums());
             System.out.println("线程存活时间: " + info.getAliveTime() + "ms");
-            System.out.println("线程名称前缀: " + info.getThreadName());
+            System.out.println("线程名称: " + info.getThreadName());
             System.out.println("是否允许核心线程销毁: " + info.isCoreDestroy());
             System.out.println("是否守护线程: " + info.isDaemon());
             System.out.println("使用队列: " + info.getQueueName());

@@ -17,7 +17,7 @@ public class ThreadBindingPoll extends PollPolicy {
     private final ThreadLocal<Integer> threadLocal = new ThreadLocal<>();
 
     @Override
-    public int selectPartition(Partition[] partitions,Object o) {
+    public int selectPartition(Partition[] partitions) {
         if(threadLocal.get()==null){
             threadLocal.set((int)round.getAndIncrement()%partitions.length);
         }
@@ -34,7 +34,4 @@ public class ThreadBindingPoll extends PollPolicy {
         this.roundRobin = roundRobin;
     }
 
-    public ThreadLocal<Integer> getThreadLocal() {
-        return threadLocal;
-    }
 }

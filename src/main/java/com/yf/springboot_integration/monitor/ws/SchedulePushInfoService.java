@@ -3,7 +3,6 @@ package com.yf.springboot_integration.monitor.ws;
 import com.yf.core.tp_regulator.UnifiedTPRegulator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Service;
 
 
 /**
@@ -11,7 +10,6 @@ import org.springframework.stereotype.Service;
  * @description
  */
 @Slf4j
-@Service
 public class SchedulePushInfoService {
 
 

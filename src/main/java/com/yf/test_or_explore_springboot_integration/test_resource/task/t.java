@@ -1,4 +1,4 @@
-package com.yf.test_springboot_integration.task;
+package com.yf.test_or_explore_springboot_integration.test_resource.task;
 
 import com.yf.common.task.GCTask;
 import com.yf.core.threadpool.ThreadPool;

@@ -111,6 +111,7 @@ public class UnifiedTPRegulator {
     public static PoolInfo getThreadPoolInfo(String tpName) {
         ThreadPool threadPool = threadPoolMap.get(tpName);
         PoolInfo info = new PoolInfo();
+        info.setType(threadPool.getType());
         info.setPoolName(threadPool.getName());
         info.setAliveTime(threadPool.getWorkerFactory().getAliveTime());
         info.setThreadName(threadPool.getWorkerFactory().getThreadName());
@@ -311,6 +312,13 @@ public class UnifiedTPRegulator {
                 }
             }
         }
+    }
+
+    /**
+     * 改变队列容量
+     */
+    public static void changeQueueCapacity(String tpName,int capacity){
+        threadPoolMap.get(tpName).getPartition().setCapacity( capacity);
     }
 
     /**
