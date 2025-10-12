@@ -1,5 +1,6 @@
 package com.yf.common.task;
 
+import com.yf.core.partition.Partition;
 import com.yf.core.threadpool.ThreadPool;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,5 +14,10 @@ import lombok.Setter;
 @Setter
 public abstract class GCTask implements Runnable{
     ThreadPool threadPool;
-    public abstract GCTask build(ThreadPool tp);
+    Partition<?> partition;
+    public GCTask build(ThreadPool tp,Partition<?> partition){
+        setThreadPool(tp);
+        setPartition(partition);
+        return this;
+    }
 }

@@ -1,6 +1,6 @@
 package com.yf.test_or_explore_springboot_integration.thread_pool;
 
-import com.yf.common.constant.OfPool;
+import com.yf.common.constant.Constant;
 import com.yf.core.partition.Impl.LinkedBlockingQ;
 import com.yf.core.rejectstrategy.impl.CallerRunsStrategy;
 import com.yf.core.threadpool.ThreadPool;
@@ -18,7 +18,7 @@ public class TPConfig {
     @Bean
     public ThreadPool threadPool1(){
         return new ThreadPool(
-                OfPool.IO,
+                Constant.IO,
                 5,
                 10,
                 "TP-ThreadPool1",
@@ -30,7 +30,7 @@ public class TPConfig {
     @Bean
     public ThreadPool threadPool2(){
         return new ThreadPool(
-                OfPool.CPU,
+                Constant.CPU,
                 5,
                 10,
                 "TP-ThreadPool2",

@@ -19,8 +19,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static com.yf.common.constant.OfPool.CORE;
-import static com.yf.common.constant.OfPool.EXTRA;
+import static com.yf.common.constant.Constant.CORE;
+import static com.yf.common.constant.Constant.EXTRA;
 
 /**
  * @author yyf

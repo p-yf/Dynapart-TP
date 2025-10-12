@@ -14,5 +14,7 @@ import java.lang.annotation.*;
 @Documented
 @Component
 public @interface GCTResource {
-    String bindingResource();//绑定的队列或者调度规则的名称
+    String bindingPartiResource() default  "";//绑定的分区的名称
+    String bindingSPResource() default  "";//绑定的调度规则的名称
+    String spType() default  "";//绑定的调度规则的类型
 }

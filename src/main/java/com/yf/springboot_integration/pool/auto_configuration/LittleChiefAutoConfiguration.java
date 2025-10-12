@@ -1,6 +1,6 @@
 package com.yf.springboot_integration.pool.auto_configuration;
 
-import com.yf.common.constant.OfPool;
+import com.yf.common.constant.Constant;
 import com.yf.core.resource_manager.GCTaskManager;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
@@ -36,7 +36,7 @@ public class LittleChiefAutoConfiguration {
     /**
      * 创建GC管理者中的littleChief
      */
-    @Bean(OfPool.LITTLE_CHIEF)
+    @Bean(Constant.LITTLE_CHIEF)
     public ThreadPool threadPool(LittleChiefProperties threadPoolProperties, QueueProperties queueProperties) throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException {
         String queueName = queueProperties.getQueueName();
         String rejectStrategyName = threadPoolProperties.getRejectStrategyName();
@@ -60,10 +60,10 @@ public class LittleChiefAutoConfiguration {
         rejectStrategy = (RejectStrategy) rejectStrategyClassConstructor.newInstance();
 
         ThreadPool littleChief = new ThreadPool(
-                OfPool.LITTLE_CHIEF,
+                Constant.LITTLE_CHIEF,
                 threadPoolProperties.getCoreNums(),
                 threadPoolProperties.getMaxNums(),
-                OfPool.LITTLE_CHIEF,
+                Constant.LITTLE_CHIEF,
                 new WorkerFactory(threadPoolProperties.getThreadName(),
                         threadPoolProperties.isUseDaemon(),
                         true,//必须支持销毁核心线程

@@ -1,6 +1,6 @@
 package com.yf.core.resource_manager;
 
-import com.yf.common.constant.OfPool;
+import com.yf.common.constant.Constant;
 import com.yf.common.task.GCTask;
 import com.yf.common.task.impl.TBPollCleaningTask;
 import com.yf.core.partition.Impl.LinkedBlockingQ;
@@ -43,24 +43,28 @@ public class GCTaskManager {
         }
     }
 
-    public static void clean(ThreadPool tp, Partition<?> partition) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
+    public static void clean(ThreadPool tp, Partition<?> oldPartition) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
 
-        if(partition instanceof Partitioning<?>){//调度规则相关的清理策略
+        if(oldPartition instanceof Partitioning<?>){//调度规则相关的清理策略
             //获取清理任务
-            GCTask offerTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getOfferPolicy().getClass())
-                    .getConstructor(ThreadPool.class).newInstance().build(tp);
-            GCTask pollTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getPollPolicy().getClass())
-                    .getConstructor(ThreadPool.class).newInstance(tp).build(tp);
-            GCTask removeTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) partition).getRemovePolicy().getClass())
-                    .getConstructor(ThreadPool.class).newInstance(tp).build(tp);
+            GCTask offerTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) oldPartition).getOfferPolicy().getClass())
+                    .getConstructor(ThreadPool.class).newInstance().build (tp, oldPartition);
+            GCTask pollTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) oldPartition).getPollPolicy().getClass())
+                    .getConstructor(ThreadPool.class).newInstance().build(tp, oldPartition);
+            GCTask removeTask = SCHEDULE_TASK_MAP.get(((Partitioning<?>) oldPartition).getRemovePolicy().getClass())
+                    .getConstructor(ThreadPool.class).newInstance().build(tp, oldPartition);
 
             //执行
             execute(offerTask);
             execute(pollTask);
             execute(removeTask);
+
+            GCTask task = PARTI_TASK_MAP.get(((Partitioning<?>) oldPartition).getPartitions()[0].getClass())
+                    .getConstructor(ThreadPool.class).newInstance().build(tp, oldPartition);
+            execute(task);
         }else{//分区相关的清理策略
-            GCTask task = PARTI_TASK_MAP.get(partition.getClass())
-                    .getConstructor(ThreadPool.class).newInstance(tp);
+            GCTask task = PARTI_TASK_MAP.get(oldPartition.getClass())
+                    .getConstructor(ThreadPool.class).newInstance().build(tp, oldPartition);
             execute(task);
         }
     }
@@ -73,10 +77,10 @@ public class GCTaskManager {
             synchronized (GCTaskManager.class) {
                 if (littleChief == null) {
                     littleChief = new ThreadPool(
-                            OfPool.LITTLE_CHIEF,
+                            Constant.LITTLE_CHIEF,
                             5,
                             10,
-                            OfPool.LITTLE_CHIEF,
+                            Constant.LITTLE_CHIEF,
                             new WorkerFactory("", false, true, 10),
                             new LinkedBlockingQ<Runnable>(50),
                             new CallerRunsStrategy()

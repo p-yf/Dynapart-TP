@@ -26,7 +26,6 @@ public class SPResourceManager {
     private static final Map<String,Class<? extends OfferPolicy>> OFFER_POLICY_MAP = new HashMap<>();
     private static final Map<String,Class<? extends PollPolicy>> POLL_POLICY_MAP = new HashMap<>();
     private static final Map<String,Class<? extends RemovePolicy>> REMOVE_POLICY_MAP = new HashMap<>();
-    private static final Map<String,Class<? extends SchedulePolicy>> QSWITCH_NOTIFIED_POLICY_MAP = new HashMap<>();
 
     static {
         //Offer
@@ -47,8 +46,6 @@ public class SPResourceManager {
         register("peek_shaving", PeekShavingRemove.class);
         register("random", PeekShavingRemove.class);
 
-        //qSwitch
-        registerQSwitch("thread_binding", ThreadBindingPoll.class);
 
     }
     //调度资源注册
@@ -64,10 +61,6 @@ public class SPResourceManager {
         }
     }
 
-    //队列切换需要被通知的资源额外注册
-    public static void registerQSwitch(String name, Class policyClass) {
-        QSWITCH_NOTIFIED_POLICY_MAP.put(name, policyClass);
-    }
 
     //获取调度资源
     public static Class<? extends OfferPolicy> getOfferResource(String name){
@@ -80,10 +73,6 @@ public class SPResourceManager {
         return REMOVE_POLICY_MAP.get(name);
     }
 
-    //获取队列通知需要被额外通知的调度资源
-    public static Class<? extends SchedulePolicy> getQSwitchNotifiedResource(String name){
-        return QSWITCH_NOTIFIED_POLICY_MAP.get(name);
-    }
 
 
     //获取所有调度资源
@@ -97,8 +86,4 @@ public class SPResourceManager {
         return REMOVE_POLICY_MAP;
     }
 
-    //获取所有队列通知需要被额外通知的调度资源
-    public static Map<String,Class<? extends SchedulePolicy>> getQSwitchNotifiedResources(){
-        return QSWITCH_NOTIFIED_POLICY_MAP;
-    }
 }

@@ -21,9 +21,4 @@ public class TBPollCleaningTask extends GCTask {
         UnifiedTPRegulator.destroyWorkers(threadPool.getName(),coreList.size(),extraList.size());
     }
 
-    @Override
-    public GCTask build(ThreadPool tp) {
-        setThreadPool(tp);
-        return this;
-    }
 }

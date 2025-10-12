@@ -1,6 +1,9 @@
 package com.yf.springboot_integration.pool.post_processor;
 
+import com.yf.common.constant.Constant;
 import com.yf.common.constant.Logo;
+import com.yf.core.partitioning.schedule_policy.OfferPolicy;
+import com.yf.core.partitioning.schedule_policy.SchedulePolicy;
 import com.yf.core.resource_manager.GCTaskManager;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
@@ -80,10 +83,21 @@ public class ResourceRegisterPostProcessor implements BeanDefinitionRegistryPost
                 GCTResource gctResource = clazz.getAnnotation(GCTResource.class);
 
                 //得到绑定资源的名称
-                String resourceName = gctResource.bindingResource();
+                String partiName = gctResource.bindingPartiResource();
+                String spName = gctResource.bindingSPResource();
                 //从自定义中心中获取对应的资源类
-                Class<? extends Partition> resource = PartiResourceManager.getResource(resourceName);
-                registerGCExecutorManager(resource,clazz,resourceName);
+                Class<? extends Partition> parti = PartiResourceManager.getResource(partiName);
+
+                Class<? extends SchedulePolicy> spResource;
+                if(gctResource.spType().equals(Constant.POLL)){
+                    spResource = SPResourceManager.getPollResource(spName);
+                } else if (gctResource.spType().equals(Constant.OFFER)) {
+                    spResource= SPResourceManager.getOfferResource(spName);
+                }else{
+                    spResource = SPResourceManager.getRemoveResource(spName);
+                }
+                registerGCExecutorManager(spResource,clazz,spName);
+                registerGCExecutorManager(parti,clazz,partiName);
                 registry.removeBeanDefinition(gctBeanName);
             } catch (ClassNotFoundException e) {
                 throw new RuntimeException(e);

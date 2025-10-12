@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @author yyf
  * @date 2025/8/8 17:20
  * @description
- * 分区队列：多队列、细粒度、扁平化、高性能
+ * 分区队列：多队列、细粒度、高性能
  * 可选任务入队策略：轮询、随机、hash、填谷、优先级
  * 可选任务出队策略：轮询、随机、削峰、线程绑定、优先级
  * 可选移除任务策略：轮询、随机、削峰、优先级

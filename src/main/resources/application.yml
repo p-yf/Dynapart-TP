@@ -30,7 +30,7 @@ yf:
       heartBeat: 10000   #心跳间隔时间(单位：ms)
       expireTime: 12000  #注册数据失效时间(单位：ms)
     ai:
-      enabled: true
+      enabled: false
       training: false
       fixedDelay: 10000
 
@@ -62,21 +62,22 @@ spring:
           # 最小空闲连接，默认0
           min-idle: 0
 
-  ai:
-    vectorstore:
-      redis:
-        initialize-schema: true
-        index-name: custom-index
-        prefix: custom-prefix
-    ollama:
-      base-url: http://localhost:11434
-      chat:
-        model: qwen3:1.7b
-        options:
-          temperature: 0.7
-      embedding:
-        options:
-          model: nomic-embed-text:latest
+#不开启ai就需要注释掉
+#  ai:
+#    vectorstore:
+#      redis:
+#        initialize-schema: true
+#        index-name: custom-index
+#        prefix: custom-prefix
+#    ollama:
+#      base-url: http://localhost:11434
+#      chat:
+#        model: qwen3:1.7b
+#        options:
+#          temperature: 0.7
+#      embedding:
+#        options:
+#          model: nomic-embed-text:latest
 
 
 

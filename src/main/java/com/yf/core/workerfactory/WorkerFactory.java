@@ -1,7 +1,6 @@
 package com.yf.core.workerfactory;
 
-import com.yf.common.constant.Logo;
-import com.yf.common.constant.OfPool;
+import com.yf.common.constant.Constant;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.worker.Worker;
 import lombok.Data;
@@ -39,10 +38,10 @@ public class WorkerFactory {
         Worker worker = new Worker(threadPool,isCore,coreDestroy,aliveTime,task);
 
         if(useVirtualThread){//创建虚拟线程
-            Thread thread = Thread.ofVirtual().name(OfPool.VIRTUAL +threadName).unstarted( worker);
+            Thread thread = Thread.ofVirtual().name(Constant.VIRTUAL +threadName).unstarted( worker);
             worker.setThread(thread);
         } else{//创建平台线程
-            Thread thread = new Thread(worker,OfPool.PLATFORM+threadName);
+            Thread thread = new Thread(worker, Constant.PLATFORM+threadName);
             thread.setDaemon(useDaemonThread);
             worker.setThread(thread);
         }

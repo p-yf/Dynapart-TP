@@ -294,5 +294,29 @@ public class SPResourceManager {
 }
 
 ```
+###另外再举一个自定义GC任务的例子
+GC任务是为了解决运行时切换队列而设置的保底策略，具体的逻辑与思考在"Reflections Or Lessons Learned"文件夹中有详细说明
+是针对src/main/java/com/yf/core/tp_regulator/UnifiedTPRegulator.java这个类中的changeQueue方法的，这里只说如何使用
+绑定了对应的资源那么在更换分区后倘若被替换掉的旧分区被绑定或者旧分区的调度规则被绑定那么就会执行这个任务
 
+springboot环境(只需要写个注解就行了)：
+```java
+//          绑定的分区资源名称                 绑定的调度策略名称  不能都不写。         绑定的调度规则类型
+@GCTResource(bindingPartiResource = "myq",bindingSPResource = "thread_binding",spType = Constant.POLL)
+public class t extends GCTask {
+
+
+    @Override
+    public void run() {
+        ThreadPool threadPool = getThreadPool();
+        Partition<?> partition = getPartition();
+    }
+
+}
+```
+非springboot环境：
+需要手动在GCTaskManager中注册：绑定的资源类型，任务类型。
+```java
+GCTaskManager.register(bindingResource.class,task.class);
+```
 
