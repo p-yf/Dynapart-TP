@@ -54,7 +54,7 @@ public class PartitionQueuePerformanceTest {
                  * 最小：1604
                  * 失败次数：0
                  */
-//                long testTime = testJdkThreadPoolWithLinkedBlockingQueue();
+                long testTime = testJdkThreadPoolWithLinkedBlockingQueue();
                 /**
                  * PartiFlow
                  * 平均每轮：1164.2
@@ -74,7 +74,7 @@ public class PartitionQueuePerformanceTest {
                  * 最小：1024
                  * 失败次数：0
                  */
-                long testTime = testLinkedBlockingQPerformance();
+//                long testTime = testLinkedBlockingQPerformance();
 
                 /**
                  * 平均每轮：1265.4
