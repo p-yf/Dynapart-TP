@@ -33,7 +33,7 @@ public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
     private PollPolicy pollPolicy = new RoundRobinPoll();
     private RemovePolicy removePolicy = new RoundRobinRemove();
     private volatile Integer capacity;
-    private Integer DEFAULT_PARTITION_NUM = 5;
+    private Integer DEFAULT_PARTITION_NUM = 4;
 
     public PartiStill(Integer partitionNum, Integer capacity, String QName, OfferPolicy offerPolicy, PollPolicy pollPolicy, RemovePolicy removePolicy) {
         this(partitionNum, capacity,QName);

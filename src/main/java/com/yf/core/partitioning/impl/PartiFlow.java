@@ -37,11 +37,8 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
     private OfferPolicy offerPolicy = new RoundRobinOffer();
     private PollPolicy pollPolicy = new RoundRobinPoll();
     private RemovePolicy removePolicy = new RoundRobinRemove();
-    private AtomicInteger offerRound = new AtomicInteger(0);
-    private AtomicInteger pollRound = new AtomicInteger(0);
-    private AtomicInteger removeRound = new AtomicInteger(0);
     private volatile Integer capacity;
-    private Integer DEFAULT_PARTITION_NUM = 5;
+    private Integer DEFAULT_PARTITION_NUM = 4;
     private static final Integer DEFAULT_WAIT_TIME = 100;
 
     public PartiFlow(Integer partitionNum, Integer capacity, String QName, OfferPolicy offerPolicy, PollPolicy pollPolicy, RemovePolicy removePolicy) {
