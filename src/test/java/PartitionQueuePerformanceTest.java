@@ -11,7 +11,7 @@ import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.workerfactory.WorkerFactory;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.rejectstrategy.impl.CallerRunsStrategy;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;

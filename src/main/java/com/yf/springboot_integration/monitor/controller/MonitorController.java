@@ -1,5 +1,10 @@
 package com.yf.springboot_integration.monitor.controller;
 
+import com.yf.common.constant.Constant;
+import com.yf.common.constant.Logo;
+import com.yf.common.glue.DynamicCompiler;
+import com.yf.common.task.GCTask;
+import com.yf.core.resource_manager.GCTaskManager;
 import com.yf.core.resource_manager.PartiResourceManager;
 import com.yf.core.resource_manager.RSResourceManager;
 import com.yf.core.resource_manager.SPResourceManager;
@@ -9,11 +14,17 @@ import com.yf.core.partitioning.impl.PartiFlow;
 import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partitioning.schedule_policy.PollPolicy;
 import com.yf.core.partitioning.schedule_policy.RemovePolicy;
+import com.yf.core.partitioning.schedule_policy.SchedulePolicy;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partition.Partition;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.tp_regulator.UnifiedTPRegulator;
+import com.yf.springboot_integration.pool.annotation.GCTResource;
+import com.yf.springboot_integration.pool.annotation.PartiResource;
+import com.yf.springboot_integration.pool.annotation.RSResource;
+import com.yf.springboot_integration.pool.annotation.SPResource;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.web.bind.annotation.*;
@@ -29,6 +40,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/monitor")
 @AllArgsConstructor
+@Slf4j
 public class MonitorController {
 
     private ApplicationContext context;
@@ -182,6 +194,91 @@ public class MonitorController {
             }
         }
         return threadPool.changeRejectStrategy(rs, rsName);
+    }
+
+    /**
+     * 动态编译并热部署资源
+     * @param className 类全名
+     * @param javaCode Java源码
+     * @return 是否部署成功
+     */
+    @PostMapping("/hotDeploy")
+    public Boolean hotDeploy(@RequestParam String className, @RequestBody String javaCode) {
+        try {
+            log.info(Logo.LOG_LOGO + "开始热部署资源类: {}", className);
+            DynamicCompiler compiler = new DynamicCompiler();
+            Class<?> clazz = compiler.compileToClass(className, javaCode);
+
+            PartiResource partiResource = clazz.getAnnotation(PartiResource.class);
+            RSResource rsResource = clazz.getAnnotation(RSResource.class);
+            SPResource spResource = clazz.getAnnotation(SPResource.class);
+            GCTResource gctResource = clazz.getAnnotation(GCTResource.class);
+
+            boolean success = false;
+
+            if (partiResource != null) {
+                PartiResourceManager.register(partiResource.value(), clazz.asSubclass(Partition.class));
+                log.info(Logo.LOG_LOGO + "热部署自定义队列 [{}] 成功", partiResource.value());
+                success = true;
+            }
+
+            if (rsResource != null) {
+                RSResourceManager.register(rsResource.value(), clazz.asSubclass(RejectStrategy.class));
+                log.info(Logo.LOG_LOGO + "热部署自定义拒绝策略 [{}] 成功", rsResource.value());
+                success = true;
+            }
+
+            if (spResource != null) {
+                SPResourceManager.register(spResource.value(), clazz);
+                log.info(Logo.LOG_LOGO + "热部署自定义调度规则 [{}] 成功", spResource.value());
+                success = true;
+            }
+
+            if (gctResource != null) {
+                String partiName = gctResource.bindingPartiResource();
+                String spName = gctResource.bindingSPResource();
+                String spType = gctResource.spType();
+
+                if (partiName != null && !partiName.isEmpty()) {
+                    Class<? extends Partition> partiClass = PartiResourceManager.getResource(partiName);
+                    if (partiClass != null) {
+                        GCTaskManager.register(partiClass, clazz.asSubclass(GCTask.class));
+                        log.info(Logo.LOG_LOGO + "热部署自定义GC任务成功，绑定分区资源: {}", partiName);
+                        success = true;
+                    }
+                }
+
+                if (spName != null && !spName.isEmpty()) {
+                    // 处理可能不带冒号的情况
+                    String type = spType != null ? spType : "";
+                    if (!type.endsWith(":")) type += ":";
+
+                    Class<? extends SchedulePolicy> spPolicyClass = null;
+                    if (Constant.POLL.equals(type)) {
+                        spPolicyClass = SPResourceManager.getPollResource(spName);
+                    } else if (Constant.OFFER.equals(type)) {
+                        spPolicyClass = SPResourceManager.getOfferResource(spName);
+                    } else if (Constant.REMOVE.equals(type)) {
+                        spPolicyClass = SPResourceManager.getRemoveResource(spName);
+                    }
+
+                    if (spPolicyClass != null) {
+                        GCTaskManager.register(spPolicyClass, clazz.asSubclass(GCTask.class));
+                        log.info(Logo.LOG_LOGO + "热部署自定义GC任务成功，绑定调度策略: {} ({})", spName, type);
+                        success = true;
+                    }
+                }
+            }
+
+            if (!success) {
+                log.warn(Logo.LOG_LOGO + "类 {} 编译成功，但未发现有效的资源注解", className);
+            }
+            return success;
+
+        } catch (Exception e) {
+            log.error(Logo.LOG_LOGO + "热部署资源类 [{}] 失败", className, e);
+            return false;
+        }
     }
 
 }

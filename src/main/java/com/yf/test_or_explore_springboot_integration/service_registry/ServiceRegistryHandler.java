@@ -97,6 +97,9 @@ public class ServiceRegistryHandler {
             stringRedisTemplate.opsForZSet().add(SORT_BY_QUEUE, KEY, capacity == null ? 0 : (double) taskNums / capacity);
             stringRedisTemplate.expire(SORT_BY_MEMORY, EXPIRE, TimeUnit.SECONDS);
             stringRedisTemplate.expire(SORT_BY_QUEUE, EXPIRE, TimeUnit.SECONDS);
+            System.out.println(memoryUsage);
+            System.out.println(taskNums);
+            System.out.println(capacity);
         }
     }
 

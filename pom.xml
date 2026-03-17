@@ -71,12 +71,10 @@
         </dependency>
 
         <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <!-- Spring AI Ollama 适配器（版本与核心一致） -->
 
         <dependency>
             <groupId>org.springframework.ai</groupId>

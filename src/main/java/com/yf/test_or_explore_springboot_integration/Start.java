@@ -17,29 +17,28 @@ import java.util.Map;
 public class Start {
     public static void main(String[] args) {
         ConfigurableApplicationContext run = SpringApplication.run(Start.class, args);
-        //命令行启动的流程  springboot环境不建议，建议用可视化界面。
         Map<String, ThreadPool> beansOfType = run.getBeansOfType(ThreadPool.class);
-//        new Thread(()->{
-//            for(ThreadPool threadPool:beansOfType.values()){
-//                if(threadPool.getName().equals("TP-ThreadPool1")){
-//                    //io类型线程池,设置io任务,一次100个任务
-//                    while(true) {
-//                        for (int i = 0; i < 100; i++) {
-//                            threadPool.execute(new Runnable() {
-//                                @Override
-//                                public void run() {
-//                                    try {
-//                                        Thread.sleep(700);
-//                                    } catch (InterruptedException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            });
-//                        }
-//                    }
-//                }
-//            }
-//        },"io线程池").start();
+        new Thread(()->{
+            for(ThreadPool threadPool:beansOfType.values()){
+                if(threadPool.getName().equals("TP-ThreadPool1")){
+                    //io类型线程池,设置io任务,一次100个任务
+                    while(true) {
+                        for (int i = 0; i < 100; i++) {
+                            threadPool.execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    try {
+                                        Thread.sleep(700);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                            });
+                        }
+                    }
+                }
+            }
+        },"io线程池").start();
 //        new Thread(()->{
 //            for(ThreadPool threadPool:beansOfType.values()){
 //                if(threadPool.getName().equals("TP-ThreadPool2")){

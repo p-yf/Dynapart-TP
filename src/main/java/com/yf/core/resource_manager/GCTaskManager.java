@@ -35,11 +35,11 @@ public class GCTaskManager {
         register(ThreadBindingPoll.class, TBPollCleaningTask.class);
     }
     public static void register(Class resourceClazz, Class<? extends GCTask> taskClass){
-        if(resourceClazz.getSuperclass() == SchedulePolicy.class) {
-            SCHEDULE_TASK_MAP.put(resourceClazz, taskClass);
+        if(SchedulePolicy.class.isAssignableFrom(resourceClazz)) {
+            SCHEDULE_TASK_MAP.put((Class<? extends SchedulePolicy>) resourceClazz, taskClass);
         }
-        if(resourceClazz.getSuperclass() == Partition.class){
-            PARTI_TASK_MAP.put(resourceClazz, taskClass);
+        if(Partition.class.isAssignableFrom(resourceClazz)){
+            PARTI_TASK_MAP.put((Class<? extends Partition<?>>) resourceClazz, taskClass);
         }
     }
 

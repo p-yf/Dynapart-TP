@@ -26,7 +26,7 @@ yf:
       enabled: false       #是否开启监控
       fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
     service-registry: #是否开启服务注册(这个服务与下面的ai一样都属于是项目的扩展，所以都没有使用自动配置)
-      enabled: false
+      enabled: true
       heartBeat: 10000   #心跳间隔时间(单位：ms)
       expireTime: 12000  #注册数据失效时间(单位：ms)
     ai:
