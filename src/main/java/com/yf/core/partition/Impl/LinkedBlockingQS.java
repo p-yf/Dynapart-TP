@@ -74,12 +74,12 @@ public class LinkedBlockingQS<T> extends Partition<T> {
                 return false;
             enqueue(newNode);
             c = size.getAndIncrement();
+            // 如果队列之前为空，在持有锁时唤醒等待的消费者 (避免lost wakeup)
+            if (c == 0) {
+                notEmpty.signal();
+            }
         } finally {
             tailLock.unlock();
-        }
-        // 如果队列之前为空，唤醒等待的消费者
-        if (c == 0) {
-            signalWaitForNotEmpty();
         }
         return true;
     }

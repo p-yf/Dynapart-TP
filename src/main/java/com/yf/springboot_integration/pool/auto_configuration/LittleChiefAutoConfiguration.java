@@ -1,10 +1,10 @@
 package com.yf.springboot_integration.pool.auto_configuration;
 
 import com.yf.common.constant.Constant;
-import com.yf.core.resource_manager.GCTaskManager;
-import com.yf.core.resource_manager.PartiResourceManager;
-import com.yf.core.resource_manager.RSResourceManager;
-import com.yf.core.resource_manager.SPResourceManager;
+import com.yf.core.resource_container.resource_manager.GCTaskManager;
+import com.yf.core.resource_container.resource_manager.PartiResourceManager;
+import com.yf.core.resource_container.resource_manager.RSResourceManager;
+import com.yf.core.resource_container.resource_manager.SPResourceManager;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partitioning.impl.PartiFlow;
 import com.yf.core.partition.Partition;

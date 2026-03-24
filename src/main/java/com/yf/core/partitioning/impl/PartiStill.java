@@ -10,7 +10,7 @@ import com.yf.core.partitioning.schedule_policy.impl.offer_policy.RoundRobinOffe
 import com.yf.core.partitioning.schedule_policy.impl.poll_policy.RoundRobinPoll;
 import com.yf.core.partitioning.schedule_policy.impl.remove_policy.RoundRobinRemove;
 import com.yf.core.partition.Partition;
-import com.yf.core.resource_manager.PartiResourceManager;
+import com.yf.core.resource_container.resource_manager.PartiResourceManager;
 import lombok.Getter;
 import lombok.Setter;
 

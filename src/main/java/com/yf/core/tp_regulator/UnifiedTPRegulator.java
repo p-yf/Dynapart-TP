@@ -6,17 +6,19 @@ import com.yf.core.partition.Partition;
 import com.yf.core.partitioning.Partitioning;
 import com.yf.core.partitioning.impl.PartiFlow;
 import com.yf.core.rejectstrategy.RejectStrategy;
-import com.yf.core.resource_manager.GCTaskManager;
-import com.yf.core.resource_manager.PartiResourceManager;
-import com.yf.core.resource_manager.RSResourceManager;
-import com.yf.core.resource_manager.SPResourceManager;
+import com.yf.core.resource_container.resource_manager.GCTaskManager;
+import com.yf.core.resource_container.resource_manager.PartiResourceManager;
+import com.yf.core.resource_container.resource_manager.RSResourceManager;
+import com.yf.core.resource_container.resource_manager.SPResourceManager;
 import com.yf.core.threadpool.ThreadPool;
 import com.yf.core.worker.Worker;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 import static com.yf.common.constant.Constant.CORE;
@@ -27,9 +29,10 @@ import static com.yf.common.constant.Constant.EXTRA;
  * @date 2025/10/5 12:50
  * @description ：线程池动态调节类，解耦线程池核心逻辑和调节逻辑，未来将实现用单个调节对象统一管控所有的线程池
  */
+@Slf4j
 public class UnifiedTPRegulator {
 
-    private final static Map<String,ThreadPool> threadPoolMap = new HashMap<>();
+    private final static Map<String, ThreadPool> threadPoolMap = new ConcurrentHashMap<>();
 
     /**
      * 注册线程池
@@ -37,7 +40,25 @@ public class UnifiedTPRegulator {
      * @param threadPool: 线程池
      */
     public static void register(String name, ThreadPool threadPool) {
-        threadPoolMap.put(name, threadPool);
+        if (name == null || threadPool == null) {
+            throw new IllegalArgumentException("name and threadPool cannot be null");
+        }
+        ThreadPool existing = threadPoolMap.put(name, threadPool);
+        if (existing != null) {
+            log.warn("Thread pool [{}] was already registered, replacing with new instance", name);
+        }
+    }
+
+    /**
+     * 注销线程池
+     * @param name:线程池名字
+     * @return 被注销的线程池
+     */
+    public static ThreadPool unregister(String name) {
+        if (name == null) {
+            return null;
+        }
+        return threadPoolMap.remove(name);
     }
 
     /**
@@ -46,6 +67,9 @@ public class UnifiedTPRegulator {
      * @return 线程池
      */
     public static ThreadPool getResource(String name){
+        if (name == null) {
+            return null;
+        }
         return threadPoolMap.get(name);
     }
 
@@ -110,6 +134,9 @@ public class UnifiedTPRegulator {
      */
     public static PoolInfo getThreadPoolInfo(String tpName) {
         ThreadPool threadPool = threadPoolMap.get(tpName);
+        if (threadPool == null) {
+            return null;
+        }
         PoolInfo info = new PoolInfo();
         info.setType(threadPool.getType());
         info.setPoolName(threadPool.getName());
@@ -141,6 +168,9 @@ public class UnifiedTPRegulator {
      */
     public static int getTaskNums(String tpName) {
         ThreadPool threadPool = threadPoolMap.get(tpName);
+        if (threadPool == null) {
+            return 0;
+        }
         return threadPool.getPartition().getEleNums();
     }
 
@@ -150,6 +180,9 @@ public class UnifiedTPRegulator {
      */
     public static Map<Integer,Integer> getPartitionTaskNums(String tpName){
         ThreadPool threadPool = threadPoolMap.get(tpName);
+        if (threadPool == null) {
+            return new HashMap<>();
+        }
         Map<Integer,Integer> map = new HashMap<>();
         if(!(threadPool.getPartition() instanceof PartiFlow)){//不是分区队列
             map.put(0,threadPool.getPartition().getEleNums());
@@ -168,6 +201,9 @@ public class UnifiedTPRegulator {
      */
     public static QueueInfo getQueueInfo(String tpName){
         ThreadPool threadPool = threadPoolMap.get(tpName);
+        if (threadPool == null) {
+            return null;
+        }
         QueueInfo queueInfo = new QueueInfo();
         queueInfo.setCapacity(threadPool.getPartition().getCapacity());
         if(threadPool.getPartition() instanceof Partitioning<?>){
@@ -256,7 +292,9 @@ public class UnifiedTPRegulator {
         }
         if(coreNums==null){
             if(maxNums!=null) {
-                destroyWorkers(tpName, 0, (oldMaxNums - oldCoreNums) - (maxNums - coreNums));
+                // When only maxNums changes and coreNums stays the same
+                // Extra workers to destroy = (oldMax - oldCore) - (newMax - oldCore) = oldMax - newMax
+                destroyWorkers(tpName, 0, oldMaxNums - maxNums);
             }
         }else{
             if(maxNums==null) {

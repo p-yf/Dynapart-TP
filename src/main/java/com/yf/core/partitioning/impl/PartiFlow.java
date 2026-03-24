@@ -2,7 +2,7 @@ package com.yf.core.partitioning.impl;
 
 import com.yf.common.exception.SwitchedException;
 import com.yf.core.partitioning.Partitioning;
-import com.yf.core.resource_manager.PartiResourceManager;
+import com.yf.core.resource_container.resource_manager.PartiResourceManager;
 import com.yf.core.partition.Impl.LinkedBlockingQ;
 import com.yf.core.partitioning.schedule_policy.OfferPolicy;
 import com.yf.core.partitioning.schedule_policy.PollPolicy;
@@ -15,7 +15,6 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author yyf

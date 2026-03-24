@@ -4,10 +4,11 @@ import com.yf.common.constant.Logo;
 import com.yf.common.entity.PoolInfo;
 import com.yf.common.entity.QueueInfo;
 import com.yf.core.partitioning.impl.PartiFlow;
+import com.yf.core.partitioning.impl.PartiStill;
 import com.yf.core.partitioning.Partitioning;
-import com.yf.core.resource_manager.PartiResourceManager;
-import com.yf.core.resource_manager.RSResourceManager;
-import com.yf.core.resource_manager.SPResourceManager;
+import com.yf.core.resource_container.resource_manager.PartiResourceManager;
+import com.yf.core.resource_container.resource_manager.RSResourceManager;
+import com.yf.core.resource_container.resource_manager.SPResourceManager;
 import com.yf.core.rejectstrategy.RejectStrategy;
 import com.yf.core.partition.Partition;
 import com.yf.core.tp_regulator.UnifiedTPRegulator;
@@ -263,6 +264,12 @@ public class ThreadPool {
             }
             queueInfo.setPartitionNum(((Partitioning<Runnable>) partition).getPartitions().length);
             queueInfo.setPartitioning(true);
+            // 设置分区类型
+            if (partition instanceof PartiStill) {
+                queueInfo.setPartitionType("parti_still");
+            } else {
+                queueInfo.setPartitionType("parti_flow");
+            }
             //找到offer的名字
             for(Map.Entry entry : SPResourceManager.getOfferResources().entrySet()){
                 if (entry.getValue() == ((Partitioning<Runnable>) partition).getOfferPolicy().getClass()) {

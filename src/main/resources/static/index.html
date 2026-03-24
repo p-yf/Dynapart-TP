@@ -3,250 +3,339 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DynaPart-TP 线程池监控中心</title>
+    <title>DynaPart-TP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
         tailwind.config = {
             theme: {
                 extend: {
                     colors: {
-                        primary: '#3B82F6',
-                        secondary: '#10B981',
-                        danger: '#EF4444',
-                        warning: '#F59E0B',
-                        dark: '#1E293B',
-                        light: '#F8FAFC'
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'system-ui', 'sans-serif'],
-                    },
+                        dark: { 900: '#0a0a0f', 800: '#12121a', 700: '#1a1a25', 600: '#242430' },
+                        accent: { blue: '#3b82f6', cyan: '#06b6d4', violet: '#8b5cf6' }
+                    }
                 }
             }
         }
     </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .card-shadow {
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            }
-            .sidebar-item-active {
-                @apply bg-primary/10 text-primary border-l-4 border-primary;
-            }
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        * { font-family: 'Inter', system-ui, sans-serif; }
+        body { background: linear-gradient(135deg, #0a0a0f 0%, #12121a 50%, #0a0a0f 100%); min-height: 100vh; }
+
+        /* Grid pattern overlay */
+        .grid-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
+            background-size: 50px 50px; pointer-events: none; z-index: 1;
         }
+
+        .glass-card {
+            background: rgba(26, 26, 37, 0.6); backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .stat-value {
+            background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        .pulse-dot { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .fade-in-up { animation: fadeInUp 0.6s ease-out forwards; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        .pool-row { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .pool-row:hover { background: rgba(255, 255, 255, 0.02); }
+
+        .progress-bar { transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        header { position: relative; }
+        header::after {
+            content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(59,130,246,0.5), rgba(6,182,212,0.5), transparent);
+        }
+
+        .logo-icon { animation: logo-glow 3s ease-in-out infinite; }
+        @keyframes logo-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.3), 0 0 40px rgba(6,182,212,0.2); }
+            50% { box-shadow: 0 0 30px rgba(59,130,246,0.5), 0 0 60px rgba(6,182,212,0.3); }
+        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+        .refresh-btn:hover i { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+        .stat-number { display: inline-block; transition: transform 0.3s ease; }
+        .glass-card:hover .stat-number { transform: scale(1.05); }
+
+        .monitor-link { position: relative; overflow: hidden; }
+        .monitor-link::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(135deg, rgba(59,130,246,0.2), rgba(6,182,212,0.2));
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        .monitor-link:hover::before { opacity: 1; }
+
+        #app { position: relative; z-index: 2; }
+
+        /* Table specific styles */
+        table { table-layout: fixed; }
+        th, td { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen">
-<!-- 顶部导航栏 -->
-<header class="bg-white shadow-sm fixed top-0 left-0 right-0 z-30">
-    <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-        <div class="flex items-center space-x-3">
-            <div class="bg-primary text-white p-2 rounded-lg">
-                <i class="fa fa-cogs text-xl"></i>
-            </div>
-            <h1 class="text-xl font-bold">DynaPart-TP</h1>
-        </div>
-        <div class="flex items-center space-x-6">
-            <div class="hidden md:flex items-center space-x-1 text-sm text-gray-600">
-                <i class="fa fa-clock-o"></i>
-                <span id="current-time">加载中...</span>
-            </div>
-            <div class="relative">
-                <button class="flex items-center space-x-1 focus:outline-none">
-                    <span class="hidden md:inline text-sm font-medium">管理员</span>
-                    <i class="fa fa-user-circle-o text-xl"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</header>
-
-<!-- 主要内容区 -->
-<main class="container mx-auto px-4 pt-20 pb-16">
-    <!-- 页面标题和统计 -->
-    <div class="mb-8">
-        <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold mb-2">线程池监控总览</h2>
-        <p class="text-gray-600">实时监控和管理所有线程池资源</p>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-            <div class="bg-white rounded-xl p-5 card-shadow flex items-center">
-                <div class="bg-primary/10 p-3 rounded-lg mr-4">
-                    <i class="fa fa-tasks text-primary text-2xl"></i>
-                </div>
-                <div>
-                    <p class="text-gray-500 text-sm">总线程池数量</p>
-                    <p class="text-2xl font-bold" id="total-pool-count">0</p>
+<body class="text-white antialiased">
+    <div class="grid-overlay"></div>
+    <div id="app" class="min-h-screen">
+        <header class="border-b border-white/5">
+            <div class="max-w-7xl mx-auto px-6 py-5">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="logo-icon w-10 h-10 rounded-xl bg-gradient-to-br from-accent-blue to-accent-cyan flex items-center justify-center">
+                            <i class="fa fa-layer-group text-white text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-semibold tracking-tight">DynaPart-TP</h1>
+                            <p class="text-xs text-white/40">Dynamic Thread Pool Manager</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-6">
+                        <div class="flex items-center gap-2 text-sm text-white/50">
+                            <span id="current-time" class="font-mono">--:--:--</span>
+                        </div>
+                        <div id="ws-indicator" class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-white/20"></span>
+                            <span class="text-xs text-white/40">Offline</span>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </header>
 
-            <div class="bg-white rounded-xl p-5 card-shadow flex items-center">
-                <div class="bg-secondary/10 p-3 rounded-lg mr-4">
-                    <i class="fa fa-bolt text-secondary text-2xl"></i>
+        <main class="max-w-7xl mx-auto px-6 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+                <div class="glass-card rounded-2xl p-5 fade-in stagger-1">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs text-white/40 uppercase tracking-wider mb-2">Thread Pools</p>
+                            <p id="stat-pools" class="stat-number text-3xl font-bold stat-value">0</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-accent-blue/10 flex items-center justify-center">
+                            <i class="fa fa-grip text-accent-blue"></i>
+                        </div>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-gray-500 text-sm">总线程数</p>
-                    <p class="text-2xl font-bold" id="total-active-threads">0</p>
+                <div class="glass-card rounded-2xl p-5 fade-in stagger-2">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs text-white/40 uppercase tracking-wider mb-2">Total Threads</p>
+                            <p id="stat-threads" class="stat-number text-3xl font-bold stat-value">0</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-accent-cyan/10 flex items-center justify-center">
+                            <i class="fa fa-spinner text-accent-cyan"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-2xl p-5 fade-in stagger-3">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs text-white/40 uppercase tracking-wider mb-2">Queued Tasks</p>
+                            <p id="stat-queued" class="stat-number text-3xl font-bold stat-value">0</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-accent-violet/10 flex items-center justify-center">
+                            <i class="fa fa-list-ol text-accent-violet"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="glass-card rounded-2xl p-5 fade-in stagger-4">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <p class="text-xs text-white/40 uppercase tracking-wider mb-2">Partitions</p>
+                            <p id="stat-partitions" class="stat-number text-3xl font-bold stat-value">0</p>
+                        </div>
+                        <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                            <i class="fa fa-th-large text-emerald-500"></i>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl p-5 card-shadow flex items-center">
-                <div class="bg-warning/10 p-3 rounded-lg mr-4">
-                    <i class="fa fa-list-alt text-warning text-2xl"></i>
+            <div class="glass-card rounded-2xl overflow-hidden fade-in-up stagger-5">
+                <div class="px-6 py-4 border-b border-white/5">
+                    <div class="flex items-center justify-between">
+                        <h2 class="text-lg font-medium">Registered Pools</h2>
+                        <button onclick="loadPools()" class="refresh-btn text-xs text-white/40 hover:text-white/70 transition-colors flex items-center gap-2">
+                            <i class="fa fa-refresh"></i> Refresh
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-gray-500 text-sm">排队任务总数</p>
-                    <p class="text-2xl font-bold" id="total-queued-tasks">0</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- 线程池列表 -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div class="p-5 border-b border-gray-100">
-            <h3 class="font-bold text-lg">线程池列表</h3>
-        </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full divide-y divide-gray-200">
-                <thead class="bg-gray-50">
-                <tr>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">线程池名称</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">核心线程数</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">最大线程数</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">队列类型</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">拒绝策略</th>
-                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">操作</th>
-                </tr>
-                </thead>
-                <tbody id="pool-table-body" class="bg-white divide-y divide-gray-200">
-                <!-- 线程池数据将通过JavaScript动态加载 -->
-                <tr>
-                    <td colspan="6" class="px-6 py-10 text-center text-gray-500">
-                        <p>加载中...</p>
-                    </td>
-                </tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</main>
-
-<script>
-    // 更新当前时间
-    function updateCurrentTime() {
-        const now = new Date();
-        const options = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' };
-        document.getElementById('current-time').textContent = now.toLocaleString('zh-CN', options);
-    }
-
-    setInterval(updateCurrentTime, 1000);
-    updateCurrentTime();
-
-    // 格式化数字显示
-    function formatNumber(num) {
-        return num.toLocaleString('zh-CN');
-    }
-
-    // 加载所有线程池信息
-    function loadAllThreadPoolInfo() {
-        fetch('/monitor/pools')
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('网络响应不正常');
-                }
-                return response.json();
-            })
-            .then(pools => {
-                // 更新总计数
-                document.getElementById('total-pool-count').textContent = formatNumber(pools.length);
-
-                // 计算总线程数（核心+最大的估算）和排队任务（需要额外请求，这里简化）
-                let totalThreads = 0;
-                let totalQueued = 0;
-
-                pools.forEach(pool => {
-                    totalThreads += (pool.maxNums || 0);
-                    // 实际项目中应调用/monitor/tasks接口获取真实队列数
-                    totalQueued += 0;
-                });
-
-                document.getElementById('total-active-threads').textContent = formatNumber(totalThreads);
-                document.getElementById('total-queued-tasks').textContent = formatNumber(totalQueued);
-
-                // 更新表格内容
-                const tableBody = document.getElementById('pool-table-body');
-                tableBody.innerHTML = '';
-
-                if (pools.length === 0) {
-                    tableBody.innerHTML = `
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[1000px]">
+                        <thead>
+                            <tr class="text-xs text-white/40 uppercase tracking-wider">
+                                <th class="px-3 py-3 text-left font-medium w-[100px]">Type</th>
+                                <th class="px-3 py-3 text-left font-medium w-[140px]">Name</th>
+                                <th class="px-3 py-3 text-center w-[60px]">Core</th>
+                                <th class="px-3 py-3 text-center w-[60px]">Max</th>
+                                <th class="px-3 py-3 text-left w-[100px]">Queue</th>
+                                <th class="px-3 py-3 text-left w-[100px]">Reject</th>
+                                <th class="px-3 py-3 text-center w-[70px]">Daemon</th>
+                                <th class="px-3 py-3 text-center w-[80px]">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pool-table" class="divide-y divide-white/5">
                             <tr>
-                                <td colspan="6" class="px-6 py-10 text-center text-gray-500">
-                                    <p>没有找到线程池数据</p>
+                                <td colspan="9" class="px-4 py-16 text-center text-white/30">
+                                    <div class="flex flex-col items-center gap-3">
+                                        <i class="fa fa-circle-notch fa-spin text-2xl"></i>
+                                        <span class="text-sm">Loading...</span>
+                                    </div>
                                 </td>
                             </tr>
-                        `;
-                    return;
-                }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
 
-                pools.forEach(pool => {
-                    const row = document.createElement('tr');
-                    row.className = 'hover:bg-gray-50 transition-colors';
-                    row.innerHTML = `
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="font-medium text-gray-900">${pool.poolName}</div>
-                                <div class="text-sm text-gray-500">${pool.threadName || '-'}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div>${pool.coreNums || 0}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div>${pool.maxNums || 0}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div>${pool.queueName || '-'}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div>${pool.rejectStrategyName || '-'}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                <a href="/detail.html?poolName=${encodeURIComponent(pool.poolName)}" class="text-primary hover:text-primary/80 mr-3">
-                                    <i class="fa fa-eye mr-1"></i>监控
-                                </a>
-                                <a href="/detail.html?poolName=${encodeURIComponent(pool.poolName)}#settings" class="text-secondary hover:text-secondary/80">
-                                    <i class="fa fa-sliders mr-1"></i>配置
-                                </a>
-                            </td>
-                        `;
-                    tableBody.appendChild(row);
+    <script>
+        const API_BASE = `${window.location.protocol}//${window.location.host}`;
+        let poolsData = [];
+
+        function updateTime() {
+            document.getElementById('current-time').textContent = new Date().toLocaleTimeString('en-GB');
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+
+        function loadPools() {
+            fetch(`${API_BASE}/monitor/pools`)
+                .then(res => { if (!res.ok) throw new Error('Network error'); return res.json(); })
+                .then(pools => { poolsData = pools; updateStats(pools); renderPools(pools); })
+                .catch(err => {
+                    console.error('Failed to load pools:', err);
+                    document.getElementById('pool-table').innerHTML = `
+                        <tr><td colspan="9" class="px-4 py-16 text-center text-red-400/60">
+                            <div class="flex flex-col items-center gap-3">
+                                <i class="fa fa-exclamation-circle text-2xl"></i>
+                                <span class="text-sm">Failed to load pools</span>
+                            </div>
+                        </td></tr>`;
                 });
-            })
-            .catch(error => {
-                console.error('加载线程池信息失败:', error);
-                const tableBody = document.getElementById('pool-table-body');
-                tableBody.innerHTML = `
-                        <tr>
-                            <td colspan="6" class="px-6 py-10 text-center text-gray-500">
-                                <p>加载失败: ${error.message}</p>
-                                <button onclick="loadAllThreadPoolInfo()" class="mt-2 text-primary hover:underline">
-                                    重试
-                                </button>
-                            </td>
-                        </tr>
-                    `;
+        }
+
+        function updateStats(pools) {
+            document.getElementById('stat-pools').textContent = pools.length;
+            let totalThreads = 0, totalQueued = 0, totalPartitions = 0;
+
+            const promises = pools.map(pool =>
+                fetch(`${API_BASE}/monitor/pool?tpName=${encodeURIComponent(pool.poolName)}`)
+                    .then(res => res.json())
+                    .then(info => { totalThreads += (info.coreNums || 0) + (info.maxNums || 0); })
+                    .catch(() => {})
+            );
+
+            const taskPromises = pools.map(pool =>
+                fetch(`${API_BASE}/monitor/tasks?tpName=${encodeURIComponent(pool.poolName)}`)
+                    .then(res => res.json())
+                    .then(count => { totalQueued += count; })
+                    .catch(() => {})
+            );
+
+            const partitionPromises = pools.map(pool =>
+                fetch(`${API_BASE}/monitor/queue?tpName=${encodeURIComponent(pool.poolName)}`)
+                    .then(res => res.json())
+                    .then(info => { totalPartitions += (info.partitioning ? info.partitionNum || 1 : 1); })
+                    .catch(() => {})
+            );
+
+            Promise.all([...promises, ...taskPromises, ...partitionPromises]).then(() => {
+                animateValue('stat-threads', totalThreads);
+                animateValue('stat-queued', totalQueued);
+                animateValue('stat-partitions', totalPartitions);
             });
-    }
+        }
 
-    // 页面加载时加载数据
-    document.addEventListener('DOMContentLoaded', function() {
-        loadAllThreadPoolInfo();
+        function animateValue(elementId, target) {
+            const el = document.getElementById(elementId);
+            const start = parseInt(el.textContent) || 0;
+            const duration = 500;
+            const startTime = performance.now();
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                el.textContent = Math.round(start + (target - start) * easeOut);
+                if (progress < 1) requestAnimationFrame(update);
+            }
+            requestAnimationFrame(update);
+        }
 
-        // 每30秒自动刷新一次数据
-        setInterval(loadAllThreadPoolInfo, 30000);
-    });
-</script>
+        function getTypeBadge(type) {
+            const typeConfig = {
+                'cpu': { bg: 'bg-blue-500/20', text: 'text-blue-400', icon: 'fa fa-microchip' },
+                'io': { bg: 'bg-cyan-500/20', text: 'text-cyan-400', icon: 'fa fa-exchange-alt' },
+                'littleChief': { bg: 'bg-emerald-500/20', text: 'text-emerald-400', icon: 'fa fa-crown' }
+            };
+            const config = typeConfig[type] || { bg: 'bg-white/10', text: 'text-white/60', icon: 'fa fa-grip' };
+            return `<span class="inline-flex items-center gap-1 px-2 py-1 rounded-md ${config.bg} ${config.text} text-xs font-medium">
+                <i class="${config.icon}"></i>${type || 'unknown'}
+            </span>`;
+        }
+
+        function renderPools(pools) {
+            const tbody = document.getElementById('pool-table');
+            if (!pools || pools.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="9" class="px-4 py-16 text-center text-white/30">
+                    <div class="flex flex-col items-center gap-3">
+                        <i class="fa fa-inbox text-2xl"></i>
+                        <span class="text-sm">No thread pools registered</span>
+                    </div>
+                </td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = pools.map((pool, idx) => `
+                <tr class="pool-row" style="animation: fadeIn 0.4s ease-out ${idx * 80}ms forwards; opacity: 0;">
+                    <td class="px-3 py-3">
+                        ${getTypeBadge(pool.type)}
+                    </td>
+                    <td class="px-3 py-3"><div class="font-medium text-white/90 truncate">${pool.poolName || '-'}</div></td>
+                    <td class="px-3 py-3 text-center">
+                        <span class="inline-flex items-center justify-center w-10 h-6 rounded-md bg-accent-blue/10 text-accent-blue text-sm font-medium">${pool.coreNums || 0}</span>
+                    </td>
+                    <td class="px-3 py-3 text-center">
+                        <span class="inline-flex items-center justify-center w-10 h-6 rounded-md bg-accent-cyan/10 text-accent-cyan text-sm font-medium">${pool.maxNums || 0}</span>
+                    </td>
+                    <td class="px-3 py-3 text-sm text-white/60 truncate">${pool.queueName || '-'}</td>
+                    <td class="px-3 py-3 text-sm text-white/60 truncate">${pool.rejectStrategyName || '-'}</td>
+                    <td class="px-3 py-3 text-center">
+                        ${pool.daemon
+                            ? '<span class="inline-flex items-center gap-1 text-xs text-emerald-400"><span class="pulse-dot w-1.5 h-1.5 rounded-full bg-emerald-400"></span>Yes</span>'
+                            : '<span class="inline-flex items-center gap-1 text-xs text-white/30"><span class="w-1.5 h-1.5 rounded-full bg-white/20"></span>No</span>'
+                        }
+                    </td>
+                    <td class="px-3 py-3 text-center">
+                        <a href="/detail.html?poolName=${encodeURIComponent(pool.poolName)}"
+                           class="monitor-link inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-sm text-white/70 hover:text-white transition-all">
+                            <i class="fa fa-chart-line text-xs"></i> Monitor
+                        </a>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { loadPools(); setInterval(loadPools, 30000); });
+    </script>
 </body>
 </html>

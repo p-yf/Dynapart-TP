@@ -1,322 +1,817 @@
-# DynaPart-TP
+# DynaPart-TP Dynamic Partition Thread Pool
 
-<img src="src/main/resources/static/logo/logo1.png" alt="Logo" width="200" height="200">  <!-- 项目Logo -->
-<img src="src/main/resources/static/logo/logo2.png" alt="Logo" width="600" height="190">  <!-- 项目Logo -->
+<img src="src/main/resources/static/logo/logo1.png" alt="Logo" width="200" height="200">
+<img src="src/main/resources/static/logo/logo2.png" alt="Logo" width="600" height="190">
 
-（the thread-pool with partitioning-queue is running some tasks, they are "let's become better and better"）
+> **中文文档**: [README_zh.md](README_zh.md)
 
-## 🚀 项目介绍
+---
 
-DynaPart-TP 是一个高性能、可动态调整的轻量级线程池框架，专为需要精细控制并发任务执行的Java应用程序设计。该框架提供了丰富的线程池管理功能，包括参数动态调整、实时监控和灵活的任务调度策略。
+## One-Line Summary
 
-前置知识：“资源”指的就是项目中的队列、拒绝策略、调度规则等。“分区化”是项目的重点创新，是一种队列降低锁粒度的方式
+DynaPart-TP is a high-performance dynamic thread pool framework that reduces lock contention through **partitioned queues** and supports **runtime hot-swapping**.
 
-### 核心功能
-- **动态参数调整**：无需重启应用，实时调整核心线程数、最大线程数，甚至是任务队列等参数
-- **灵活自定义**：可自定义各种组件资源，如：任务队列、拒绝策略、调度规则等
-- **实时监控**：通过REST API和WebSocket实时监控线程池状态
-- **Spring Boot集成**：与Spring Boot框架无缝集成，支持自动配置，同时利用注解驱动的开发思想
-- **轻松扩展**：只需要实现接口就能轻松自定义任务队列、拒绝策略
-- **分区化队列模型**：支持分区化队列（PartiFlow和PartiStill用来实现分区化），降低锁粒度，提高吞吐量，提升稳定性
+---
 
-## 💡 实现亮点
+## Key Highlights
 
-### 1. 动态参数调整机制
-框架允许在运行时调整线程池的核心参数，包括核心线程数、最大线程数、线程空闲时间等。这些调整会立即生效，无需重启应用。
+| Highlight | Description |
+|-----------|-------------|
+| **Partitioned Queue** | Multiple partitions with independent locks, significantly reduces lock contention |
+| **3D Scheduling** | Independent offer/poll/remove policies |
+| **Three-Layer Fallback** | Safe Worker exit and old queue GC during switching |
+| **Annotation-Based Resources** | @ResourceScan auto-scans and registers, zero-config custom components |
+| **Runtime Hot Deploy** | Dynamic Java code compilation, update without restart |
+| **Real-time Monitoring** | REST API + WebSocket dashboard |
 
-### 2. 实时监控系统
-通过WebSocket实现了线程池状态的实时推送，客户端可以实时获取线程池的工作状态、任务队列长度等信息。同时提供了REST API用于查询和调整线程池参数。
+---
 
-### 3. 可插拔的组件设计
-- **任务队列**：支持多种队列实现，可根据业务需求动态切换，支持自定义
-- **拒绝策略**：提供多种拒绝策略（如CallerRuns、DiscardOldest等），支持自定义
-- **调度规则**：支持多种出入队调度规则，如轮询、随机、哈希、填谷等，支持自定义
+## Overall Architecture
 
-### 4. 线程生命周期管理
-精细控制线程的创建和销毁，支持线程的动态调整和自动回收。
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                         Application                                          │
+└─────────────────────────────────────────────────────────────────────────────────────────────┘
+                                              │
+                    ┌─────────────────────────┬─────────────────────────┐
+                    │                         │                         │
+                    ▼                         ▼                         ▼
+┌─────────────────────────────────┐ ┌───────────────────────────┐ ┌───────────────────────────┐
+│           ThreadPool            │ │   UnifiedTPRegulator      │ │    ResourceContainer      │
+│                                 │ │                           │ │                           │
+│  Worker threads ← Queue ← Reject│ │  Dynamic regulator:       │ │  Resource managers:       │
+│                                 │ │  register/switch/monitor  │ │  @ResourceScan scanning   │
+└─────────────────────────────────┘ └───────────────────────────┘ └───────────────────────────┘
 
-### 5. 良好的架构设计
-1 遵循了开闭原则：所以无论是使用者还是开发者进行扩展都会很轻松，心旷神怡。
-2 资源管理中心：注册表设计模式，项目中有三个资源管理中心分别管理分区（就是队列）、拒绝策略、调度规则，方便开发者扩展资源
-3 合理利用springboot机制：在springboot环境下能够实现自动装配和通过注解来注册资源
-4 利用组合模式实现了分区（队列）的自由分区与否
-
-### 6. 分区化队列模型（Partition）
-  分区化是框架的核心特性之一，它将队列抽象为一种分区表现形式。任何队列只要实现了`Partition`抽象类，就可以自由选择成为分区队列或者单个队列。
-作者实现了两种分区化模型：PartiStill和PartiFlow，若想自己实现分区化模型，只需实现`Partitioning`接口即可
-- **灵活的分区策略**：支持轮询、随机、哈希、填谷、优先级等多种任务入队调度规则
-- **高效的任务出队**：提供轮询、随机、削峰、线程绑定、优先级等出队和移除调度规则
-- **细粒度控制**：可根据业务需求动态调整分区数量和容量
-- **高性能设计**：通过多分区并行处理提高吞吐量，减少锁竞争
-
-
-## 🚀 性能对比
-
-通过测试对比，可看到在锁竞争激烈的情况下DynaPart-TP线程池与JDK线程池相比具有明显性能优势，吞吐量和稳定性都高50%以上
-
-### 性能优势（测试仅限锁竞争激烈的情况）
-1. **更高吞吐量**：在相同配置下，DynaPart-TP处理任务的速度远高于JDK线程池
-2. **更好的资源利用**：通过分区化设计，减少线程等待时间，提高CPU利用率
-3. **更稳定的性能**：在高并发场景下，DynaPart-TP的性能波动更小
-
-## 📚 使用方法
-
-### 1. Spring Boot环境集成(test_springboot_integration包就是用来测试springboot集成的)
-
-#### 1.1配置文件
-在`application.yml`中添加以下配置：
-
-```yaml
-#线程池配置
-yf:
-  thread-pool:
-    pool:
-      enabled: true
-      useVirtualThread: false #是否使用虚拟线程
-      coreNums: 10    #线程池核心线程数
-      maxNums: 50    #线程池最大线程数
-      poolName: yf-thread-pool   #线程池名称
-      threadName: yf-thread      #线程名称
-      isDaemon: true      #是否是守护线程
-      coreDestroy: false  #核心线程是否销毁
-      aliveTime: 5000        #线程存活时间（单位：ms）
-      rejectStrategyName: discard   #拒绝策略名称
-    queue:     #(由于queue比较重要，所以与pool和monitor一个层级)
-      partitioning: false  #是否分区化(如果是false，只需要读取capacity和queueName)
-      partitionNum: 10      #分区数量
-      capacity: 10000         #队列容量（不写代表null，为无界）
-      queueName: linked     #队列名称
-      offerPolicy: ROUND_ROBIN       #入队策略
-      pollPolicy: THREAD_BINDING      #出队策略
-      removePolicy: ROUND_ROBIN     #移除策略
-    monitor:
-      enabled: true       #是否开启监控
-      fixedDelay: 1000    #后台像前端推送线程状态信息的间隔时间(单位：ms)
-    service-registry:      #是否开启服务注册
-      enabled: false
-      heartBeat: 10000   #心跳间隔时间(单位：ms)
-      expireTime: 12000  #注册数据失效时间(单位：ms)
+                         ┌──────────────────────────────────────────────────────┐
+                         │                  ResourceContainer                    │
+                         │                                                       │
+                         │   ResourceScanner ───→ @ResourceScan scans packages  │
+                         │         │                                           │
+                         │         ├── @PartiResource ──→ PartiResourceManager   │
+                         │         ├── @SPResource ────→ SPResourceManager       │
+                         │         ├── @RSResource ────→ RSResourceManager       │
+                         │         └── @GCTResource ───→ GCTaskManager          │
+                         └──────────────────────────────────────────────────────┘
 ```
 
-#### 1.2使用线程池
+### Component Responsibilities
 
-注入`ThreadPool`实例并使用：
+| Component | Responsibility |
+|-----------|----------------|
+| **ThreadPool** | Core thread pool, manages Worker lifecycle |
+| **Worker** | Polls tasks from queue and executes |
+| **Partition** | Queue abstraction (single/partitioned) |
+| **Partitioning** | Partitioned queue interface (PartiFlow/PartiStill) |
+| **OfferPolicy/PollPolicy/RemovePolicy** | 3D scheduling policies |
+| **RejectStrategy** | Rejection strategies |
+| **UnifiedTPRegulator** | Global thread pool registry + dynamic control |
+| **ResourceScanner** | Annotation scanning and resource registration |
+| **GCTaskManager** | GC cleanup task management during queue switching |
 
+---
+
+## Partitioning Mechanism (Queue + Scheduling Policies)
+
+This is the **core mechanism** of DynaPart-TP, covering the complete flow from task submission to task execution.
+
+### Problem: Lock Contention in Traditional Thread Pools
+
+Traditional thread pools use a single queue, all threads compete for one lock:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                 Traditional Single Queue Thread Pool          │
+│                                                             │
+│   ThreadPool                                                 │
+│   ┌───────────────────┐                                     │
+│   │   Single Queue    │ ←── All threads compete for same lock│
+│   │     (1 lock)      │                                     │
+│   └───────────────────┘                                     │
+│         ↓                                                    │
+│   ThreadA ──→ [BLOCKED]                                      │
+│   ThreadB ──→ [BLOCKED]                                      │
+│   ThreadC ──→ [BLOCKED]                                      │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Problem**: Under high concurrency, synchronization overhead becomes the bottleneck.
+
+### Solution: Partitioned Queue + 3D Scheduling Policies
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Partitioned Thread Pool (Complete Flow)            │
+│                                                                     │
+│  【Task Submission Flow】                                           │
+│   execute(task)                                                     │
+│       ↓                                                             │
+│   OfferPolicy.selectPartition()  ──→ "Which partition should task enter?"│
+│       ↓                                                             │
+│   Partition.offer(task)      ──→ Task enters partition's sub-queue  │
+│                                                                     │
+│  【Worker Task Polling Flow】                                       │
+│   Worker.run()                                                      │
+│       ↓                                                             │
+│   PollPolicy.selectPartition()  ──→ "Which partition to poll from?"│
+│       ↓                                                             │
+│   Partition.poll()              ──→ Poll task from partition         │
+│                                                                     │
+│  【Task Rejection Flow】                                            │
+│   Queue full / Thread pool full                                    │
+│       ↓                                                             │
+│   RemovePolicy.selectPartition()  ──→ "Which partition to discard?"│
+│       ↓                                                             │
+│   Partition.removeEle()         ──→ Remove task from partition       │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Queue Implementations
+
+#### Single Queue: LinkedBlockingQ (Dual Lock Separation)
+
+Producers and consumers use **independent locks**, never blocking each other:
+
+```java
+public class LinkedBlockingQ<T> extends Partition<T> {
+    private final Lock headLock = new ReentrantLock();  // Consumer lock
+    private final Lock tailLock = new ReentrantLock();  // Producer lock
+    private final Condition notEmpty = headLock.newCondition();
+}
+```
+
+#### Partitioned Queue: PartiFlow (Dynamic Partition)
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                        PartiFlow                                 │
+│                  (Partitioned Queue, implements Partitioning)    │
+│                                                                 │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                   Scheduling Policy Layer                  │   │
+│  │   ┌────────────┐  ┌────────────┐  ┌────────────┐       │   │
+│  │   │OfferPolicy │  │PollPolicy  │  │RemovePolicy│       │   │
+│  │   │  (Offer)   │  │   (Poll)   │  │  (Remove)   │       │   │
+│  │   └─────┬──────┘  └─────┬──────┘  └─────┬──────┘       │   │
+│  └─────────┼───────────────┼───────────────┼────────────────┘   │
+│            └───────────────┼───────────────┘                    │
+│                            ▼                                    │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │                      Partition Layer                       │   │
+│  │   ┌────────┐  ┌────────┐  ┌────────┐  ┌────────┐       │   │
+│  │   │ Part 0 │  │ Part 1 │  │ Part 2 │  │ Part 3 │ ...  │   │
+│  │   │(sub-queue)│ (sub-queue)│ (sub-queue)│ (sub-queue)│   │   │
+│  │   └────────┘  └────────┘  └────────┘  └────────┘       │   │
+│  │                                                          │   │
+│  │   Each partition has independent lock:                    │   │
+│  │   Lock0 / Lock1 / Lock2 / Lock3                           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────────────┘
+```
+
+**Two Partitioned Queue Types**:
+
+| Type | Class | Characteristics |
+|------|-------|-----------------|
+| Dynamic | `PartiFlow` | Post-scheduling round-robin: try next if partition full, more flexible |
+| Static | `PartiStill` | Direct routing: return false if partition full, higher performance |
+
+### Built-in Scheduling Policies
+
+#### Offer Policy (OfferPolicy)
+
+| Config Value | Principle | Characteristics |
+|-------------|-----------|-----------------|
+| `round_robin` | Atomic counter round-robin | Load balancing |
+| `random` | Random selection | Simple implementation |
+| `plain_hash` | Hash-based selection | Same task same partition |
+| `balanced_hash` | Hash perturbation optimization | Uniform distribution |
+| `valley_filling` | Select partition with fewest tasks | Dynamic balancing |
+| `priority` | Priority tasks select partition by getPriority() value; non-Priority tasks degrade to round-robin | **Degradable Priority** |
+
+#### Poll Policy (PollPolicy)
+
+| Config Value | Principle | Characteristics |
+|-------------|-----------|-----------------|
+| `round_robin` | Atomic counter round-robin | Fair |
+| `random` | Random selection | Decentralized |
+| `thread_binding` | ThreadLocal bound to thread | **High cache hit rate** |
+| `peek_shaving` | Poll from busiest partition | Peak shaving |
+| `priority` | Prefer partitions with tasks (low-index first), degrades to round-robin when all empty | **Degradable Priority** |
+
+#### Remove Policy (RemovePolicy)
+
+| Config Value | Principle |
+|-------------|-----------|
+| `round_robin` | Round-robin |
+| `random` | Random |
+| `peek_shaving` | Remove from busiest partition |
+| `priority` | Remove from high-index partitions first (preserve low-index/high-priority), returns last when all empty |
+
+### Special Scheduling Policies (Optional Deep Dive)
+
+These policies have special implementations for specific scenarios:
+
+**1. Thread Binding (thread_binding)**
+- Binds each thread to a fixed partition via ThreadLocal
+- Advantage: High cache hit rate, suitable for long-running tasks
+- Note: Must cooperate with GCTask mechanism (cleanup old Workers on queue switch)
+
+**2. Balanced Hash (balanced_hash)**
+- Hash perturbation optimization for more uniform distribution
+- More uniform than plain_hash, slightly more computation
+
+**3. Priority Policies (priority)**
+- Offer: Priority tasks select partition by `getPriority()` value; non-Priority tasks degrade to round-robin
+- Poll: Prefer partitions with tasks (low-index first), degrades to round-robin when all partitions empty
+- Remove: Remove from high-index partitions first (free up low-priority partitions first), returns last partition when all empty
+
+### Post-Scheduling Round-Robin (roundRobin Property)
+
+Each policy has a `roundRobin` property:
+- `false`: Only operate on the partition selected by the policy
+- `true`: If selected partition fails, automatically try next
+
+```
+Example: valley_filling + roundRobin=true
+Policy selects partition 0, but partition 0 is full → Try partition 1, success
+```
+
+**Note**: `thread_binding` must have `roundRobin=false`, otherwise one thread would operate on multiple partitions, destroying cache locality.
+
+---
+
+## Queue Switching Mechanism (Three-Layer Fallback + GCTask)
+
+### Problem: Challenges When Dynamically Switching Queues
+
+Two problems must be solved during queue switching:
+1. **Old Workers sense the switch and exit**: Cannot poll from old queue anymore
+2. **Old queue resources are recycled**: Old queue should be GC-able
+
+### Solution: Three-Layer Fallback + GCTask
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    Queue Switching Complete Flow                                  │
+│                                                                                 │
+│  Calling UnifiedTPRegulator.changeQueue("poolName", newQueue)                     │
+│                                                                                 │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │ Layer 1: Synchronous Mark (Old queue switched)                             │  │
+│  │         oldQ.markAsSwitched()  →  switched=true on all partitions         │  │
+│  │         → New tasks offer() detect switched, throw SwitchedException      │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                            │
+│                                    ▼                                            │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │ Layer 2: Lock-Check-Exception (Old Workers exit)                           │  │
+│  │         Old Workers in poll():                                             │  │
+│  │         1. Acquire lock first (lockGlobally)                               │  │
+│  │         2. Check switched flag                                             │  │
+│  │         3. If true, throw SwitchedException, Worker exits                 │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+│                                    │                                            │
+│                                    ▼                                            │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │ Layer 3: GCTask Fallback (Old queue GC)                                    │  │
+│  │         When edge cases (ThreadLocal binding, lock-free queues) can't be    │  │
+│  │         handled by first two layers:                                       │  │
+│  │         → GCTaskManager.clean() executes fallback cleanup                   │  │
+│  │         → Destroy Workers holding old references → New Workers new bindings│  │
+│  │         → Old queue has no references → Can be GC'd                        │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+│                                                                                 │
+│  ┌───────────────────────────────────────────────────────────────────────────┐  │
+│  │ Async Migration: GCTaskManager.execute() migrates remaining tasks         │  │
+│  └───────────────────────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### GCTask Mechanism
+
+**Why is GCTask needed?**
+
+When using `thread_binding` poll policy, Workers bind to **partition index** via ThreadLocal:
+- On first partition selection, `threadLocal.set(index)` stores the partition index
+- Subsequent polls always return the same partition index
+
+**Problem**: ThreadLocal's key is a **weak reference** (collected by GC), but value (Integer index) is a **strong reference** (not collected)
+
+```
+Before GC: ThreadLocalMap: { ThreadLocal(key) → Integer(index=value) }
+                      key is weak ref, collected by GC
+After GC: ThreadLocalMap: { null → Integer }  ← Integer cannot be GC'd (memory leak)
+```
+
+As queue switches happen repeatedly, more and more Integer objects cannot be collected → **memory leak**.
+
+**GCTask Solution**: Destroy old Workers → Workers' ThreadLocals destroyed with Workers → No leak
+
+### GCTaskManager Architecture
+
+```java
+public class GCTaskManager {
+    // Dedicated async thread pool (executes GCTasks, cannot block main switching flow)
+    private static volatile ThreadPool littleChief;
+
+    // SchedulePolicy → GCTask mapping
+    private static Map<Class<? extends SchedulePolicy>,
+                      Class<? extends GCTask>> SCHEDULE_TASK_MAP = new HashMap<>();
+
+    // Partition type → GCTask mapping
+    private static Map<Class<? extends Partition<?>>,
+                      Class<? extends GCTask>> PARTI_TASK_MAP = new HashMap<>();
+
+    static {
+        // ThreadBindingPoll uses ThreadLocal, needs cleanup
+        register(ThreadBindingPoll.class, TBPollCleaningTask.class);
+    }
+}
+```
+
+### littleChief Thread Pool
+
+**What it is**: littleChief is a dedicated thread pool inside GCTaskManager for executing GCTasks, responsible for asynchronously executing cleanup tasks during queue switching.
+
+**Why singleton**:
+- GCTask is just cleanup tasks, short execution time, no need to create new thread pool for each switch
+- One small thread pool is enough to handle all GCTask cleanup tasks
+- Avoids thread pool accumulation and resource waste during multiple switches
+- Easy for unified management and monitoring
+
+**Three configuration methods**:
+
+#### 1. No Configuration (Use Default)
+
+If not configured, littleChief uses **lazy singleton** default implementation, created automatically on first call to `GCTaskManager.execute()`:
+
+```java
+// Default configuration
+ThreadPool littleChief = new ThreadPool(
+    "littleChief",           // Name
+    5,                       // Core threads
+    10,                      // Max threads
+    "littleChief",           // Thread name prefix
+    new WorkerFactory("", false, true, 10),  // Non-daemon, core destroyable
+    new LinkedBlockingQ<>(50),   // Queue capacity 50
+    new CallerRunsStrategy()     // Rejection strategy
+);
+```
+
+#### 2. yml Configuration (Spring Boot Auto-configuration)
+
+Configure littleChief parameters in `application.yml`, Spring Boot will automatically create and inject:
+
+```yaml
+yf:
+  thread-pool:
+    little-chief:  # Dedicated thread pool for GC async tasks
+      enabled: true
+      useVirtualThread: false  # Use virtual threads
+      coreNums: 10              # Core thread count
+      maxNums: 50              # Max thread count
+      threadName: yf-thread    # Thread name
+      useDaemon: true          # Daemon thread
+      aliveTime: 5000          # Keep-alive time (ms)
+      rejectStrategyName: discard  # Rejection strategy
+```
+
+#### 3. Manual Configuration
+
+Manually set via `GCTaskManager.setLittleChief(ThreadPool tp)`:
+
+```java
+// Create custom littleChief thread pool
+ThreadPool myLittleChief = new ThreadPool(
+    "my-gc-pool", 5, 10, "gc-worker",
+    new WorkerFactory("gc", false, true, 5000),
+    new LinkedBlockingQ<>(100),
+    new CallerRunsStrategy()
+);
+
+// Manual injection (recommended to set early at application startup)
+GCTaskManager.setLittleChief(myLittleChief);
+```
+
+**Note**: `setLittleChief()` can only be set once, subsequent calls have no effect.
+
+### GCTask-Related Annotations
+
+| Annotation | Purpose | Registers To |
+|------------|---------|--------------|
+| `@GCTResource` | Bind custom GCTask to specific policy/queue | GCTaskManager |
+
+**@GCTResource Annotation Parameters**:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `bindingPartiResource` | String | Bound queue resource name (corresponds to @PartiResource's name) |
+| `bindingSPResource` | String | Bound scheduling policy name (corresponds to @SPResource's name) |
+| `spType` | String | Policy type: `poll:` (poll), `offer:` (offer), `remove:` (remove) |
+
+**Example**:
+
+```java
+// Custom GCTask, bound to poll policy named "myPoll"
+@GCTResource(bindingSPResource = "myPoll", spType = "poll:")
+public class MyGCTask extends GCTask {
+    @Override
+    public void run() {
+        // Custom cleanup logic
+    }
+}
+```
+
+### Built-in GCTask: TBPollCleaningTask
+
+When switching a queue using `thread_binding` poll policy, this cleanup task executes automatically:
+
+```java
+public class TBPollCleaningTask extends GCTask {
+    @Override
+    public void run() {
+        // Destroy all Workers, new Workers will be created based on new queue
+        UnifiedTPRegulator.destroyWorkers(
+            threadPool.getName(),
+            coreList.size(),
+            extraList.size()
+        );
+    }
+}
+```
+
+---
+
+## Resource Scanning and Container Management
+
+### Core Annotations
+
+| Annotation | Purpose | Registers To |
+|------------|---------|--------------|
+| `@ResourceScan` | Enable package scanning (scan entry class's package and subpackages) | - |
+| `@PartiResource("name")` | Custom queue | PartiResourceManager |
+| `@SPResource("name")` | Custom scheduling policy | SPResourceManager |
+| `@RSResource("name")` | Custom reject strategy | RSResourceManager |
+| `@GCTResource(...)` | Custom GCTask | GCTaskManager |
+
+### Scanning Flow
+
+```
+Application starts
+    │
+    ▼
+Discover entry class with @ResourceScan annotation
+    │
+    ▼
+ResourceScanner.scan(entry class)
+    │
+    ├── Scan all .class files in entry class's package and subpackages
+    │
+    ├── Find @PartiResource ──→ PartiResourceManager.register(name, class)
+    ├── Find @SPResource ────→ SPResourceManager.register(name, class)
+    ├── Find @RSResource ───→ RSResourceManager.register(name, class)
+    └── Find @GCTResource ───→ GCTaskManager.register(binding, class)
+```
+
+### Usage Example
+
+```java
+@ResourceScan  // Enable scanning
+public class MyApplication {
+    public static void main(String[] args) {
+        // Scanning auto-completes
+    }
+}
+
+// Custom queue
+@PartiResource("myQueue")
+public class MyQueue extends LinkedBlockingQ<Runnable> { ... }
+
+// Custom poll policy
+@SPResource("myPoll")
+public class MyPoll extends PollPolicy { ... }
+
+// Custom GCTask
+@GCTResource(bindingSPResource = "myPoll", spType = "poll:")
+public class MyGCTask extends GCTask { ... }
+```
+
+---
+
+## Hot Deployment (Glue Mode)
+
+Dynamically compile Java code strings into Class files at runtime.
+
+### REST API
+
+```
+POST /monitor/hotDeploy?className=com.example.MyTask
+Body: Java code string
+```
+
+Compiled classes are automatically detected for annotations and registered to corresponding resource managers.
+
+### Code Usage
+
+```java
+DynamicCompiler compiler = new DynamicCompiler();
+Class<?> clazz = compiler.compileToClass("com.example.MyTask", javaCodeString);
+Runnable task = (Runnable) clazz.getDeclaredConstructor().newInstance();
+```
+
+---
+
+## Quick Start
+
+### Spring Boot Integration (Recommended)
+
+**1. Add @ResourceScan to entry class**
+```java
+@ResourceScan
+public class MyApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MyApplication.class, args);
+    }
+}
+```
+
+**2. Configure application.yml**
+```yaml
+yf:
+  thread-pool:
+    little-chief:  # Configure littleChief thread pool itself
+      enabled: true
+      coreNums: 10
+      maxNums: 50
+      threadName: worker
+      useDaemon: false
+      aliveTime: 60000
+      rejectStrategyName: callerRuns
+    queue:  # Configure internal queue used by littleChief
+      partitioning: true
+      partitionNum: 8
+      capacity: 10000
+      queueName: linked
+      offerPolicy: valley_filling
+      pollPolicy: round_robin
+      removePolicy: round_robin
+    monitor:
+      enabled: true
+      fixedDelay: 1000
+```
+
+**3. Use**
 ```java
 @Autowired
 private ThreadPool threadPool;
 
-// 执行任务
-threadPool.execute(() -> {
-    // 任务逻辑
-});
-//如果是使用优先级队列，那么应传入PriorityTask对象能手动指定优先级（数字越大优先级越高），示例：
-//Runnable r = () -> {};        //任务，返回值 ，优先级
-//PriorityTask pt = new PriorityTask(r, null,10);
-//threadPool.executeThreadFirst(pt);
-
-
-// 提交有返回值的任务
-Future<?> future = threadPool.submit(() -> {
-    // 任务逻辑
-    return result;
-});
-//如果是使用优先级队列或者分区队列的优先级调度规则，那么应传入PriorityTask对象能手动指定优先级（数字越大优先级越小，0最大），示例：
-//Callable c = () -> {};        //任务，返回值 ，优先级
-//PriorityTask pt = new PriorityTask(c,10);
-//threadPool.executeThreadFirst(pt);
+threadPool.execute(() -> System.out.println("Task executed"));
 ```
 
-### 1.3监控线程池
-
-#### REST API
-- 获取线程池信息：`GET /monitor/pool`
-- 获取队列任务数量：`GET /monitor/tasks`
-- 调整线程参数：`PUT /monitor/worker`
-- 切换队列：`PUT /monitor/queue`
-- 切换拒绝策略：`PUT /monitor/rejectStrategy`
-- ......
-
-
-### 2. 非Spring Boot环境使用
+### Standalone (No Spring)
 
 ```java
-import com.yf.core.workerfactory.WorkerFactory;
+// 1. Manually invoke resource scanning (if custom resources need registration)
+ResourceScanner.scan(YourApplication.class);
 
-// 创建worker工厂
-WorkerFactory workerFactory = new WorkerFactory("worker", false, false, 6000,false);
-// 线程名称，是否守护线程，核心线程是否销毁，空闲时间（单位：ms）
-
-
-singleQueue.
-
-setCapacity(100); // 设置队列容量，如果不设置则为无界队列
-
-// 或创建分区化队列
-PartiFlow<Runnable> partitionedQueue = new PartiFlow<>(
-        10, // 分区数量
-        1000, // 总容量
-        "linked_plus", // 队列名称
-        OfferStrategy.ROUND_ROBIN, // 入队策略
-        PollStrategy.ROUND_ROBIN, // 出队策略
-        RemoveStrategy.ROUND_ROBIN // 移除策略
+// 2. Create partitioned queue
+Partition<Runnable> queue = new PartiFlow<>(
+    8, 10000, "linked",
+    new ValleyFillingOffer(),
+    new ThreadBindingPoll(),
+    new RoundRobinRemove()
 );
 
-// 创建拒绝策略
-RejectStrategy rejectStrategy = new CallerRunsStrategy();
-
-// 创建线程池                            
+// 3. Create thread pool
 ThreadPool threadPool = new ThreadPool(
-        5, 20, // 核心线程数，最大线程数
-        "DynaPartPool", // 线程池名称
-        workerFactory, // worker工厂
-        singleQueue, // 任务队列（或使用partitionedQueue）
-        rejectStrategy // 拒绝策略
+    10, 50, "my-pool",
+    new WorkerFactory("worker", false, false, 60000),
+    queue,
+    new CallerRunsStrategy()
 );
 
-// 使用线程池
-threadPool.execute(() ->{
-        // 任务逻辑
-        });
+// 4. Register
+UnifiedTPRegulator.register("my-pool", threadPool);
 
-Future<?> future = threadPool.submit(() -> {
-    // 任务逻辑
-    return "Result";
-});
+// 5. Use
+threadPool.execute(() -> {});
 ```
-### 2.1 命令行
 
-#### 主要命令
-- yf info pool //打印线程池信息
-- yf info worker  //打印线程信息
-- yf info taskNum  //打印队列任务数量
-- yf change worker -coreNums 2 -maxNums 5 -coreDestroy true......(如果有参数没写就直接赋值为null)  //改变线程参数
-- yf change queue linked(队列名称举例)  //改变队列
-- yf change rejectstrategy callerRuns(拒绝策略名称举例)   //改变拒绝策略
+**Note**: If not using @ResourceScan annotation or no custom resources, manually call `ResourceScanner.scan(EntryClass)` for resource scanning and registration.
 
+### Hot Switching Examples
 
-## 🔧 开发者自定义扩展资源说明
-
-### 只举调度策略自定义的例子，并且举的例子是入队规则的，队列和拒绝策略自定义的方法差不多
-调度策略涉及了入队、出队和移除策略，所以共有三个Map来管理，key：资源名称，value：调度策略类
-以下分别说明springboot环境和非springboot环境的使用方式，当然，springboot环境肯定是兼容非springboot环境的使用方法的
-
-springboot环境：
 ```java
-/**
- * @author yyf
- * @date 2025/9/21 0:57
- * @description
- */
-@SPResource("mysp")//无论是出队还是入队还是移除都是使用这个注解，但是继承的类是不同的，注解value值是资源名称。
-public class mysp extends OfferPolicy {
+// Dynamically adjust thread parameters
+UnifiedTPRegulator.changeWorkerParams("poolName", 20, 100, null, null, null);
 
-    @Override
-    public int selectPartition(Partition[] partitions, Object object) {
-        return 0;
-    }
+// Dynamically switch queue
+Partition<Runnable> newQueue = new LinkedBlockingQ<>(20000);
+UnifiedTPRegulator.changeQueue("poolName", newQueue);
 
-//    （只有入队和出队有轮询相关接口，移除没有，只有PartiFlow实现分区化才能够自由选择是否轮询，PartiStill无轮询相关功能）
-//    这里的轮询指的是在调度策略执行后是否轮询下一个分区尝试出队或者入队，不要跟出入队调度规则中的轮询规则搞浑了
-    @Override
-    public boolean getRoundRobin() {//在入队失败后是否选择轮询接下来的分区
-        return false;
-    }
-
-    @Override
-    public void setRoundRobin(boolean roundRobin) {//设置是否轮询
-
-    }
-}
+// Dynamically switch reject strategy
+UnifiedTPRegulator.changeRejectStrategy("poolName", new AbortStrategy(), "abort");
 ```
 
-非springboot环境，在实现相关的类后还需要注册到注册中心，需要调用静态方法register
+---
+
+## Configuration Parameters
+
+### little-chief (GC Async Task Thread Pool)
+
+The `little-chief` config node configures **the littleChief thread pool itself**, which is the dedicated thread pool inside GCTaskManager for executing GCTasks.
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| enabled | boolean | Enable/disable | true |
+| useVirtualThread | boolean | Use virtual threads | false |
+| coreNums | int | Core thread count | 5 |
+| maxNums | int | Max thread count | 10 |
+| threadName | String | Thread name | littleChief |
+| useDaemon | boolean | Daemon thread | false |
+| aliveTime | long | Keep-alive time (ms) | 10000 |
+| rejectStrategyName | String | Rejection strategy | callerRuns |
+
+### queue (littleChief Internal Queue)
+
+The `queue` config node configures **the internal queue used by littleChief thread pool**.
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| partitioning | boolean | Enable partitioning | false |
+| partitionNum | int | Partition count (recommend power of 2) | 4 |
+| capacity | Integer | Capacity, null=unbounded | - |
+| queueName | String | Queue type | linked |
+| offerPolicy | String | Offer policy | round_robin |
+| pollPolicy | String | Poll policy | round_robin |
+| removePolicy | String | Remove policy | round_robin |
+
+**Queue Types (queueName)**:
+
+| Value | Class | Characteristics |
+|-------|-------|-----------------|
+| linked | LinkedBlockingQ | Dual lock separation, bounded/unbounded |
+| linkedS | LinkedBlockingQS | CAS optimized version |
+| priority | PriorityBlockingQ | Priority queue |
+
+---
+
+## REST API
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/monitor/pool?tpName=xxx` | Thread pool info |
+| GET | `/monitor/tasks?tpName=xxx` | Task count |
+| GET | `/monitor/partitionTaskNums?tpName=xxx` | Task count per partition |
+| GET | `/monitor/threadInfo?tpName=xxx` | Thread status |
+| PUT | `/monitor/worker?tpName=xxx` | Adjust thread parameters |
+| PUT | `/monitor/queue?tpName=xxx` | Switch queue |
+| PUT | `/monitor/rejectStrategy?tpName=xxx&rsName=xxx` | Switch reject strategy |
+| POST | `/monitor/hotDeploy?className=xxx` | Hot deploy |
+
+---
+
+## Web UI Screenshots
+
+### Dashboard
+
+![Dashboard](pic/index.png)
+
+### Partition Monitoring
+
+![Partition Monitor 1/2](pic/monitor1.png)
+![Partition Monitor 2/2](pic/monitor2.png)
+
+### Dynamic Configuration
+
+![Config 1/2](pic/config1.png)
+![Config 2/2](pic/config2.png)
+
+### Hot Deployment
+
+![Hot Deploy 1/2](pic/hotdeploy1.png)
+![Hot Deploy 2/2](pic/hotdeploy2.png)
+
+---
+
+## Project Structure
+
+```
+src/main/java/com/yf/
+├── common/                    # Common components
+│   ├── constant/              # Constants
+│   ├── entity/                # Entities (PoolInfo, QueueInfo)
+│   ├── exception/             # Exceptions (SwitchedException)
+│   ├── glue/                  # Dynamic compilation (Glue Mode)
+│   │   ├── DynamicCompiler.java
+│   │   ├── MemoryClassLoader.java
+│   │   ├── MemoryFileManager.java
+│   │   └── SourceFile.java / ByteCodeFile.java
+│   └── task/                  # Task classes
+│       ├── GCTask.java        # GC cleanup task base class
+│       └── impl/
+│           └── TBPollCleaningTask.java  # ThreadBinding cleanup task
+│
+├── core/                      # Core components
+│   ├── partition/             # Queue abstraction and implementations
+│   │   ├── Partition.java     # Abstract base class
+│   │   └── Impl/
+│   │       ├── LinkedBlockingQ.java    # Dual-lock single queue
+│   │       ├── LinkedBlockingQS.java   # CAS-optimized single queue
+│   │       └── PriorityBlockingQ.java  # Priority queue
+│   │
+│   ├── partitioning/          # Partitioned queues
+│   │   ├── Partitioning.java  # Partitioning interface
+│   │   ├── impl/
+│   │   │   ├── PartiFlow.java     # Dynamic partitioning
+│   │   │   └── PartiStill.java    # Static partitioning
+│   │   └── schedule_policy/
+│   │       ├── OfferPolicy.java    # Offer policy interface
+│   │       ├── PollPolicy.java    # Poll policy interface
+│   │       ├── RemovePolicy.java  # Remove policy interface
+│   │       └── impl/
+│   │           ├── offer/          # Offer policy implementations
+│   │           ├── poll/           # Poll policy implementations
+│   │           └── remove/         # Remove policy implementations
+│   │
+│   ├── rejectstrategy/        # Reject strategies
+│   │   ├── RejectStrategy.java
+│   │   └── impl/
+│   │       ├── CallerRunsStrategy.java
+│   │       ├── AbortStrategy.java
+│   │       ├── DiscardStrategy.java
+│   │       └── DiscardOldestStrategy.java
+│   │
+│   ├── resource_container/    # Resource container
+│   │   ├── ResourceScanner.java   # Scanner
+│   │   ├── scanned_annotation/    # Annotation definitions
+│   │   │   ├── ResourceScan.java
+│   │   │   ├── PartiResource.java
+│   │   │   ├── SPResource.java
+│   │   │   ├── RSResource.java
+│   │   │   └── GCTResource.java
+│   │   └── resource_manager/       # Resource managers
+│   │       ├── GCTaskManager.java
+│   │       ├── PartiResourceManager.java
+│   │       ├── SPResourceManager.java
+│   │       └── RSResourceManager.java
+│   │
+│   ├── threadpool/            # Thread pool core
+│   │   └── ThreadPool.java
+│   ├── tp_regulator/         # Dynamic regulator
+│   │   └── UnifiedTPRegulator.java
+│   ├── worker/               # Worker thread
+│   │   └── Worker.java
+│   └── workerfactory/        # Thread factory
+│       └── WorkerFactory.java
+│
+└── springboot_integration/    # Spring Boot integration
+    ├── monitor/               # Monitor module
+    │   ├── auto_configuration/
+    │   ├── controller/
+    │   │   └── MonitorController.java  # REST API
+    │   └── ws/
+    │       ├── ThreadPoolWebSocketHandler.java
+    │       └── SchedulePushInfoService.java
+    └── pool/                  # Auto configuration
+        └── auto_configuration/
+            ├── LittleChiefAutoConfiguration.java
+            └── ResourceAutoConfiguration.java
+```
+
+---
+
+## FAQ
+
+### How to choose partition count?
+
+**Recommend power of 2** (8/16/32/64), enabling bit operations instead of modulo:
+
 ```java
-/**
- * @author yyf
- * @date 2025/9/20 21:29
- * @description : 调度规则资源管理(SchedulePolicyResourceManager)
- */
-public class SPResourceManager {
-    private static final Map<String,Class<? extends OfferPolicy>> OFFER_POLICY_MAP = new HashMap<>();
-    private static final Map<String,Class<? extends PollPolicy>> POLL_POLICY_MAP = new HashMap<>();
-    private static final Map<String,Class<? extends RemovePolicy>> REMOVE_POLICY_MAP = new HashMap<>();
-    static {
-        //Offer
-        register("round_robin", RoundRobinOffer.class);
-        register("random", RandomOffer.class);
-        register("hash", HashOffer.class);
-        register("valley_filling", ValleyFillingOffer.class);
+// When partition count is power of 2
+return r & (ps - 1);  // Bit operation, single cycle
 
-        //poll
-        register("round_robin", RoundRobinPoll.class);
-        register("peek_shaving", PeekShavingPoll.class);
-        register("thread_binding", ThreadBindingPoll.class);
-        register("random", RandomPoll.class);
-
-        //remove
-        register("round_robin", RoundRobinRemove.class);
-        register("peek_shaving", PeekShavingRemove.class);
-        register("random", PeekShavingRemove.class);
-
-    }
-
-    public static void register(String name, Class policyClass) {
-        if(policyClass.getSuperclass()==OfferPolicy.class) {
-            OFFER_POLICY_MAP.put(name, policyClass);
-        }
-        if(policyClass.getSuperclass()==PollPolicy.class) {
-            POLL_POLICY_MAP.put(name, policyClass);
-        }
-        if (policyClass.getSuperclass() == RemovePolicy.class) {
-            REMOVE_POLICY_MAP.put(name, policyClass);
-        }
-    }
-
-    public static Class<? extends OfferPolicy> getOfferResource(String name){
-        return OFFER_POLICY_MAP.get(name);
-    }
-    public static Class<? extends PollPolicy> getPollResource(String name){
-        return POLL_POLICY_MAP.get(name);
-    }
-    public static Class<? extends RemovePolicy> getRemoveResource(String name){
-        return REMOVE_POLICY_MAP.get(name);
-    }
-    public static Map<String,Class<? extends OfferPolicy>> getOfferResources(){
-        return OFFER_POLICY_MAP;
-    }
-    public static Map<String,Class<? extends PollPolicy>> getPollResources(){
-        return POLL_POLICY_MAP;
-    }
-    public static Map<String,Class<? extends RemovePolicy>> getRemoveResources(){
-        return REMOVE_POLICY_MAP;
-    }
-}
-
-```
-###另外再举一个自定义GC任务的例子
-GC任务是为了解决运行时切换队列而设置的保底策略，具体的逻辑与思考在"Reflections Or Lessons Learned"文件夹中有详细说明
-是针对src/main/java/com/yf/core/tp_regulator/UnifiedTPRegulator.java这个类中的changeQueue方法的，这里只说如何使用
-绑定了对应的资源那么在更换分区后倘若被替换掉的旧分区被绑定或者旧分区的调度规则被绑定那么就会执行这个任务
-
-springboot环境(只需要写个注解就行了)：
-```java
-//          绑定的分区资源名称                 绑定的调度策略名称  不能都不写。         绑定的调度规则类型
-@GCTResource(bindingPartiResource = "myq",bindingSPResource = "thread_binding",spType = Constant.POLL)
-public class t extends GCTask {
-
-
-    @Override
-    public void run() {
-        ThreadPool threadPool = getThreadPool();
-        Partition<?> partition = getPartition();
-    }
-
-}
-```
-非springboot环境：
-需要手动在GCTaskManager中注册：绑定的资源类型，任务类型。
-```java
-GCTaskManager.register(bindingResource.class,task.class);
+// When not power of 2
+return r % ps;       // Division, dozens of cycles
 ```
 
+### When does partitioning show advantages?
+
+- High concurrency, large task volume
+- Lock contention becomes bottleneck
+- Need high cache hit rate (using thread_binding policy)
+
+### How to choose scheduling policies?
+
+| Scenario | Offer Policy | Poll Policy |
+|----------|--------------|-------------|
+| High concurrency short tasks | valley_filling | round_robin |
+| Long-running tasks (cache needed) | plain_hash | thread_binding |
+| Peak shaving | valley_filling | peek_shaving |
+
+---
+
+## License
+
+MIT

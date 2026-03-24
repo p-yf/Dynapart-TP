@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <div id="status">Connecting...</div>
+    <div id="messages"></div>
+    <script>
+        const ws = new WebSocket('ws://127.0.0.1:8081/monitor/threads');
+        ws.onopen = () => {
+            document.getElementById('status').innerHTML = '<span style="color:green">Connected!</span>';
+        };
+        ws.onclose = (e) => {
+            document.getElementById('status').innerHTML = '<span style="color:red">Disconnected: ' + e.code + ' ' + e.reason + '</span>';
+        };
+        ws.onerror = (e) => {
+            document.getElementById('status').innerHTML = '<span style="color:red">Error!</span>';
+            console.error(e);
+        };
+        ws.onmessage = (evt) => {
+            const div = document.createElement('div');
+            div.textContent = evt.data;
+            document.getElementById('messages').appendChild(div);
+        };
+    </script>
+</body>
+</html>

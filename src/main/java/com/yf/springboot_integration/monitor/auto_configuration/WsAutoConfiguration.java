@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
 import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.web.socket.server.support.HttpSessionHandshakeInterceptor;
 
 
 /**
@@ -28,11 +29,14 @@ public class WsAutoConfiguration implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(new ThreadPoolWebSocketHandler(), "/monitor/threads")
-                .setAllowedOrigins("*");
+                .setAllowedOrigins("*")
+                .addInterceptors(new HttpSessionHandshakeInterceptor());
+        log.info("WebSocket handler registered at /monitor/threads");
     }
 
     @Bean
     public SchedulePushInfoService schedulePushInfoService(){
+        log.info("SchedulePushInfoService bean created");
         return new SchedulePushInfoService();
     }
 }

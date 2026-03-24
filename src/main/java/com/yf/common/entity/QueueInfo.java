@@ -30,4 +30,7 @@ public class QueueInfo {
     // 移除策略
     private String removePolicy;
 
+    // 分区类型: parti_flow (动态) 或 parti_still (静态)
+    private String partitionType = "parti_flow";
+
 }

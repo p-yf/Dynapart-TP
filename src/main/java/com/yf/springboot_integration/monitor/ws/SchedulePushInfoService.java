@@ -1,6 +1,7 @@
 package com.yf.springboot_integration.monitor.ws;
 
 import com.yf.core.tp_regulator.UnifiedTPRegulator;
+import com.yf.core.threadpool.ThreadPool;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 
@@ -19,11 +20,24 @@ public class SchedulePushInfoService {
      */
     @Scheduled(fixedDelayString = "${yf.thread-pool.monitor.fixedDelay}")
     public void pushInfo() {
-        // 遍历所有线程池，按名称广播
-        UnifiedTPRegulator.getResources().forEach((tpName, threadPool) -> {
-            ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(tpName, threadPool.getThreadsInfo());
-            ThreadPoolWebSocketHandler.broadcastTaskNums(tpName, threadPool.getTaskNums());
-            ThreadPoolWebSocketHandler.broadcastPartitionTaskNums(tpName, threadPool.getPartitionTaskNums());
-        });
+        try {
+            // 遍历所有线程池，按名称广播
+            UnifiedTPRegulator.getResources().forEach((tpName, threadPool) -> {
+                if (threadPool == null) {
+                    log.warn("Skipping null thread pool for name: {}", tpName);
+                    return;
+                }
+                try {
+                    log.debug("Pushing info for thread pool: {}", tpName);
+                    ThreadPoolWebSocketHandler.broadcastThreadPoolInfo(tpName, threadPool.getThreadsInfo());
+                    ThreadPoolWebSocketHandler.broadcastTaskNums(tpName, threadPool.getTaskNums());
+                    ThreadPoolWebSocketHandler.broadcastPartitionTaskNums(tpName, threadPool.getPartitionTaskNums());
+                } catch (Exception e) {
+                    log.error("Failed to push info for thread pool [{}]: {}", tpName, e.getMessage(), e);
+                }
+            });
+        } catch (Exception e) {
+            log.error("Error in scheduled pushInfo task: {}", e.getMessage(), e);
+        }
     }
 }
