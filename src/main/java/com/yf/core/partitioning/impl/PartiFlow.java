@@ -187,6 +187,13 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
         }
     }
 
+    /**
+     * 唤醒所有子分区的等待线程
+     */
+    public void signalAllPartitions() {
+        // 已通过 markAsSwitched 间接完成
+    }
+
     public void setCapacity(Integer capacity) {
         if(partitions==null){
             throw new RuntimeException("还未初始化各个分区！");

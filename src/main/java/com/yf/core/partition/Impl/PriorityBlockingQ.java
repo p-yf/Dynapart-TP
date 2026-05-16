@@ -73,8 +73,14 @@ public class PriorityBlockingQ<T> extends Partition<T> {
                     if (!await) { // 超时
                         return null;
                     }
+                    if (switched) {
+                        throw new SwitchedException();
+                    }
                 } else {
                     notEmpty.await(); // 无限等待
+                    if (switched) {
+                        throw new SwitchedException();
+                    }
                 }
             }
             return q.poll(); // 获取并移除优先级最高的任务（队列头部）
@@ -120,7 +126,13 @@ public class PriorityBlockingQ<T> extends Partition<T> {
 
     @Override
     public void markAsSwitched() {
-        switched = true;
+        lock.lock();
+        try {
+            switched = true;
+            notEmpty.signalAll();
+        } finally {
+            lock.unlock();
+        }
     }
 
 }

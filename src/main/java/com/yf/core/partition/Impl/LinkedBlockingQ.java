@@ -95,6 +95,9 @@ public class LinkedBlockingQ<T> extends Partition<T> {
             while (size.get() == 0) {
                 if (waitTime == null) {
                     notEmpty.await();
+                    if (switched) {
+                        throw new SwitchedException();
+                    }
                 } else {
                     if (nanos == 0) {
                         nanos = TimeUnit.MILLISECONDS.toNanos(waitTime);
@@ -105,6 +108,9 @@ public class LinkedBlockingQ<T> extends Partition<T> {
                     nanos = notEmpty.awaitNanos(nanos);
                     if (nanos <= 0) {
                         return null;
+                    }
+                    if (switched) {
+                        throw new SwitchedException();
                     }
                 }
             }
@@ -135,7 +141,13 @@ public class LinkedBlockingQ<T> extends Partition<T> {
 
     @Override
     public void markAsSwitched() {
-        switched = true;
+        headLock.lock();
+        try {
+            switched = true;
+            notEmpty.signalAll();
+        } finally {
+            headLock.unlock();
+        }
     }
 
     /**

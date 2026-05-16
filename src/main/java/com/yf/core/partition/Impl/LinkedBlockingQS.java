@@ -140,8 +140,14 @@ public class LinkedBlockingQS<T> extends Partition<T> {
                         return null;  // 超时返回
                     }
                     nanos = notEmpty.awaitNanos(nanos);
+                    if (switched) {
+                        throw new SwitchedException();
+                    }
                 } else {
                     notEmpty.await();  // 无限等待
+                    if (switched) {
+                        throw new SwitchedException();
+                    }
                 }
             }
         } finally {
@@ -168,7 +174,13 @@ public class LinkedBlockingQS<T> extends Partition<T> {
 
     @Override
     public void markAsSwitched() {
-        switched = true;
+        headLock.lock();
+        try {
+            switched = true;
+            notEmpty.signalAll();
+        } finally {
+            headLock.unlock();
+        }
     }
 
     public T removeEle() {
