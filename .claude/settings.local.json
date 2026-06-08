@@ -59,7 +59,9 @@
       "Bash(node fix_readme_zh.js)",
       "Bash(node -e \":*)",
       "Bash(node fix_readme_zh_v2.js)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(mvn exec:java -Dexec.mainClass=\"com.yf.test.QueueSwitchThreadLeakTest\" -Dexec.classpathScope=test -q)",
+      "Bash(mvn exec:java -Dexec.mainClass=\"com.yf.test.QueueSwitchThreadLeakTest\" -Dexec.classpathScope=test -e)"
     ]
   }
 }
