@@ -239,4 +239,48 @@ public class LinkedBlockingQS<T> extends Partition<T> {
             headLock.unlock();
         }
     }
+
+    /**
+     * 迁移专用:不检查 switched,一次性把本队列的元素转移到 target。
+     * 使用 CAS 出队,若 target 满了把元素放回头部并停止。
+     */
+    @Override
+    public int drainTo(Partition<T> target) {
+        int count = 0;
+        headLock.lock();
+        try {
+            while (true) {
+                Node<T> h = head.get();
+                Node<T> first = h.getNext();
+                if (first == null) {
+                    break; // 队列空
+                }
+                if (head.compareAndSet(h, first)) {
+                    T task = first.getValue();
+                    first.setValue(null);
+                    h.next = h;
+                    int c = size.getAndDecrement();
+                    if (c > 1) {
+                        notEmpty.signal();
+                    }
+                    if (!target.offer(task)) {
+                        // target 满:把 task 放回头部
+                        Node<T> newNode = new Node<>(task);
+                        newNode.setNext(head.get().getNext());
+                        head.get().setNext(newNode);
+                        if (head.get() == tail) {
+                            tail = newNode;
+                        }
+                        size.incrementAndGet();
+                        break;
+                    }
+                    count++;
+                }
+                // CAS 失败,重试
+            }
+        } finally {
+            headLock.unlock();
+        }
+        return count;
+    }
 }

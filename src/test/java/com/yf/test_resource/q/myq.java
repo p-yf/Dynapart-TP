@@ -56,4 +56,9 @@ public class myq extends Partition {
 
     }
 
+    @Override
+    public int drainTo(Partition target) {
+        return 0;
+    }
+
 }

@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>DynaPart-TP · 动态切换队列机制</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+            background: #f3f4f6;
+            color: #1f2937;
+            height: 100vh;
+            overflow: hidden;
+            font-size: 14px;
+        }
+        .deck { max-width: 1100px; margin: 0 auto; height: 100vh; padding: 24px 24px 56px; position: relative; }
+        .slide { display: none; height: 100%; flex-direction: column; }
+        .slide.active { display: flex; }
+        .slide-header {
+            display: flex; align-items: baseline; gap: 14px;
+            border-bottom: 2px solid #2563eb;
+            padding-bottom: 8px; margin-bottom: 10px;
+        }
+        .step-tag { background: #2563eb; color: #fff; padding: 4px 12px; border-radius: 3px; font-size: 13px; font-weight: 600; }
+        .step-tag.async { background: #059669; }
+        .step-name { font-size: 20px; font-weight: 600; }
+        .step-fn { font-size: 14px; color: #6b7280; font-family: Consolas, "Courier New", monospace; margin-left: 6px; }
+
+        .svg-row { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+        .svg-cell {
+            flex: 1;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px 10px;
+            background: #ffffff;
+            position: relative;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .svg-cell svg { display: block; max-width: 100%; max-height: 100%; }
+        .label {
+            position: absolute; top: 8px; left: 12px;
+            font-size: 12px; font-weight: 600;
+            padding: 2px 10px; border-radius: 3px;
+        }
+        .label.act { background: #dbeafe; color: #1d4ed8; }
+        .label.eff { background: #dcfce7; color: #15803d; }
+
+        .note {
+            margin-top: 8px; padding: 6px 12px;
+            background: #f9fafb; border-left: 3px solid #2563eb;
+            font-size: 13px; color: #374151; line-height: 1.55;
+        }
+
+        /* 翻页 */
+        .nav {
+            position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%);
+            display: flex; align-items: center; gap: 14px; font-size: 13px;
+            background: #ffffff; padding: 6px 16px; border-radius: 20px;
+            border: 1px solid #e5e7eb; color: #4b5563;
+        }
+        .nav button { background: #2563eb; color: #fff; border: none; padding: 5px 14px; border-radius: 3px; cursor: pointer; font-size: 13px; }
+        .nav button:disabled { background: #9ca3af; cursor: not-allowed; }
+        .nav .page { font-weight: 600; color: #1f2937; }
+        .nav .hint { color: #9ca3af; font-size: 12px; }
+
+        .slide.cover .svg-cell { background: transparent; border: none; }
+    </style>
+</head>
+<body>
+<div class="deck">
+
+    <!-- ============================================ -->
+    <!-- Page 1: 总览                                   -->
+    <!-- ============================================ -->
+    <div class="slide cover active" data-page="1">
+        <div class="slide-header">
+            <span class="step-tag">总览</span>
+            <span class="step-name">DynaPart-TP · 动态切换队列机制</span>
+        </div>
+        <div class="svg-row">
+            <div class="svg-cell">
+                <span class="label act">6 步切换流程</span>
+                <svg viewBox="0 0 1040 380" width="1040" height="380" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="14" fill="#1f2937">
+                        <line x1="60" y1="180" x2="980" y2="180" stroke="#9ca3af" stroke-width="2"/>
+                        <polygon points="980,180 970,175 970,185" fill="#9ca3af"/>
+
+                        <circle cx="80" cy="180" r="24" fill="#2563eb"/><text x="80" y="187" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">1</text>
+                        <text x="80" y="138" text-anchor="middle" font-size="13" font-weight="600">lockGlobally</text>
+                        <text x="80" y="232" text-anchor="middle" font-size="12" fill="#4b5563">🔒 锁旧队列</text>
+
+                        <circle cx="220" cy="180" r="24" fill="#2563eb"/><text x="220" y="187" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">2</text>
+                        <text x="220" y="138" text-anchor="middle" font-size="13" font-weight="600">markAsSwitched</text>
+                        <text x="220" y="232" text-anchor="middle" font-size="12" fill="#4b5563">⚠ 标 switched + signalAll</text>
+
+                        <circle cx="380" cy="180" r="24" fill="#2563eb"/><text x="380" y="187" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">3</text>
+                        <text x="380" y="138" text-anchor="middle" font-size="13" font-weight="600">setPartition</text>
+                        <text x="380" y="232" text-anchor="middle" font-size="12" fill="#4b5563">🔄 换引用 newQ</text>
+
+                        <circle cx="540" cy="180" r="24" fill="#059669"/><text x="540" y="187" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">4</text>
+                        <text x="540" y="112" text-anchor="middle" font-size="11" fill="#059669" font-weight="600">（异步）</text>
+                        <text x="540" y="138" text-anchor="middle" font-size="13" font-weight="600">GCTaskManager.clean</text>
+                        <text x="540" y="232" text-anchor="middle" font-size="12" fill="#4b5563">🧹 清理策略状态</text>
+
+                        <circle cx="720" cy="180" r="24" fill="#2563eb"/><text x="720" y="187" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">5</text>
+                        <text x="720" y="138" text-anchor="middle" font-size="13" font-weight="600">unlockGlobally</text>
+                        <text x="720" y="232" text-anchor="middle" font-size="12" fill="#4b5563">🔓 释放锁</text>
+
+                        <circle cx="900" cy="180" r="24" fill="#059669"/><text x="900" y="187" text-anchor="middle" fill="#fff" font-size="18" font-weight="700">6</text>
+                        <text x="900" y="112" text-anchor="middle" font-size="11" fill="#059669" font-weight="600">（异步）</text>
+                        <text x="900" y="138" text-anchor="middle" font-size="13" font-weight="600">迁移残留任务</text>
+                        <text x="900" y="232" text-anchor="middle" font-size="12" fill="#4b5563">📦 oldQ → newQ</text>
+
+                        <rect x="380" y="290" width="16" height="16" fill="#2563eb"/>
+                        <text x="404" y="303" font-size="13" font-weight="600">同步步骤（主线程）</text>
+                        <text x="404" y="320" font-size="11" fill="#6b7280">持有锁，原子切换</text>
+
+                        <rect x="560" y="290" width="16" height="16" fill="#059669"/>
+                        <text x="584" y="303" font-size="13" font-weight="600">异步步骤（LittleChief 池）</text>
+                        <text x="584" y="320" font-size="11" fill="#6b7280">不阻塞主流程</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Page 2: Step 1 - lockGlobally                  -->
+    <!-- ============================================ -->
+    <div class="slide" data-page="2">
+        <div class="slide-header">
+            <span class="step-tag">Step 1</span>
+            <span class="step-name">lockGlobally</span>
+            <span class="step-fn">() · 加锁抢占</span>
+        </div>
+        <div class="svg-row">
+            <div class="svg-cell">
+                <span class="label act">行为</span>
+                <svg viewBox="0 0 1040 230" width="1040" height="230" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 主线程 -->
+                        <rect x="80" y="50" width="140" height="44" rx="4" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+                        <text x="150" y="78" text-anchor="middle" font-size="14" font-weight="600" fill="#1e3a8a">主线程</text>
+
+                        <text x="150" y="120" text-anchor="middle" font-size="13" fill="#1d4ed8" font-weight="600">lockGlobally()</text>
+
+                        <!-- oldQ -->
+                        <rect x="380" y="50" width="200" height="44" rx="4" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+                        <text x="480" y="78" text-anchor="middle" font-size="14" font-weight="600" fill="#92400e">oldQ (PartiFlow)</text>
+
+                        <!-- 锁状态 -->
+                        <rect x="700" y="30" width="280" height="160" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+                        <text x="840" y="55" text-anchor="middle" font-size="13" font-weight="700" fill="#b91c1c">oldQ 内部 4 个分区</text>
+                        <line x1="720" y1="65" x2="960" y2="65" stroke="#fca5a5" stroke-width="1"/>
+                        <text x="840" y="90" text-anchor="middle" font-size="13" fill="#7f1d1d">Partition 0  🔒</text>
+                        <text x="840" y="112" text-anchor="middle" font-size="13" fill="#7f1d1d">Partition 1  🔒</text>
+                        <text x="840" y="134" text-anchor="middle" font-size="13" fill="#7f1d1d">Partition 2  🔒</text>
+                        <text x="840" y="156" text-anchor="middle" font-size="13" fill="#7f1d1d">Partition 3  🔒</text>
+                        <text x="840" y="180" text-anchor="middle" font-size="11" fill="#dc2626" font-weight="600">headLock 全部持有</text>
+
+                        <!-- 箭头 -->
+                        <line x1="220" y1="72" x2="380" y2="72" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arr-cv)"/>
+                        <line x1="580" y1="72" x2="700" y2="100" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arr-cv)"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="svg-cell">
+                <span class="label eff">效果 · 锁 = 队列与线程之间的阻隔屏障</span>
+                <svg viewBox="0 0 1040 220" width="1040" height="220" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 生产者侧 -->
+                        <rect x="20" y="70" width="240" height="80" rx="6" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+                        <text x="140" y="95" text-anchor="middle" font-size="14" font-weight="600" fill="#1e3a8a">生产者 P1 ~ Pn</text>
+                        <text x="140" y="120" text-anchor="middle" font-size="12" fill="#dc2626" font-weight="600">⛔ 阻塞在 lock 入口</text>
+                        <text x="140" y="138" text-anchor="middle" font-size="11" fill="#6b7280">无法接近 oldQ</text>
+
+                        <!-- 锁屏障 -->
+                        <rect x="320" y="40" width="200" height="140" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="4"/>
+                        <text x="420" y="95" text-anchor="middle" font-size="56">🔒</text>
+                        <text x="420" y="140" text-anchor="middle" font-size="14" font-weight="700" fill="#b91c1c">LOCKED</text>
+                        <text x="420" y="160" text-anchor="middle" font-size="11" fill="#7f1d1d">主线程独占持有中</text>
+
+                        <!-- 队列侧 -->
+                        <rect x="580" y="70" width="240" height="80" rx="6" fill="#fef3c7" stroke="#f59e0b" stroke-width="1.5"/>
+                        <text x="700" y="95" text-anchor="middle" font-size="14" font-weight="600" fill="#92400e">oldQ</text>
+                        <text x="700" y="120" text-anchor="middle" font-size="12" fill="#dc2626" font-weight="600">不再接收新任务</text>
+                        <text x="700" y="138" text-anchor="middle" font-size="11" fill="#6b7280">等待切换完成</text>
+
+                        <!-- 阻隔线 -->
+                        <line x1="260" y1="110" x2="320" y2="110" stroke="#dc2626" stroke-width="4"/>
+                        <line x1="520" y1="110" x2="580" y2="110" stroke="#9ca3af" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-cv)"/>
+                        <text x="550" y="103" text-anchor="middle" font-size="9" fill="#9ca3af">极少量</text>
+
+                        <!-- 底注 -->
+                        <rect x="840" y="70" width="180" height="80" rx="6" fill="#f9fafb" stroke="#9ca3af" stroke-width="1"/>
+                        <text x="930" y="95" text-anchor="middle" font-size="12" font-weight="600" fill="#1f2937">Step 1 ~ 3 都在锁内</text>
+                        <text x="930" y="115" text-anchor="middle" font-size="11" fill="#4b5563">原子窗口</text>
+                        <text x="930" y="135" text-anchor="middle" font-size="10" fill="#6b7280">无并发干扰</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Page 3: Step 2 - markAsSwitched                -->
+    <!-- ============================================ -->
+    <div class="slide" data-page="3">
+        <div class="slide-header">
+            <span class="step-tag">Step 2</span>
+            <span class="step-name">markAsSwitched</span>
+            <span class="step-fn">() · 标记 + signalAll</span>
+        </div>
+        <div class="svg-row">
+            <div class="svg-cell">
+                <span class="label act">行为 · 在 headLock 内完成两件事</span>
+                <svg viewBox="0 0 1040 230" width="1040" height="230" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 主线程（持锁） -->
+                        <rect x="60" y="50" width="160" height="44" rx="4" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+                        <text x="140" y="78" text-anchor="middle" font-size="14" font-weight="600" fill="#1e3a8a">主线程（持 headLock）</text>
+
+                        <!-- 行为 1：标记 -->
+                        <rect x="320" y="40" width="280" height="60" rx="6" fill="#fef2f2" stroke="#dc2626" stroke-width="1.5"/>
+                        <text x="460" y="65" text-anchor="middle" font-size="14" font-weight="600" fill="#b91c1c">① 标记 switched = true</text>
+                        <text x="460" y="88" text-anchor="middle" font-size="11" fill="#7f1d1d">后续 offer/poll 立即抛 SwitchedException</text>
+
+                        <!-- 箭头 1 -->
+                        <line x1="220" y1="72" x2="320" y2="72" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arr-cv)"/>
+
+                        <!-- 行为 2：唤醒 -->
+                        <rect x="700" y="40" width="280" height="60" rx="6" fill="#fff7ed" stroke="#f59e0b" stroke-width="1.5"/>
+                        <text x="840" y="65" text-anchor="middle" font-size="14" font-weight="600" fill="#92400e">② signalAll 唤醒等待者</text>
+                        <text x="840" y="88" text-anchor="middle" font-size="11" fill="#78350f">让阻塞在 notEmpty.await() 的消费者醒过来</text>
+
+                        <!-- 箭头 2 -->
+                        <line x1="600" y1="72" x2="700" y2="72" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arr-cv)"/>
+
+                        <!-- 等待中的消费者 -->
+                        <g>
+                            <text x="520" y="155" text-anchor="middle" font-size="13" font-weight="600" fill="#6d28d9">阻塞在 notEmpty.await() 的消费者</text>
+                            <rect x="350" y="170" width="90" height="40" rx="4" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.2"/>
+                            <text x="395" y="195" text-anchor="middle" font-size="13" fill="#5b21b6">C1 等待</text>
+                            <rect x="475" y="170" width="90" height="40" rx="4" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.2"/>
+                            <text x="520" y="195" text-anchor="middle" font-size="13" fill="#5b21b6">C2 等待</text>
+                            <rect x="600" y="170" width="90" height="40" rx="4" fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.2"/>
+                            <text x="645" y="195" text-anchor="middle" font-size="13" fill="#5b21b6">C3 等待</text>
+
+                            <!-- 唤醒箭头 -->
+                            <line x1="730" y1="105" x2="395" y2="170" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arr-cv)"/>
+                            <line x1="750" y1="105" x2="520" y2="170" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arr-cv)"/>
+                            <line x1="770" y1="105" x2="645" y2="170" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="3,2" marker-end="url(#arr-cv)"/>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+            <div class="svg-cell">
+                <span class="label eff">效果 · 异常屏障 + Worker 重试至 newQ</span>
+                <svg viewBox="0 0 1040 220" width="1040" height="220" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 唤醒的消费者 -->
+                        <rect x="20" y="50" width="100" height="36" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+                        <text x="70" y="74" text-anchor="middle" font-size="13" fill="#15803d" font-weight="600">C1 唤醒</text>
+                        <rect x="20" y="100" width="100" height="36" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+                        <text x="70" y="124" text-anchor="middle" font-size="13" fill="#15803d" font-weight="600">C2 唤醒</text>
+                        <rect x="20" y="150" width="100" height="36" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+                        <text x="70" y="174" text-anchor="middle" font-size="13" fill="#15803d" font-weight="600">C3 唤醒</text>
+
+                        <line x1="120" y1="68" x2="200" y2="100" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-cv)"/>
+                        <line x1="120" y1="118" x2="200" y2="118" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-cv)"/>
+                        <line x1="120" y1="168" x2="200" y2="140" stroke="#16a34a" stroke-width="1.5" marker-end="url(#arr-cv)"/>
+
+                        <!-- 异常屏障 -->
+                        <rect x="200" y="70" width="220" height="100" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/>
+                        <text x="310" y="100" text-anchor="middle" font-size="28">⚠</text>
+                        <text x="310" y="128" text-anchor="middle" font-size="14" font-weight="700" fill="#b91c1c">SwitchedException</text>
+                        <text x="310" y="148" text-anchor="middle" font-size="11" fill="#7f1d1d">PartiFlow 捕获 → return null</text>
+                        <text x="310" y="164" text-anchor="middle" font-size="11" fill="#7f1d1d">（不传给调用方）</text>
+
+                        <line x1="420" y1="120" x2="490" y2="120" stroke="#dc2626" stroke-width="1.5" marker-end="url(#arr-cv)"/>
+
+                        <!-- Worker 重试 -->
+                        <rect x="490" y="80" width="220" height="80" rx="6" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+                        <text x="600" y="105" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">Worker 重试</text>
+                        <text x="600" y="128" text-anchor="middle" font-size="12" fill="#1e40af">threadPool.partition.poll()</text>
+                        <text x="600" y="148" text-anchor="middle" font-size="11" fill="#6b7280">自动从 TP 引用取</text>
+
+                        <line x1="710" y1="120" x2="790" y2="120" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arr-cv)"/>
+
+                        <!-- 终点 newQ -->
+                        <rect x="790" y="80" width="230" height="80" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+                        <text x="905" y="112" text-anchor="middle" font-size="15" font-weight="600" fill="#15803d">✅ 走 newQ</text>
+                        <text x="905" y="138" text-anchor="middle" font-size="11" fill="#15803d">下次 poll 自动用新引用</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Page 4: Step 3 - setPartition                  -->
+    <!-- ============================================ -->
+    <div class="slide" data-page="4">
+        <div class="slide-header">
+            <span class="step-tag">Step 3</span>
+            <span class="step-name">setPartition</span>
+            <span class="step-fn">(newQ) · 原子替换引用</span>
+        </div>
+        <div class="svg-row">
+            <div class="svg-cell">
+                <span class="label act">行为 · 引用赋值</span>
+                <svg viewBox="0 0 1040 230" width="1040" height="230" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- ThreadPool -->
+                        <rect x="400" y="30" width="200" height="50" rx="6" fill="#dbeafe" stroke="#1d4ed8" stroke-width="2"/>
+                        <text x="500" y="55" text-anchor="middle" font-size="15" font-weight="600" fill="#1e3a8a">ThreadPool</text>
+                        <text x="500" y="73" text-anchor="middle" font-size="12" fill="#1e40af" font-family="Consolas,monospace">.partition</text>
+
+                        <!-- oldQ -->
+                        <rect x="80" y="140" width="180" height="60" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+                        <text x="170" y="165" text-anchor="middle" font-size="14" font-weight="600" fill="#b91c1c">oldQ</text>
+                        <text x="170" y="185" text-anchor="middle" font-size="11" fill="#dc2626">switched=true</text>
+
+                        <!-- newQ -->
+                        <rect x="780" y="140" width="180" height="60" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+                        <text x="870" y="165" text-anchor="middle" font-size="14" font-weight="600" fill="#15803d">newQ</text>
+                        <text x="870" y="185" text-anchor="middle" font-size="11" fill="#15803d">已就绪</text>
+
+                        <!-- 旧引用（断开） -->
+                        <line x1="400" y1="55" x2="260" y2="140" stroke="#dc2626" stroke-width="2" stroke-dasharray="5,3"/>
+                        <text x="320" y="100" text-anchor="middle" font-size="12" fill="#7f1d1d" font-weight="600">旧引用（断开）</text>
+                        <text x="200" y="115" text-anchor="middle" font-size="18" fill="#dc2626" font-weight="700">×</text>
+
+                        <!-- 新引用（连接） -->
+                        <line x1="600" y1="55" x2="780" y2="140" stroke="#16a34a" stroke-width="3" marker-end="url(#arr-cv)"/>
+                        <text x="700" y="100" text-anchor="middle" font-size="13" fill="#15803d" font-weight="700">threadPool.partition = newQ</text>
+
+                        <!-- 注释 -->
+                        <text x="520" y="215" text-anchor="middle" font-size="12" fill="#6b7280">单条赋值 · 原子 · Happens-Before 保证可见性</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="svg-cell">
+                <span class="label eff">效果 · 引用切换前 vs 切换后</span>
+                <svg viewBox="0 0 1040 220" width="1040" height="220" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 切换前 -->
+                        <rect x="20" y="20" width="440" height="180" rx="8" fill="#fffbeb" stroke="#d97706" stroke-width="1.5"/>
+                        <text x="240" y="45" text-anchor="middle" font-size="14" font-weight="600" fill="#92400e">切换前</text>
+                        <rect x="180" y="60" width="120" height="40" rx="4" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+                        <text x="240" y="85" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">ThreadPool</text>
+                        <line x1="240" y1="100" x2="240" y2="135" stroke="#dc2626" stroke-width="2.5" marker-end="url(#arr-cv)"/>
+                        <text x="260" y="120" font-size="10" fill="#7f1d1d">指向</text>
+                        <rect x="150" y="140" width="180" height="50" rx="4" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+                        <text x="240" y="163" text-anchor="middle" font-size="13" font-weight="600" fill="#b91c1c">oldQ</text>
+                        <text x="240" y="180" text-anchor="middle" font-size="10" fill="#dc2626">switched=true · 🔒</text>
+
+                        <!-- 箭头 setPartition -->
+                        <line x1="475" y1="110" x2="555" y2="110" stroke="#374151" stroke-width="2.5" marker-end="url(#arr-cv)"/>
+                        <text x="515" y="103" text-anchor="middle" font-size="13" font-weight="600">setPartition</text>
+
+                        <!-- 切换后 -->
+                        <rect x="580" y="20" width="440" height="180" rx="8" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.5"/>
+                        <text x="800" y="45" text-anchor="middle" font-size="14" font-weight="600" fill="#15803d">切换后</text>
+                        <rect x="740" y="60" width="120" height="40" rx="4" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+                        <text x="800" y="85" text-anchor="middle" font-size="13" font-weight="600" fill="#1e3a8a">ThreadPool</text>
+                        <line x1="800" y1="100" x2="800" y2="135" stroke="#16a34a" stroke-width="2.5" marker-end="url(#arr-cv)"/>
+                        <text x="820" y="120" font-size="10" fill="#15803d">指向</text>
+                        <rect x="710" y="140" width="180" height="50" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+                        <text x="800" y="163" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">newQ</text>
+                        <text x="800" y="180" text-anchor="middle" font-size="10" fill="#15803d">已就绪</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Page 5: Step 4 - GCTaskManager.clean           -->
+    <!-- ============================================ -->
+    <div class="slide" data-page="5">
+        <div class="slide-header">
+            <span class="step-tag async">Step 4 · 异步</span>
+            <span class="step-name">GCTaskManager.clean</span>
+            <span class="step-fn">() · 视绑定情况决定是否执行</span>
+        </div>
+        <div class="svg-row">
+            <div class="svg-cell">
+                <span class="label act">行为 · 查询 SCHEDULE_TASK_MAP / PARTI_TASK_MAP</span>
+                <svg viewBox="0 0 1040 230" width="1040" height="230" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- LittleChief -->
+                        <rect x="60" y="50" width="180" height="50" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+                        <text x="150" y="78" text-anchor="middle" font-size="14" font-weight="600" fill="#065f46">LittleChief 线程池</text>
+                        <text x="150" y="120" text-anchor="middle" font-size="11" fill="#047857">提交 Runnable（异步）</text>
+
+                        <!-- 2 个 Map 查询 -->
+                        <rect x="340" y="30" width="260" height="60" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
+                        <text x="470" y="55" text-anchor="middle" font-size="13" font-family="Consolas,monospace" fill="#1f2937">PARTI_TASK_MAP.get()</text>
+                        <text x="470" y="78" text-anchor="middle" font-size="11" fill="#6b7280">查队列子分区类型</text>
+
+                        <rect x="700" y="30" width="280" height="60" rx="6" fill="#ffffff" stroke="#374151" stroke-width="1.2"/>
+                        <text x="840" y="55" text-anchor="middle" font-size="13" font-family="Consolas,monospace" fill="#1f2937">SCHEDULE_TASK_MAP.get()</text>
+                        <text x="840" y="78" text-anchor="middle" font-size="11" fill="#6b7280">查策略类型</text>
+
+                        <line x1="240" y1="75" x2="340" y2="60" stroke="#059669" stroke-width="1.5" marker-end="url(#arr-cv)"/>
+                        <line x1="240" y1="75" x2="700" y2="60" stroke="#059669" stroke-width="1.5" marker-end="url(#arr-cv)"/>
+
+                        <!-- 两种结果 -->
+                        <rect x="60" y="155" width="440" height="55" rx="6" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4,2"/>
+                        <text x="280" y="180" text-anchor="middle" font-size="13" font-weight="600" fill="#4b5563">无绑定 → 跳过</text>
+                        <text x="280" y="200" text-anchor="middle" font-size="11" fill="#6b7280">（LinkedBlockingQ）</text>
+
+                        <rect x="540" y="155" width="440" height="55" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+                        <text x="760" y="180" text-anchor="middle" font-size="13" font-weight="600" fill="#065f46">有绑定 → 执行 GCTask</text>
+                        <text x="760" y="200" text-anchor="middle" font-size="11" fill="#047857">（ThreadBindingPoll → TBPollCleaningTask）</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="svg-cell">
+                <span class="label eff">效果 · 视资源类型而异</span>
+                <svg viewBox="0 0 1040 220" width="1040" height="220" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 左：无绑定 -->
+                        <rect x="20" y="20" width="490" height="180" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-width="1.5" stroke-dasharray="4,2"/>
+                        <text x="265" y="48" text-anchor="middle" font-size="14" font-weight="600" fill="#4b5563">LinkedBlockingQ（无绑定）</text>
+
+                        <text x="265" y="95" text-anchor="middle" font-size="40" fill="#9ca3af">∅</text>
+                        <text x="265" y="125" text-anchor="middle" font-size="13" fill="#4b5563" font-weight="600">无清理动作</text>
+                        <text x="265" y="148" text-anchor="middle" font-size="11" fill="#6b7280">队列本身无额外状态</text>
+                        <text x="265" y="166" text-anchor="middle" font-size="11" fill="#6b7280">残留任务由 Step 6 迁移</text>
+                        <text x="265" y="190" text-anchor="middle" font-size="12" fill="#059669" font-weight="600">⏭ clean 跳过 · 0 开销</text>
+
+                        <!-- 右：有绑定 -->
+                        <rect x="540" y="20" width="480" height="180" rx="8" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+                        <text x="780" y="48" text-anchor="middle" font-size="14" font-weight="600" fill="#065f46">ThreadBindingPoll（有绑定）</text>
+
+                        <!-- 旧 worker -->
+                        <rect x="560" y="70" width="100" height="40" rx="4" fill="#fee2e2" stroke="#dc2626" stroke-width="1.2"/>
+                        <text x="610" y="95" text-anchor="middle" font-size="13" fill="#7f1d1d">旧 Worker</text>
+
+                        <!-- × 符号 -->
+                        <line x1="670" y1="80" x2="700" y2="100" stroke="#dc2626" stroke-width="2.5"/>
+                        <line x1="700" y1="80" x2="670" y2="100" stroke="#dc2626" stroke-width="2.5"/>
+                        <text x="685" y="73" text-anchor="middle" font-size="14" font-weight="700" fill="#dc2626">×</text>
+
+                        <!-- → 销毁 -->
+                        <text x="720" y="98" text-anchor="middle" font-size="11" fill="#dc2626" font-weight="600">destroyWorkers()</text>
+
+                        <!-- 新 worker -->
+                        <rect x="900" y="70" width="100" height="40" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2" stroke-dasharray="3,2"/>
+                        <text x="950" y="95" text-anchor="middle" font-size="13" fill="#15803d">新 Worker</text>
+                        <line x1="860" y1="80" x2="890" y2="100" stroke="#16a34a" stroke-width="2.5" stroke-dasharray="3,2" marker-end="url(#arr-cv)"/>
+
+                        <text x="780" y="135" text-anchor="middle" font-size="12" fill="#1f2937" font-weight="600">所有 Worker 被销毁</text>
+                        <text x="780" y="155" text-anchor="middle" font-size="11" fill="#4b5563">ThreadLocal 随线程消亡</text>
+                        <text x="780" y="173" text-anchor="middle" font-size="11" fill="#4b5563">→ 内存泄漏解除</text>
+                        <text x="780" y="193" text-anchor="middle" font-size="12" fill="#065f46" font-weight="600">🧹 clean 异步执行</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Page 6: Step 5 - unlockGlobally                -->
+    <!-- ============================================ -->
+    <div class="slide" data-page="6">
+        <div class="slide-header">
+            <span class="step-tag">Step 5</span>
+            <span class="step-name">unlockGlobally</span>
+            <span class="step-fn">() · finally 块释放</span>
+        </div>
+        <div class="svg-row">
+            <div class="svg-cell">
+                <span class="label act">行为 · 释放所有分区的 headLock</span>
+                <svg viewBox="0 0 1040 230" width="1040" height="230" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 主线程 -->
+                        <rect x="80" y="50" width="160" height="44" rx="4" fill="#dbeafe" stroke="#1d4ed8" stroke-width="1.5"/>
+                        <text x="160" y="78" text-anchor="middle" font-size="14" font-weight="600" fill="#1e3a8a">主线程</text>
+                        <text x="160" y="120" text-anchor="middle" font-size="13" font-weight="600" fill="#1d4ed8">finally { unlockGlobally(); }</text>
+
+                        <!-- oldQ -->
+                        <rect x="380" y="50" width="200" height="44" rx="4" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+                        <text x="480" y="78" text-anchor="middle" font-size="14" font-weight="600" fill="#15803d">oldQ · 🔓 unlocked</text>
+
+                        <!-- 分区解锁 -->
+                        <rect x="700" y="30" width="280" height="160" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+                        <text x="840" y="55" text-anchor="middle" font-size="13" font-weight="700" fill="#15803d">oldQ 内部 4 个分区</text>
+                        <line x1="720" y1="65" x2="960" y2="65" stroke="#86efac" stroke-width="1"/>
+                        <text x="840" y="90" text-anchor="middle" font-size="13" fill="#15803d">Partition 0  🔓</text>
+                        <text x="840" y="112" text-anchor="middle" font-size="13" fill="#15803d">Partition 1  🔓</text>
+                        <text x="840" y="134" text-anchor="middle" font-size="13" fill="#15803d">Partition 2  🔓</text>
+                        <text x="840" y="156" text-anchor="middle" font-size="13" fill="#15803d">Partition 3  🔓</text>
+                        <text x="840" y="180" text-anchor="middle" font-size="11" fill="#059669" font-weight="600">headLock 全部释放</text>
+
+                        <line x1="240" y1="72" x2="380" y2="72" stroke="#16a34a" stroke-width="2" marker-end="url(#arr-cv)"/>
+                        <line x1="580" y1="72" x2="700" y2="100" stroke="#16a34a" stroke-width="2" marker-end="url(#arr-cv)"/>
+                    </g>
+                </svg>
+            </div>
+            <div class="svg-cell">
+                <span class="label eff">效果 · 屏障打开 · 任务涌入 newQ</span>
+                <svg viewBox="0 0 1040 220" width="1040" height="220" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- 生产者 -->
+                        <rect x="20" y="70" width="240" height="80" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+                        <text x="140" y="95" text-anchor="middle" font-size="14" font-weight="600" fill="#15803d">P2 ~ Pn 全部唤醒</text>
+                        <text x="140" y="120" text-anchor="middle" font-size="12" fill="#16a34a" font-weight="600">✅ 不再阻塞</text>
+                        <text x="140" y="138" text-anchor="middle" font-size="11" fill="#15803d">看到 newQ 引用</text>
+
+                        <!-- 锁打开 -->
+                        <rect x="320" y="40" width="200" height="140" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="4"/>
+                        <text x="420" y="95" text-anchor="middle" font-size="56">🔓</text>
+                        <text x="420" y="140" text-anchor="middle" font-size="14" font-weight="700" fill="#15803d">UNLOCKED</text>
+                        <text x="420" y="160" text-anchor="middle" font-size="11" fill="#059669">主线程释放完毕</text>
+
+                        <!-- 队列 -->
+                        <rect x="580" y="70" width="240" height="80" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.5"/>
+                        <text x="700" y="95" text-anchor="middle" font-size="14" font-weight="600" fill="#15803d">newQ</text>
+                        <text x="700" y="120" text-anchor="middle" font-size="12" fill="#16a34a" font-weight="600">任务涌入 [T T T T T T]</text>
+                        <text x="700" y="138" text-anchor="middle" font-size="11" fill="#15803d">旧队列完全停接</text>
+
+                        <!-- 流通粗箭头 -->
+                        <line x1="260" y1="110" x2="320" y2="110" stroke="#16a34a" stroke-width="5"/>
+                        <line x1="520" y1="110" x2="580" y2="110" stroke="#16a34a" stroke-width="5" marker-end="url(#arr-cv)"/>
+                        <text x="550" y="103" text-anchor="middle" font-size="11" fill="#16a34a" font-weight="700">流通</text>
+
+                        <!-- 右侧说明 -->
+                        <rect x="840" y="70" width="180" height="80" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.2"/>
+                        <text x="930" y="95" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">return true</text>
+                        <text x="930" y="115" text-anchor="middle" font-size="11" fill="#4b5563">调用方拿到结果</text>
+                        <text x="930" y="135" text-anchor="middle" font-size="10" fill="#6b7280">主线程结束</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================ -->
+    <!-- Page 7: Step 6 - drainTo 迁移                       -->
+    <!-- ============================================ -->
+    <div class="slide" data-page="7">
+        <div class="slide-header">
+            <span class="step-tag async">Step 6 · 异步</span>
+            <span class="step-name">drainTo</span>
+            <span class="step-fn">(newQ) · 迁移残留任务</span>
+        </div>
+        <div class="svg-row">
+            <div class="svg-cell">
+                <span class="label act">行为 · LittleChief 异步执行 · drainTo 绕过 switched 检查</span>
+                <svg viewBox="0 0 1040 230" width="1040" height="230" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <!-- LittleChief -->
+                        <rect x="60" y="50" width="180" height="50" rx="6" fill="#ecfdf5" stroke="#059669" stroke-width="1.5"/>
+                        <text x="150" y="80" text-anchor="middle" font-size="14" font-weight="600" fill="#065f46">LittleChief 线程池</text>
+
+                        <!-- oldQ.drainTo -->
+                        <rect x="340" y="50" width="220" height="50" rx="6" fill="#dcfce7" stroke="#059669" stroke-width="1.5" stroke-dasharray="3,2"/>
+                        <text x="450" y="80" text-anchor="middle" font-size="14" font-weight="600" fill="#065f46">oldQ.drainTo(newQ)</text>
+                        <text x="450" y="100" text-anchor="middle" font-size="10" fill="#047857">不走 poll，不查 switched</text>
+
+                        <!-- 旧队列:链表示意 -->
+                        <rect x="60" y="130" width="220" height="70" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.2"/>
+                        <text x="170" y="152" text-anchor="middle" font-size="13" font-weight="600" fill="#b91c1c">oldQ (switched=true)</text>
+                        <text x="170" y="180" text-anchor="middle" font-size="11" fill="#dc2626">[T]→[T]→[T]→[T]→[T] · switched=true</text>
+
+                        <!-- 新队列:接收 -->
+                        <rect x="540" y="130" width="220" height="70" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+                        <text x="650" y="152" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">newQ (switched=false)</text>
+                        <text x="650" y="180" text-anchor="middle" font-size="11" fill="#15803d">[T][T][T][T][T] → [T][T]...</text>
+
+                        <!-- 箭头 -->
+                        <line x1="240" y1="75" x2="340" y2="75" stroke="#059669" stroke-width="2" marker-end="url(#arr-cv)"/>
+                        <line x1="560" y1="75" x2="540" y2="155" stroke="#16a34a" stroke-width="2" marker-end="url(#arr-cv)"/>
+                        <line x1="280" y1="165" x2="540" y2="165" stroke="#059669" stroke-width="2.5" marker-end="url(#arr-cv)" stroke-dasharray="5,3"/>
+                        <text x="410" y="158" text-anchor="middle" font-size="12" font-weight="700" fill="#059669">drainTo: 一次性把旧队列元素转移到 newQ</text>
+
+                        <!-- 关键提示 -->
+                        <rect x="780" y="130" width="240" height="70" rx="6" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+                        <text x="900" y="152" text-anchor="middle" font-size="13" font-weight="700" fill="#92400e">⚡ 关键</text>
+                        <text x="900" y="172" text-anchor="middle" font-size="11" fill="#78350f">drainTo 是 Partition 抽象方法</text>
+                        <text x="900" y="188" text-anchor="middle" font-size="11" fill="#78350f">不检查 switched · 不会被中断</text>
+                    </g>
+                </svg>
+            </div>
+            <div class="svg-cell">
+                <span class="label eff">效果 · oldQ 清空 · newQ 接管全部任务 · 零丢失</span>
+                <svg viewBox="0 0 1040 220" width="1040" height="220" xmlns="http://www.w3.org/2000/svg">
+                    <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                        <text x="520" y="25" text-anchor="middle" font-size="13" font-weight="600">drainTo 过程中 · oldQ 归零 · newQ 包含旧任务 + 新提交</text>
+
+                        <!-- oldQ -->
+                        <text x="180" y="55" text-anchor="middle" font-size="13" font-weight="600" fill="#b91c1c">oldQ</text>
+                        <rect x="60" y="65" width="240" height="100" rx="6" fill="#fee2e2" stroke="#dc2626" stroke-width="1.2"/>
+
+                        <text x="105" y="90" text-anchor="middle" font-size="13" fill="#7f1d1d" font-weight="600">5</text>
+                        <text x="140" y="90" text-anchor="middle" font-size="12" fill="#7f1d1d">→ 4</text>
+                        <text x="175" y="90" text-anchor="middle" font-size="12" fill="#7f1d1d">→ 3</text>
+                        <text x="210" y="90" text-anchor="middle" font-size="12" fill="#7f1d1d">→ 2</text>
+                        <text x="245" y="90" text-anchor="middle" font-size="12" fill="#7f1d1d">→ 1</text>
+                        <text x="280" y="90" text-anchor="middle" font-size="12" fill="#059669" font-weight="700">→ ∅</text>
+
+                        <circle cx="105" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="140" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="175" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="210" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="245" cy="125" r="11" fill="#dc2626"/>
+
+                        <text x="180" y="155" text-anchor="middle" font-size="10" fill="#6b7280">5 → 0 (全部被 drainTo 抽走)</text>
+
+                        <!-- 箭头 -->
+                        <line x1="320" y1="115" x2="430" y2="115" stroke="#059669" stroke-width="2.5" marker-end="url(#arr-cv)"/>
+                        <text x="375" y="105" text-anchor="middle" font-size="11" font-weight="600" fill="#059669">drainTo</text>
+
+                        <!-- newQ -->
+                        <text x="560" y="55" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">newQ</text>
+                        <rect x="440" y="65" width="240" height="100" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="1.2"/>
+
+                        <text x="560" y="90" text-anchor="middle" font-size="11" fill="#15803d">→ 1 → 2 → 3 → 4 → 5 (旧任务) + N (新提交)</text>
+                        <circle cx="485" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="510" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="535" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="560" cy="125" r="11" fill="#dc2626"/>
+                        <circle cx="585" cy="125" r="11" fill="#dc2626"/>
+                        <text x="610" y="129" text-anchor="middle" font-size="10" fill="#15803d">+</text>
+                        <circle cx="630" cy="125" r="11" fill="#3b82f6"/>
+                        <circle cx="655" cy="125" r="11" fill="#3b82f6"/>
+                        <text x="560" y="155" text-anchor="middle" font-size="10" fill="#6b7280">5 旧 + N 新 = 全部任务</text>
+
+                        <!-- 终态 -->
+                        <rect x="720" y="55" width="300" height="115" rx="6" fill="#f0fdf4" stroke="#16a34a" stroke-width="2"/>
+                        <text x="870" y="80" text-anchor="middle" font-size="14" font-weight="600" fill="#15803d">✅ 零丢失</text>
+                        <text x="870" y="103" text-anchor="middle" font-size="12" fill="#15803d">oldQ = ∅ · 不留残留</text>
+                        <text x="870" y="123" text-anchor="middle" font-size="11" fill="#4b5563">newQ = 5 旧 + N 新</text>
+                        <text x="870" y="145" text-anchor="middle" font-size="11" fill="#059669" font-weight="600">oldQ 可 GC · 切换完成</text>
+                        <text x="870" y="163" text-anchor="middle" font-size="10" fill="#6b7280">drainTo 绕过 switched 校验</text>
+                    </g>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- 翻页 -->
+    <div class="nav">
+        <button id="prev">← 上一步</button>
+        <span class="page"><span id="cur">1</span> / 7</span>
+        <button id="next">下一步 →</button>
+        <span class="hint">键盘 ← → 翻页</span>
+    </div>
+</div>
+
+<script>
+    (function () {
+        const slides = document.querySelectorAll('.slide');
+        const total = slides.length;
+        let cur = 0;
+        const curEl = document.getElementById('cur');
+        const prevBtn = document.getElementById('prev');
+        const nextBtn = document.getElementById('next');
+        function show(idx) {
+            if (idx < 0 || idx >= total) return;
+            slides[cur].classList.remove('active');
+            cur = idx;
+            slides[cur].classList.add('active');
+            curEl.textContent = (cur + 1);
+            prevBtn.disabled = cur === 0;
+            nextBtn.disabled = cur === total - 1;
+        }
+        prevBtn.addEventListener('click', () => show(cur - 1));
+        nextBtn.addEventListener('click', () => show(cur + 1));
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft')  { show(cur - 1); e.preventDefault(); }
+            if (e.key === 'ArrowRight') { show(cur + 1); e.preventDefault(); }
+        });
+        show(0);
+    })();
+</script>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>DynaPart-TP 分区化机制示意图</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+            background: #ffffff;
+            color: #1f2937;
+            padding: 24px 20px 40px;
+        }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        h1 {
+            font-size: 20px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 4px;
+        }
+        .sub {
+            text-align: center;
+            color: #6b7280;
+            font-size: 12.5px;
+            margin-bottom: 24px;
+        }
+
+        section { margin-bottom: 22px; }
+        section h2 {
+            font-size: 15px;
+            font-weight: 600;
+            border-left: 3px solid #2563eb;
+            padding-left: 8px;
+            margin-bottom: 10px;
+        }
+
+        .svg-wrap {
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px 8px;
+            background: #fafafa;
+        }
+        svg { display: block; margin: 0 auto; max-width: 100%; }
+
+        .caption {
+            text-align: center;
+            color: #4b5563;
+            font-size: 12.5px;
+            margin-top: 8px;
+        }
+        .caption .key { color: #dc2626; font-weight: 600; }
+        .caption .good { color: #059669; font-weight: 600; }
+
+        .compare-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .compare-table th, .compare-table td {
+            border: 1px solid #e5e7eb;
+            padding: 6px 10px;
+            text-align: left;
+        }
+        .compare-table th {
+            background: #f3f4f6;
+            font-weight: 600;
+        }
+        .compare-table td:first-child { font-weight: 500; color: #1f2937; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <h1>DynaPart-TP · 分区化机制示意图</h1>
+    <div class="sub">单队列 vs 分区化队列</div>
+
+    <!-- ============================================== -->
+    <!-- 1. 未分区化（单队列）                              -->
+    <!-- ============================================== -->
+    <section>
+        <h2>一、未分区化（单队列）</h2>
+
+        <div class="svg-wrap">
+        <svg viewBox="0 0 960 240" width="960" height="240" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arr-np" viewBox="0 0 10 10" refX="9" refY="5"
+                        markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/>
+                </marker>
+            </defs>
+
+            <!-- 生产者 -->
+            <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                <text x="70" y="28" text-anchor="middle" font-size="13" font-weight="600" fill="#1d4ed8">生产者</text>
+                <rect x="30" y="50"  width="80" height="32" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+                <text x="70" y="71" text-anchor="middle">P1</text>
+                <rect x="30" y="95" width="80" height="32" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+                <text x="70" y="116" text-anchor="middle">P2</text>
+                <rect x="30" y="140" width="80" height="32" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+                <text x="70" y="161" text-anchor="middle">P3</text>
+
+                <line x1="110" y1="66"  x2="200" y2="105" stroke="#374151" stroke-width="1.2" marker-end="url(#arr-np)"/>
+                <line x1="110" y1="111" x2="200" y2="115" stroke="#374151" stroke-width="1.2" marker-end="url(#arr-np)"/>
+                <line x1="110" y1="156" x2="200" y2="125" stroke="#374151" stroke-width="1.2" marker-end="url(#arr-np)"/>
+            </g>
+
+            <!-- 线程池外框 -->
+            <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                <rect x="200" y="30" width="540" height="180" rx="8"
+                      fill="#fef3c7" fill-opacity="0.4" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4,2"/>
+                <text x="470" y="22" text-anchor="middle" font-size="13" font-weight="600">ThreadPool</text>
+
+                <!-- 队列矩形 -->
+                <rect x="240" y="85" width="380" height="70" rx="4"
+                      fill="#ffffff" stroke="#374151" stroke-width="1.5"/>
+                <text x="430" y="78" text-anchor="middle" font-size="12">Queue（单队列）</text>
+
+                <circle cx="280" cy="120" r="14" fill="#3b82f6"/>
+                <text x="280" y="124" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">T1</text>
+                <circle cx="330" cy="120" r="14" fill="#3b82f6"/>
+                <text x="330" y="124" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">T2</text>
+                <circle cx="380" cy="120" r="14" fill="#3b82f6"/>
+                <text x="380" y="124" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">T3</text>
+                <circle cx="430" cy="120" r="14" fill="#3b82f6"/>
+                <text x="430" y="124" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">T4</text>
+                <circle cx="480" cy="120" r="14" fill="#3b82f6"/>
+                <text x="480" y="124" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">T5</text>
+                <circle cx="530" cy="120" r="14" fill="#3b82f6"/>
+                <text x="530" y="124" text-anchor="middle" fill="#fff" font-size="11" font-weight="600">T6</text>
+                <text x="595" y="125" text-anchor="middle" font-size="14">…</text>
+
+                <!-- 单锁标注 -->
+                <rect x="430" y="180" width="180" height="22" rx="3"
+                      fill="#fee2e2" stroke="#dc2626" stroke-width="1.2"/>
+                <text x="520" y="195" text-anchor="middle" fill="#dc2626" font-size="12" font-weight="600">🔒 单一全局锁 LOCK</text>
+            </g>
+
+            <!-- 消费者 -->
+            <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                <line x1="740" y1="105" x2="830" y2="66"  stroke="#374151" stroke-width="1.2" marker-end="url(#arr-np)"/>
+                <line x1="740" y1="115" x2="830" y2="111" stroke="#374151" stroke-width="1.2" marker-end="url(#arr-np)"/>
+                <line x1="740" y1="125" x2="830" y2="156" stroke="#374151" stroke-width="1.2" marker-end="url(#arr-np)"/>
+
+                <text x="875" y="28" text-anchor="middle" font-size="13" font-weight="600" fill="#6d28d9">消费者</text>
+                <rect x="830" y="50" width="90" height="32" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+                <text x="875" y="71" text-anchor="middle">W1</text>
+                <rect x="830" y="95" width="90" height="32" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+                <text x="875" y="116" text-anchor="middle">W2</text>
+                <rect x="830" y="140" width="90" height="32" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+                <text x="875" y="161" text-anchor="middle">W3</text>
+            </g>
+        </svg>
+        </div>
+        <div class="caption">所有线程竞争<b class="key">同一把锁</b>，高并发下大量阻塞。</div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 2. 分区化                                          -->
+    <!-- ============================================== -->
+    <section>
+        <h2>二、分区化（多队列 · 调度策略纵向插入）</h2>
+
+        <div class="svg-wrap">
+        <svg viewBox="0 0 1080 460" width="1080" height="460" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arr-pp" viewBox="0 0 10 10" refX="9" refY="5"
+                        markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/>
+                </marker>
+            </defs>
+
+            <!-- 生产者 -->
+            <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                <text x="60" y="28" text-anchor="middle" font-size="13" font-weight="600" fill="#1d4ed8">生产者</text>
+                <rect x="20" y="60"  width="80" height="32" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+                <text x="60" y="81" text-anchor="middle">P1</text>
+                <rect x="20" y="170" width="80" height="32" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+                <text x="60" y="191" text-anchor="middle">P2</text>
+                <rect x="20" y="280" width="80" height="32" rx="4" fill="#dbeafe" stroke="#3b82f6" stroke-width="1.2"/>
+                <text x="60" y="301" text-anchor="middle">P3</text>
+            </g>
+
+            <!-- OfferPolicy 纵向矩形 -->
+            <g font-family="Microsoft YaHei" font-size="12" fill="#1f2937">
+                <text x="170" y="28" text-anchor="middle" font-size="13" font-weight="600" fill="#4338ca">入队调度</text>
+                <rect x="135" y="50" width="70" height="290" rx="4"
+                      fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+                <rect x="135" y="50" width="70" height="34" rx="4" fill="#6366f1"/>
+                <rect x="135" y="76" width="70" height="8" fill="#6366f1"/>
+                <text x="170" y="72" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">Offer</text>
+                <text x="170" y="100" text-anchor="middle" font-size="11" font-weight="600" fill="#4338ca">Policy</text>
+                <text x="170" y="135" text-anchor="middle" font-size="10.5">· round_robin</text>
+                <text x="170" y="153" text-anchor="middle" font-size="10.5">· random</text>
+                <text x="170" y="171" text-anchor="middle" font-size="10.5">· plain_hash</text>
+                <text x="170" y="189" text-anchor="middle" font-size="10.5">· balanced_hash</text>
+                <text x="170" y="207" text-anchor="middle" font-size="10.5">· valley_filling</text>
+                <text x="170" y="225" text-anchor="middle" font-size="10.5">· priority</text>
+                <text x="170" y="260" text-anchor="middle" font-size="10" fill="#6b7280">决定入哪个</text>
+                <text x="170" y="274" text-anchor="middle" font-size="10" fill="#6b7280">分区</text>
+                <text x="170" y="305" text-anchor="middle" font-size="10" fill="#4338ca" font-weight="600">PartiFlow:</text>
+                <text x="170" y="320" text-anchor="middle" font-size="9.5" fill="#6b7280">满则轮询下一</text>
+            </g>
+
+            <!-- 生产者 → OfferPolicy 箭头 -->
+            <g stroke="#374151" stroke-width="1.2" fill="none">
+                <line x1="100" y1="76"  x2="135" y2="150" marker-end="url(#arr-pp)"/>
+                <line x1="100" y1="186" x2="135" y2="195" marker-end="url(#arr-pp)"/>
+                <line x1="100" y1="296" x2="135" y2="240" marker-end="url(#arr-pp)"/>
+            </g>
+
+            <!-- 线程池 + 4 个分区 -->
+            <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                <text x="555" y="28" text-anchor="middle" font-size="13" font-weight="600" fill="#15803d">ThreadPool（线程池）</text>
+                <rect x="225" y="40" width="500" height="320" rx="8"
+                      fill="#dcfce7" fill-opacity="0.30" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="4,2"/>
+
+                <!-- 分区 0 -->
+                <rect x="245" y="60" width="460" height="55" rx="4" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+                <text x="251" y="55" font-size="11" fill="#16a34a" font-weight="600">Partition 0</text>
+                <circle cx="290" cy="88" r="12" fill="#16a34a"/>
+                <text x="290" y="92" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T1</text>
+                <circle cx="330" cy="88" r="12" fill="#16a34a"/>
+                <text x="330" y="92" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T2</text>
+                <circle cx="370" cy="88" r="12" fill="#16a34a"/>
+                <text x="370" y="92" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T3</text>
+                <rect x="620" y="76" width="80" height="24" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="660" y="93" text-anchor="middle" font-size="11" fill="#15803d">🔓 Lock0</text>
+
+                <!-- 分区 1 -->
+                <rect x="245" y="140" width="460" height="55" rx="4" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+                <text x="251" y="135" font-size="11" fill="#16a34a" font-weight="600">Partition 1</text>
+                <circle cx="290" cy="168" r="12" fill="#16a34a"/>
+                <text x="290" y="172" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T4</text>
+                <circle cx="330" cy="168" r="12" fill="#16a34a"/>
+                <text x="330" y="172" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T5</text>
+                <circle cx="370" cy="168" r="12" fill="#16a34a"/>
+                <text x="370" y="172" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T6</text>
+                <circle cx="410" cy="168" r="12" fill="#16a34a"/>
+                <text x="410" y="172" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T7</text>
+                <rect x="620" y="156" width="80" height="24" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="660" y="173" text-anchor="middle" font-size="11" fill="#15803d">🔓 Lock1</text>
+
+                <!-- 分区 2 -->
+                <rect x="245" y="220" width="460" height="55" rx="4" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+                <text x="251" y="215" font-size="11" fill="#16a34a" font-weight="600">Partition 2</text>
+                <circle cx="290" cy="248" r="12" fill="#16a34a"/>
+                <text x="290" y="252" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T8</text>
+                <circle cx="330" cy="248" r="12" fill="#16a34a"/>
+                <text x="330" y="252" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T9</text>
+                <rect x="620" y="236" width="80" height="24" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="660" y="253" text-anchor="middle" font-size="11" fill="#15803d">🔓 Lock2</text>
+
+                <!-- 分区 3 -->
+                <rect x="245" y="300" width="460" height="55" rx="4" fill="#ffffff" stroke="#16a34a" stroke-width="1.2"/>
+                <text x="251" y="295" font-size="11" fill="#16a34a" font-weight="600">Partition 3</text>
+                <circle cx="290" cy="328" r="12" fill="#16a34a"/>
+                <text x="290" y="332" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T10</text>
+                <circle cx="330" cy="328" r="12" fill="#16a34a"/>
+                <text x="330" y="332" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T11</text>
+                <circle cx="370" cy="328" r="12" fill="#16a34a"/>
+                <text x="370" y="332" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">T12</text>
+                <rect x="620" y="316" width="80" height="24" rx="2" fill="#dcfce7" stroke="#16a34a"/>
+                <text x="660" y="333" text-anchor="middle" font-size="11" fill="#15803d">🔓 Lock3</text>
+            </g>
+
+            <!-- OfferPolicy → 各分区（虚线广播） -->
+            <g stroke="#6366f1" stroke-width="1" stroke-dasharray="3,2" fill="none">
+                <line x1="205" y1="340" x2="245" y2="88"  marker-end="url(#arr-pp)"/>
+                <line x1="205" y1="340" x2="245" y2="168" marker-end="url(#arr-pp)"/>
+                <line x1="205" y1="340" x2="245" y2="248" marker-end="url(#arr-pp)"/>
+                <line x1="205" y1="340" x2="245" y2="328" marker-end="url(#arr-pp)"/>
+            </g>
+
+            <!-- PollPolicy 纵向矩形 -->
+            <g font-family="Microsoft YaHei" font-size="12" fill="#1f2937">
+                <text x="765" y="28" text-anchor="middle" font-size="13" font-weight="600" fill="#4338ca">出队调度</text>
+                <rect x="730" y="50" width="70" height="290" rx="4"
+                      fill="#e0e7ff" stroke="#6366f1" stroke-width="1.5"/>
+                <rect x="730" y="50" width="70" height="34" rx="4" fill="#6366f1"/>
+                <rect x="730" y="76" width="70" height="8" fill="#6366f1"/>
+                <text x="765" y="72" text-anchor="middle" font-size="12" font-weight="700" fill="#ffffff">Poll</text>
+                <text x="765" y="100" text-anchor="middle" font-size="11" font-weight="600" fill="#4338ca">Policy</text>
+                <text x="765" y="135" text-anchor="middle" font-size="10.5">· round_robin</text>
+                <text x="765" y="153" text-anchor="middle" font-size="10.5">· random</text>
+                <text x="765" y="171" text-anchor="middle" font-size="10.5">· thread_binding</text>
+                <text x="765" y="189" text-anchor="middle" font-size="10.5">· peek_shaving</text>
+                <text x="765" y="207" text-anchor="middle" font-size="10.5">· priority</text>
+                <text x="765" y="260" text-anchor="middle" font-size="10" fill="#6b7280">决定从哪个</text>
+                <text x="765" y="274" text-anchor="middle" font-size="10" fill="#6b7280">分区取</text>
+                <text x="765" y="305" text-anchor="middle" font-size="10" fill="#4338ca" font-weight="600">thread_binding</text>
+                <text x="765" y="320" text-anchor="middle" font-size="9.5" fill="#6b7280">默认关轮询</text>
+            </g>
+
+            <!-- 各分区 → PollPolicy（虚线） -->
+            <g stroke="#6366f1" stroke-width="1" stroke-dasharray="3,2" fill="none">
+                <line x1="705" y1="88"  x2="730" y2="120" marker-end="url(#arr-pp)"/>
+                <line x1="705" y1="168" x2="730" y2="195" marker-end="url(#arr-pp)"/>
+                <line x1="705" y1="248" x2="730" y2="240" marker-end="url(#arr-pp)"/>
+                <line x1="705" y1="328" x2="730" y2="285" marker-end="url(#arr-pp)"/>
+            </g>
+
+            <!-- 消费者 -->
+            <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                <text x="880" y="28" text-anchor="middle" font-size="13" font-weight="600" fill="#6d28d9">消费者</text>
+                <rect x="840" y="60"  width="80" height="32" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+                <text x="880" y="81" text-anchor="middle">W1</text>
+                <rect x="840" y="170" width="80" height="32" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+                <text x="880" y="191" text-anchor="middle">W2</text>
+                <rect x="840" y="280" width="80" height="32" rx="4" fill="#ede9fe" stroke="#8b5cf6" stroke-width="1.2"/>
+                <text x="880" y="301" text-anchor="middle">W3</text>
+            </g>
+
+            <!-- PollPolicy → 消费者 -->
+            <g stroke="#374151" stroke-width="1.2" fill="none">
+                <line x1="800" y1="150" x2="840" y2="76"  marker-end="url(#arr-pp)"/>
+                <line x1="800" y1="195" x2="840" y2="186" marker-end="url(#arr-pp)"/>
+                <line x1="800" y1="240" x2="840" y2="296" marker-end="url(#arr-pp)"/>
+            </g>
+
+            <!-- 底部：RemovePolicy 拒绝兜底 -->
+            <g font-family="Microsoft YaHei" font-size="12" fill="#1f2937">
+                <text x="540" y="395" text-anchor="middle" font-size="12" font-weight="600" fill="#b91c1c">↓ 所有分区都满时 ↓</text>
+                <rect x="505" y="405" width="70" height="40" rx="4"
+                      fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+                <text x="540" y="421" text-anchor="middle" font-size="11" font-weight="600" fill="#b91c1c">Remove</text>
+                <text x="540" y="436" text-anchor="middle" font-size="10" fill="#b91c1c">Policy</text>
+                <line x1="475" y1="358" x2="540" y2="403" stroke="#dc2626" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#arr-pp)"/>
+                <text x="610" y="421" font-size="11" fill="#6b7280">从某分区丢弃旧任务</text>
+                <text x="610" y="437" font-size="11" fill="#6b7280">→ RejectStrategy</text>
+            </g>
+        </svg>
+        </div>
+        <div class="caption">
+            调度策略以<b>纵向矩形</b>插在<b>线程 ↔ 队列</b>之间。每分区一把独立锁，<b class="good">线程互不阻塞</b>。
+        </div>
+
+        <!-- PartiFlow vs PartiStill（精简对比） -->
+        <div class="svg-wrap" style="margin-top:12px;">
+        <svg viewBox="0 0 1080 200" width="1080" height="200" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <marker id="arr-cmp" viewBox="0 0 10 10" refX="9" refY="5"
+                        markerWidth="6" markerHeight="6" orient="auto">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/>
+                </marker>
+            </defs>
+            <g font-family="Microsoft YaHei" font-size="13" fill="#1f2937">
+                <!-- PartiFlow -->
+                <text x="270" y="22" text-anchor="middle" font-size="14" font-weight="600" fill="#0891b2">🌊 PartiFlow（动态）</text>
+                <rect x="20" y="35" width="500" height="150" rx="6"
+                      fill="#ecfeff" stroke="#06b6d4" stroke-width="1.5"/>
+
+                <rect x="40"  y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#06b6d4"/>
+                <text x="90"  y="77" text-anchor="middle" font-size="11">P0 满</text>
+                <rect x="150" y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#06b6d4"/>
+                <text x="200" y="77" text-anchor="middle" font-size="11">P1</text>
+                <rect x="260" y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#06b6d4"/>
+                <text x="310" y="77" text-anchor="middle" font-size="11">P2</text>
+                <rect x="370" y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#06b6d4"/>
+                <text x="420" y="77" text-anchor="middle" font-size="11">P3</text>
+
+                <!-- 路径示意 -->
+                <line x1="90"  y1="91" x2="200" y2="115" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arr-cmp)"/>
+                <line x1="200" y1="115" x2="310" y2="115" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arr-cmp)"/>
+                <line x1="310" y1="115" x2="420" y2="115" stroke="#0891b2" stroke-width="1.5" marker-end="url(#arr-cmp)"/>
+                <text x="40"  y="135" font-size="11" fill="#0e7490">P0 满 → 试 P1 → P2 → P3 …</text>
+
+                <rect x="40" y="150" width="450" height="22" rx="3" fill="#cffafe" stroke="#06b6d4"/>
+                <text x="265" y="165" text-anchor="middle" font-size="11.5" font-weight="600" fill="#0e7490">✅ 支持调度后轮询 —— 更灵活</text>
+
+                <!-- PartiStill -->
+                <text x="810" y="22" text-anchor="middle" font-size="14" font-weight="600" fill="#7c3aed">🗿 PartiStill（静态）</text>
+                <rect x="560" y="35" width="500" height="150" rx="6"
+                      fill="#f5f3ff" stroke="#8b5cf6" stroke-width="1.5"/>
+
+                <rect x="580" y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#8b5cf6"/>
+                <text x="630" y="77" text-anchor="middle" font-size="11">P0 满</text>
+                <rect x="690" y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#8b5cf6"/>
+                <text x="740" y="77" text-anchor="middle" font-size="11">P1</text>
+                <rect x="800" y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#8b5cf6"/>
+                <text x="850" y="77" text-anchor="middle" font-size="11">P2</text>
+                <rect x="910" y="55" width="100" height="34" rx="3" fill="#ffffff" stroke="#8b5cf6"/>
+                <text x="960" y="77" text-anchor="middle" font-size="11">P3</text>
+
+                <!-- 路径：直接 false -->
+                <line x1="630" y1="91" x2="630" y2="115" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#arr-cmp)"/>
+                <text x="580" y="135" font-size="11" fill="#5b21b6">P0 满 → ❌ 不试其它，直接 false</text>
+
+                <rect x="580" y="150" width="450" height="22" rx="3" fill="#ede9fe" stroke="#8b5cf6"/>
+                <text x="805" y="165" text-anchor="middle" font-size="11.5" font-weight="600" fill="#5b21b6">❌ 不支持轮询 —— 性能更高</text>
+            </g>
+        </svg>
+        </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 3. 关键差异                                        -->
+    <!-- ============================================== -->
+    <section>
+        <h2>三、关键差异</h2>
+        <table class="compare-table">
+            <thead>
+                <tr>
+                    <th>维度</th>
+                    <th>未分区化</th>
+                    <th>分区化</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>队列 / 锁数</td>
+                    <td>1 队列 · 1 全局锁</td>
+                    <td>N 队列 · N 独立锁（建议 2 的次幂）</td>
+                </tr>
+                <tr>
+                    <td>锁粒度</td>
+                    <td>粗 —— 所有线程争用</td>
+                    <td>细 —— 只锁当前分区</td>
+                </tr>
+                <tr>
+                    <td>调度策略</td>
+                    <td>无</td>
+                    <td>Offer / Poll / Remove 三维可配</td>
+                </tr>
+                <tr>
+                    <td>实现类</td>
+                    <td>LinkedBlockingQ</td>
+                    <td>PartiFlow / PartiStill</td>
+                </tr>
+                <tr>
+                    <td>并发度</td>
+                    <td>受限，吞吐易饱和</td>
+                    <td>高，随分区数线性扩展</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="caption" style="margin-top:8px;">
+            💡 分区数取 2 的次幂：用位运算 <code style="background:#e5e7eb;padding:1px 5px;border-radius:3px;">&amp; (N-1)</code> 代替取模 <code style="background:#e5e7eb;padding:1px 5px;border-radius:3px;">% N</code>，性能更快。
+        </div>
+    </section>
+
+</div>
+</body>
+</html>

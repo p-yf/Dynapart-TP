@@ -54,4 +54,9 @@ public class myqn extends Partition {
     public void markAsSwitched() {
     }
 
+    @Override
+    public int drainTo(Partition target) {
+        return 0;
+    }
+
 }

@@ -188,6 +188,19 @@ public class PartiFlow<T> extends Partition<T> implements Partitioning<T> {
     }
 
     /**
+     * 迁移专用:逐个排空子分区。
+     * 不检查 switched,即使各子分区已 markAsSwitched 也能继续工作。
+     */
+    @Override
+    public int drainTo(Partition<T> target) {
+        int total = 0;
+        for (Partition<T> partition : partitions) {
+            total += partition.drainTo(target);
+        }
+        return total;
+    }
+
+    /**
      * 唤醒所有子分区的等待线程
      */
     public void signalAllPartitions() {

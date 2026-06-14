@@ -135,4 +135,27 @@ public class PriorityBlockingQ<T> extends Partition<T> {
         }
     }
 
+    /**
+     * 迁移专用:不检查 switched,把本队列元素一次性转移到 target。
+     * 若 target 满了,把元素重新塞回本队列并停止。
+     */
+    @Override
+    public int drainTo(Partition<T> target) {
+        int count = 0;
+        lock.lock();
+        try {
+            while (!q.isEmpty()) {
+                T task = q.poll();
+                if (!target.offer(task)) {
+                    q.add(task); // 放回本队列
+                    break;
+                }
+                count++;
+            }
+        } finally {
+            lock.unlock();
+        }
+        return count;
+    }
+
 }

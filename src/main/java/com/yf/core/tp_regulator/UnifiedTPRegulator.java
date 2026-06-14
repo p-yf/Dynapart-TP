@@ -1,5 +1,6 @@
 package com.yf.core.tp_regulator;
 
+import com.yf.common.constant.Logo;
 import com.yf.common.entity.PoolInfo;
 import com.yf.common.entity.QueueInfo;
 import com.yf.core.partition.Partition;
@@ -381,38 +382,12 @@ public class UnifiedTPRegulator {
             oldQ.unlockGlobally();
         }
         try {
-            if (!(oldQ instanceof Partitioning)) {
-                //非分区队列
-                GCTaskManager.execute(()->{
-                    while (oldQ.getEleNums() > 0) {
-                        Runnable task = null;
-                        try {
-                            task = oldQ.poll(1);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                        q.offer(task);
-                    }
-                });
-
-            } else {
-                //分区队列
-                GCTaskManager.execute(()->{
-                    Partition<Runnable>[] partitions = ((Partitioning<Runnable>) oldQ).getPartitions();
-                    for (Partition<Runnable> partition : partitions) {
-                        while (partition.getEleNums() > 0) {
-                            Runnable task = null;
-                            try {
-                                task = partition.poll(1);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                            q.offer(task);
-                        }
-                    }
-                });
-
-            }
+            // 使用 drainTo 迁移:该方法不检查 switched,
+            // 即便 oldQ 已经被 markAsSwitched 也能正常把残留任务转移到 newQ
+            GCTaskManager.execute(()->{
+                int migrated = oldQ.drainTo(q);
+                log.info(Logo.LOG_LOGO+"队列切换完成,共迁移 {} 个任务", migrated);
+            });
         } catch (Exception e) {
             return false;
         }

@@ -144,6 +144,19 @@ public class PartiStill<T> extends Partition<T> implements Partitioning<T> {
         }
     }
 
+    /**
+     * 迁移专用:逐个排空子分区。
+     * 不检查 switched,即使各子分区已 markAsSwitched 也能继续工作。
+     */
+    @Override
+    public int drainTo(Partition<T> target) {
+        int total = 0;
+        for (Partition<T> partition : partitions) {
+            total += partition.drainTo(target);
+        }
+        return total;
+    }
+
     public void setCapacity(Integer capacity) {
         if(partitions==null){
             throw new RuntimeException("还未初始化各个分区！");

@@ -219,4 +219,35 @@ public class LinkedBlockingQ<T> extends Partition<T> {
             headLock.unlock();
         }
     }
+
+    /**
+     * 迁移专用:不检查 switched,一次性把本队列的元素转移到 target。
+     * 若 target 满了,把当前元素重新挂回本队列头部并停止。
+     */
+    @Override
+    public int drainTo(Partition<T> target) {
+        int count = 0;
+        headLock.lock();
+        try {
+            while (size.get() > 0) {
+                T task = dequeue();
+                size.decrementAndGet();
+                if (!target.offer(task)) {
+                    // target 已满:把 task 放回本队列头部(在头节点之后插入)
+                    Node<T> newNode = new Node<>(task);
+                    newNode.setNext(head.getNext());
+                    head.setNext(newNode);
+                    if (head == tail) {
+                        tail = newNode;
+                    }
+                    size.incrementAndGet();
+                    break;
+                }
+                count++;
+            }
+        } finally {
+            headLock.unlock();
+        }
+        return count;
+    }
 }
